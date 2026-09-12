@@ -34,6 +34,7 @@ npm run typecheck # TypeScript 类型检查
 | 服务商 | 协议 | 默认模型 | 说明 |
 | --- | --- | --- | --- |
 | **DeepSeek**（默认） | Chat Completions | `deepseek-chat` | 国内可直连。已实测浏览器跨域放行 POST，100ms 级响应 |
+| 通义千问 | Chat Completions | `qwen3.8-flash` | 阿里云百炼，国内直连（实测 POST 30ms 级）。官方页面写明**新用户赠送 1 亿+ tokens**，免费额度以控制台为准 |
 | OpenAI | Responses API | `gpt-6-astra` | 官方文档指出该模型工具调用需走 Responses API；国内网络常无法直连 |
 | 自定义 | Chat Completions | 自填 | 任何 OpenAI 兼容接口，例如通义 `https://dashscope.aliyuncs.com/compatible-mode/v1`、智谱 `https://open.bigmodel.cn/api/paas/v4` |
 
@@ -51,8 +52,10 @@ npm run typecheck # TypeScript 类型检查
 ### 直连模式
 
 1. 到服务商后台建一个密钥（DeepSeek 在 [platform.deepseek.com](https://platform.deepseek.com/api_keys)，建议单独建一个，方便随时吊销）。
-2. 打开应用右下角「AI 行程助手」→ ⚙ → 选 **直连（自用）** → 服务商选 **DeepSeek** → 粘贴密钥。
+2. 打开应用右下角「AI 行程助手」→ ⚙ → 选 **直连（自用）** → 服务商选 **DeepSeek** 或 **通义千问** → 粘贴密钥。
 3. 点「测试连接」确认能通，然后直接提问，例如「我只有 1 小时，从东门进，怎么逛最值？」
+
+通义千问的密钥在[阿里云百炼控制台](https://bailian.console.aliyun.com/)创建，新用户有 1 亿+ tokens 的免费额度，够这个小助手用很久；注意 `qwen3.8-flash` 这类 flash 档最省钱，`qwen3.8-max` 更聪明但更贵。
 
 密钥只写入当前浏览器的 `localStorage`，本项目没有后端，也没有任何地方会把它传出去。**请不要把密钥写进仓库或截图分享。**
 

@@ -14,7 +14,7 @@ export type AgentMode = 'direct' | 'proxy';
  */
 export type AgentProtocol = 'responses' | 'chat';
 
-export type AgentProviderId = 'deepseek' | 'openai' | 'custom';
+export type AgentProviderId = 'deepseek' | 'qwen' | 'openai' | 'custom';
 
 export interface AgentProvider {
   id: AgentProviderId;
@@ -37,6 +37,16 @@ export const PROVIDERS: AgentProvider[] = [
     models: ['deepseek-chat', 'deepseek-reasoner'],
     keyHint: 'sk-...',
     note: '国内可直连，浏览器跨域已实测放行。「deepseek-chat」支持工具调用。',
+  },
+  {
+    id: 'qwen',
+    label: '通义千问',
+    protocol: 'chat',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen3.8-flash',
+    models: ['qwen3.8-flash', 'qwen3.7-plus', 'qwen3.8-max', 'qwen-plus'],
+    keyHint: 'sk-...',
+    note: '阿里云百炼，国内直连、响应很快。新用户有免费额度（官方页面写明赠送 1 亿+ tokens），额度以控制台为准。',
   },
   {
     id: 'openai',
