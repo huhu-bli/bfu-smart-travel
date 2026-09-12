@@ -51,7 +51,10 @@ const nextId = () => {
 export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpenTrips }: Props) {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useLocalStorage<AgentSettings>('agent', DEFAULT_AGENT_SETTINGS);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const configured =
+    settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
+  // 没配置过就直接展开设置，省得用户找不到入口。
+  const [settingsOpen, setSettingsOpen] = useState(!configured);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -61,16 +64,14 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const migrated = useRef(false);
 
-  const configured =
-    settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
-
   // 兼容早期版本保存的设置：缺 provider/protocol 时补齐。
   useEffect(() => {
     if (migrated.current) return;
     migrated.current = true;
     if (settings.provider && settings.protocol) return;
     setSettings((prev) => {
-      const looksLikeOpenAi = /openai\.com/.test(prev.baseUrl ?? '') || (prev.model ?? '').startsWith('gpt');
+      // 早期版本没有服务商概念：地址指向 OpenAI 就沿用，否则迁移到默认的 DeepSeek。
+      const looksLikeOpenAi = /openai\.com/i.test(prev.baseUrl ?? '');
       const preset = providerOf(looksLikeOpenAi ? 'openai' : 'deepseek');
       return {
         ...DEFAULT_AGENT_SETTINGS,
@@ -78,7 +79,9 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
         provider: preset.id,
         protocol: preset.protocol,
         baseUrl: prev.baseUrl || preset.baseUrl,
-        model: prev.model || preset.model,
+        model: looksLikeOpenAi ? prev.model || preset.model : preset.model,
+        // 换了服务商，旧密钥不再适用，清掉避免误用。
+        apiKey: looksLikeOpenAi ? prev.apiKey : '',
       };
     });
   }, [settings, setSettings]);
