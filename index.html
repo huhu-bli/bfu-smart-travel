@@ -12,6 +12,14 @@
     />
   </head>
   <body>
+    <script>
+      // 站点级默认配置，由构建时的环境变量注入。
+      // 配好之后所有访客都会默认走这个代理，不需要自己填密钥。
+      window.__BFU_ENV__ = {
+        VITE_AGENT_PROXY_URL: '%VITE_AGENT_PROXY_URL%',
+        VITE_AGENT_PROXY_TOKEN: '%VITE_AGENT_PROXY_TOKEN%',
+      };
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

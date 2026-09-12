@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { SPOT_MAP } from '../data/spots';
 import { TRIPS } from '../data/trips';
+import { answerLocally } from '../lib/localAgent';
 import {
   DEFAULT_AGENT_SETTINGS,
   PROVIDERS,
@@ -34,6 +35,8 @@ interface ChatTurn {
   tripIds?: string[];
   trace?: string[];
   isError?: boolean;
+  /** 内置助手（未配置密钥）作答 */
+  offline?: boolean;
 }
 
 const QUICK_PROMPTS = [
@@ -102,6 +105,30 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     setInput('');
     setTurns((prev) => [...prev, { id: nextId(), role: 'user', text: question }]);
     setBusy(true);
+
+    // 没配置密钥时用内置助手作答，保证任何访客都能直接用。
+    if (!configured) {
+      try {
+        const local = answerLocally(question);
+        setTurns((prev) => [
+          ...prev,
+          {
+            id: nextId(),
+            role: 'assistant',
+            text: local.text,
+            plan: local.plan,
+            planOptions: local.planOptions,
+            spotIds: local.spotIds,
+            tripIds: local.tripIds,
+            trace: local.trace,
+            offline: true,
+          },
+        ]);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
 
     try {
       const result = await runAgentTurn({
@@ -351,7 +378,10 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
           <div className="agent-body" ref={scrollRef}>
             {turns.length === 0 ? (
               <div className="agent-welcome">
-                <p>我是北林行程助手，可以帮你排校园路线、讲点位、推校外一日游。</p>
+                <p>
+                  我是北林行程助手，可以帮你排校园路线、讲点位、推校外一日游。
+                  {configured ? '' : ' 当前用内置助手作答，不需要密钥。'}
+                </p>
                 <div className="agent-quick">
                   {QUICK_PROMPTS.map((prompt) => (
                     <button key={prompt} type="button" onClick={() => send(prompt)}>
@@ -420,7 +450,13 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
                 ) : null}
 
                 {turn.trace && turn.trace.length ? (
-                  <p className="agent-trace">调用：{turn.trace.join('、')}</p>
+                  <p className="agent-trace">
+                    {turn.offline ? '内置助手作答 · 不消耗额度 · ' : ''}
+                    调用：{turn.trace.join('、')}
+                  </p>
+                ) : null}
+                {turn.offline && (!turn.trace || !turn.trace.length) ? (
+                  <p className="agent-trace">内置助手作答 · 不消耗额度</p>
                 ) : null}
               </article>
             ))}
@@ -446,7 +482,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
             <textarea
               value={input}
               rows={2}
-              placeholder={configured ? '说说你想怎么逛…（Enter 发送，Shift+Enter 换行）' : '先在上面填写 API Key 或代理地址'}
+              placeholder={configured ? '说说你想怎么逛…（Enter 发送，Shift+Enter 换行）' : '直接问就行，未配置密钥时由内置助手作答'}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
@@ -455,7 +491,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
                 }
               }}
             />
-            <button type="submit" className="agent-send" disabled={busy || !configured || !input.trim()}>
+            <button type="submit" className="agent-send" disabled={busy || !input.trim()}>
               {busy ? '…' : '发送'}
             </button>
           </form>

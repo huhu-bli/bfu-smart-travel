@@ -25,6 +25,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # 想让所有访客都能直接用 AI，就在这里注入自己的代理地址（见 README「让别人也能用」）。
+          VITE_AGENT_PROXY_URL: ${{ vars.AGENT_PROXY_URL }}
+          VITE_AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

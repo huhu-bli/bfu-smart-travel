@@ -77,14 +77,28 @@ export interface AgentSettings {
   model: string;
 }
 
+/**
+ * 读取构建时注入的站点级配置（见 index.html）。
+ * 变量没配置时 Vite 会保留 %VITE_XXX% 原文，这里按空值处理。
+ */
+function readSiteEnv(key: string): string {
+  const bag = (globalThis as { __BFU_ENV__?: Record<string, unknown> }).__BFU_ENV__;
+  const raw = bag?.[key];
+  if (typeof raw !== 'string') return '';
+  return raw.startsWith('%') ? '' : raw.trim();
+}
+
+const SITE_PROXY_URL = readSiteEnv('VITE_AGENT_PROXY_URL');
+const SITE_PROXY_TOKEN = readSiteEnv('VITE_AGENT_PROXY_TOKEN');
+
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
-  mode: 'direct',
+  mode: SITE_PROXY_URL ? 'proxy' : 'direct',
   provider: 'deepseek',
   protocol: 'chat',
   apiKey: '',
   baseUrl: 'https://api.deepseek.com',
-  proxyUrl: '',
-  proxyToken: '',
+  proxyUrl: SITE_PROXY_URL,
+  proxyToken: SITE_PROXY_TOKEN,
   model: 'deepseek-chat',
 };
 
