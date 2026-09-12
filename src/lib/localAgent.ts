@@ -1,4 +1,3 @@
-import { GATE_IDS } from '../data/interests';
 import { SPOTS, SPOT_MAP } from '../data/spots';
 import type { InterestId, PlanOptions, RoutePlan } from '../types';
 import { formatDuration } from './planner';
@@ -16,7 +15,18 @@ export interface LocalAnswer {
   spotIds: string[];
   tripIds: string[];
   trace: string[];
+  /** 记住这次的参数，方便接着追问「改成 2 小时」这类问题。 */
+  memory: LocalMemory;
 }
+
+export interface LocalMemory {
+  minutes: number;
+  interests: InterestId[];
+  gateId: string;
+}
+
+const NEGATION = /(不要|不看|不去|不逛|去掉|去掉|别去|不想看|不想去|没有兴趣)/;
+const RESET = /(重新|重来|清空|从零|换一个新)/;
 
 const INTEREST_KEYWORDS: Record<InterestId, string[]> = {
   plant: ['植物', '园林', '树', '花', '银杏', '绿化', '苗木', '温室', '牡丹', '月季', '竹', '园子', '草坪'],
@@ -101,11 +111,12 @@ export function parseInterests(text: string): InterestId[] {
   return hits;
 }
 
-function parseGate(text: string): string {
+/** 只在文本里明确提到门岗时返回，否则返回 null，方便沿用上一轮的起点。 */
+export function matchGate(text: string): string | null {
   for (const [pattern, id] of GATE_KEYWORDS) {
     if (pattern.test(text)) return id;
   }
-  return GATE_IDS.includes('east-gate') ? 'east-gate' : GATE_IDS[0];
+  return null;
 }
 
 function parseSpot(text: string): string | null {
@@ -136,12 +147,66 @@ function safeParse<T>(raw: string): T {
   }
 }
 
-export function answerLocally(rawText: string): LocalAnswer {
+/** 合并本轮识别到的兴趣与上一轮的记忆；带否定词表示「去掉」。 */
+function mergeInterests(
+  text: string,
+  parsed: InterestId[],
+  previous: InterestId[],
+): InterestId[] {
+  if (!previous.length) return parsed;
+  if (!parsed.length) return previous;
+
+  // 按分句判断：带否定词的句子是要去掉的，其它句子是要加的。
+  const removals = new Set<InterestId>();
+  const additions = new Set<InterestId>();
+  for (const clause of text.split(/[，。,.!！?？;；\s]+/).filter(Boolean)) {
+    const hits = parseInterests(clause);
+    if (!hits.length) continue;
+    const target = NEGATION.test(clause) ? removals : additions;
+    hits.forEach((id) => target.add(id));
+  }
+
+  if (!removals.size && !additions.size) {
+    return NEGATION.test(text)
+      ? previous.filter((id) => !parsed.includes(id))
+      : Array.from(new Set([...previous, ...parsed]));
+  }
+
+  const next = previous.filter((id) => !removals.has(id));
+  additions.forEach((id) => {
+    if (!next.includes(id)) next.push(id);
+  });
+  return next;
+}
+
+/**
+ * 对外入口：支持追问。例如先问「1 小时怎么逛」，再说「改成 2 小时」「换成南门」「不想看花了」。
+ */
+export function answerLocally(rawText: string, previous?: LocalMemory | null): LocalAnswer {
+  const text = rawText.trim();
+  const following = Boolean(previous) && !RESET.test(text);
+  const base = following && previous ? previous : null;
+
+  const explicitMinutes = parseMinutes(text);
+  const parsedInterests = parseInterests(text);
+  const memory: LocalMemory = {
+    minutes: explicitMinutes ?? base?.minutes ?? 60,
+    interests: base
+      ? mergeInterests(text, parsedInterests, base.interests)
+      : parsedInterests,
+    gateId: matchGate(text) ?? base?.gateId ?? 'east-gate',
+  };
+
+  return { ...answerCore(rawText, memory), memory };
+}
+
+function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'memory'> {
   const text = rawText.trim();
   const context = emptyContext();
-  const minutes = parseMinutes(text);
-  const interests = parseInterests(text);
-  const gateId = parseGate(text);
+  const explicitMinutes = parseMinutes(text);
+  const minutes = explicitMinutes ?? memory.minutes;
+  const interests = memory.interests;
+  const gateId = matchGate(text) ?? memory.gateId;
   const gateName = SPOT_MAP[gateId]?.name ?? '东门（正门）';
   const spotId = parseSpot(text);
 
@@ -170,7 +235,7 @@ export function answerLocally(rawText: string): LocalAnswer {
 
   // 2) 点位讲解
   const wantsDetail = /(值得|怎么样|好不好|是什么|介绍|讲讲|说说|开放|几点|好玩|看看)/.test(text);
-  if (spotId && (wantsDetail || !minutes)) {
+  if (spotId && (wantsDetail || !explicitMinutes)) {
     const detail = safeParse<{ name: string; description: string; highlights: string[]; bestTime: string; visitMinutes: number; tips: string }>(
       runTool('get_spot_detail', JSON.stringify({ spot_id: spotId }), context),
     );
@@ -186,7 +251,7 @@ export function answerLocally(rawText: string): LocalAnswer {
   }
 
   // 3) 校园路线（默认意图）
-  const planMinutes = minutes ?? 60;
+  const planMinutes = minutes;
   const result = safeParse<{
     title: string;
     totalMinutes: number;
@@ -205,7 +270,7 @@ export function answerLocally(rawText: string): LocalAnswer {
     ),
   );
 
-  if (HELP_KEYWORDS.test(text) && !minutes && !spotId && interests.length === 0) {
+  if (HELP_KEYWORDS.test(text) && !explicitMinutes && !spotId && interests.length === 0) {
     return {
       text: [
         '我是北林行程助手，可以：',

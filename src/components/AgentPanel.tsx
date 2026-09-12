@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { SPOT_MAP } from '../data/spots';
 import { TRIPS } from '../data/trips';
-import { answerLocally } from '../lib/localAgent';
+import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
   DEFAULT_AGENT_SETTINGS,
   PROVIDERS,
@@ -66,6 +66,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const historyRef = useRef<AgentHistory>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const migrated = useRef(false);
+  const localMemoryRef = useRef<LocalMemory | null>(null);
 
   // 兼容早期版本保存的设置：缺 provider/protocol 时补齐。
   useEffect(() => {
@@ -109,7 +110,8 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     // 没配置密钥时用内置助手作答，保证任何访客都能直接用。
     if (!configured) {
       try {
-        const local = answerLocally(question);
+        const local = answerLocally(question, localMemoryRef.current);
+        localMemoryRef.current = local.memory;
         setTurns((prev) => [
           ...prev,
           {
@@ -167,6 +169,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
 
   const reset = () => {
     historyRef.current = [];
+    localMemoryRef.current = null;
     setTurns([]);
   };
 
@@ -220,6 +223,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const resetSettings = () => {
     setSettings(DEFAULT_AGENT_SETTINGS);
     historyRef.current = [];
+    localMemoryRef.current = null;
     setTurns([]);
     setProbe(null);
     setSettingsOpen(true);
@@ -386,7 +390,9 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
               <div className="agent-welcome">
                 <p>
                   我是北林行程助手，可以帮你排校园路线、讲点位、推校外一日游。
-                  {configured ? '' : ' 当前用内置助手作答，不需要密钥。'}
+                  {configured
+                    ? ' 追问也可以，比如「改成 2 小时」。'
+                    : ' 当前用内置助手作答，不需要密钥；排完路线后接着说「改成 2 小时」「换成南门」也能接着调。'}
                 </p>
                 <div className="agent-quick">
                   {QUICK_PROMPTS.map((prompt) => (
