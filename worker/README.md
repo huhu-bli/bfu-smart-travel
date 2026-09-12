@@ -7,18 +7,23 @@
 ```bash
 cd worker
 npx wrangler login
-npx wrangler secret put OPENAI_API_KEY     # 粘贴你的 OpenAI 密钥
+npx wrangler secret put OPENAI_API_KEY     # 粘贴你的密钥（DeepSeek 或 OpenAI 的都可以）
+npx wrangler secret put UPSTREAM_BASE      # 用 DeepSeek 就填 https://api.deepseek.com
 npx wrangler secret put APP_TOKEN          # 自己设一个口令，例如 bfu-travel-2026
 npx wrangler deploy
 ```
+
+默认上游是 `https://api.openai.com/v1`（OpenAI）。改用 DeepSeek 只需要把 `UPSTREAM_BASE` 设为 `https://api.deepseek.com`，前端把服务商切成 DeepSeek 即可。
 
 `deploy` 完成后会输出一个地址，形如 `https://bfu-smart-travel-agent.<你的子域>.workers.dev`。
 
 （可选）限制可用模型：
 
 ```bash
-npx wrangler secret put ALLOWED_MODELS     # 例如 gpt-6-astra,gpt-5.6
+npx wrangler secret put ALLOWED_MODELS     # 例如 deepseek-chat,deepseek-reasoner
 ```
+
+Worker 只接受两个路径：`/responses`（OpenAI Responses API）和 `/chat/completions`（DeepSeek 等 OpenAI 兼容接口），其余路径一律 404。
 
 ## 在前端使用
 

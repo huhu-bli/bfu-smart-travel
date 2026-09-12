@@ -27,7 +27,17 @@ npm run typecheck # TypeScript 类型检查
 
 ## AI 行程助手（Agent）
 
-右下角的小机器人就是入口。它用 OpenAI 的 Responses API + 工具调用，把大模型接到本项目已有的数据和算法上：模型负责理解需求、选参数，路线和点位内容全部由本地函数产出，不会出现模型编造点位或时间的情况。
+右下角的小机器人就是入口。它用「模型 + 工具调用」的方式接到本项目已有的数据和算法上：模型负责理解需求、选参数，路线和点位内容全部由本地函数产出，不会出现模型编造点位或时间的情况。
+
+### 支持的服务商
+
+| 服务商 | 协议 | 默认模型 | 说明 |
+| --- | --- | --- | --- |
+| **DeepSeek**（默认） | Chat Completions | `deepseek-chat` | 国内可直连。已实测浏览器跨域放行 POST，100ms 级响应 |
+| OpenAI | Responses API | `gpt-6-astra` | 官方文档指出该模型工具调用需走 Responses API；国内网络常无法直连 |
+| 自定义 | Chat Completions | 自填 | 任何 OpenAI 兼容接口，例如通义 `https://dashscope.aliyuncs.com/compatible-mode/v1`、智谱 `https://open.bigmodel.cn/api/paas/v4` |
+
+两套协议在代码里是分开的适配层：Responses 用 `function_call` / `function_call_output`，Chat Completions 用 `tool_calls` / `role: "tool"`，工具定义只有一份，切换服务商时自动转换。切换服务商会重置对话上下文，因为两套协议的历史格式不通用。
 
 ### 两种模式
 
@@ -40,9 +50,9 @@ npm run typecheck # TypeScript 类型检查
 
 ### 直连模式
 
-1. 到 [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys) 建一个密钥（建议单独建一个，方便随时吊销）。
-2. 打开应用右下角「AI 行程助手」→ ⚙ → 选 **直连（自用）** → 粘贴密钥。
-3. 直接提问，例如「我只有 1 小时，从东门进，怎么逛最值？」
+1. 到服务商后台建一个密钥（DeepSeek 在 [platform.deepseek.com](https://platform.deepseek.com/api_keys)，建议单独建一个，方便随时吊销）。
+2. 打开应用右下角「AI 行程助手」→ ⚙ → 选 **直连（自用）** → 服务商选 **DeepSeek** → 粘贴密钥。
+3. 点「测试连接」确认能通，然后直接提问，例如「我只有 1 小时，从东门进，怎么逛最值？」
 
 密钥只写入当前浏览器的 `localStorage`，本项目没有后端，也没有任何地方会把它传出去。**请不要把密钥写进仓库或截图分享。**
 

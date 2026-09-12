@@ -1836,6 +1836,15 @@ a {
   border-radius: 12px;
 }
 
+.provider-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  background: #e9f2eb;
+  padding: 4px;
+  border-radius: 12px;
+}
+
 .mode-btn {
   border: none;
   background: transparent;

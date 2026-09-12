@@ -3,12 +3,14 @@ import { SPOT_MAP } from '../data/spots';
 import { TRIPS } from '../data/trips';
 import {
   DEFAULT_AGENT_SETTINGS,
-  MODEL_HINTS,
+  PROVIDERS,
   describePlanOption,
   formatPlanSummary,
   probeConnection,
+  providerOf,
   runAgentTurn,
-  type AgentInputItem,
+  type AgentHistory,
+  type AgentProviderId,
   type AgentSettings,
   type ProbeResult,
 } from '../lib/agent';
@@ -55,11 +57,31 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const [busy, setBusy] = useState(false);
   const [probing, setProbing] = useState(false);
   const [probe, setProbe] = useState<ProbeResult | null>(null);
-  const historyRef = useRef<AgentInputItem[]>([]);
+  const historyRef = useRef<AgentHistory>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const migrated = useRef(false);
 
   const configured =
     settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
+
+  // 兼容早期版本保存的设置：缺 provider/protocol 时补齐。
+  useEffect(() => {
+    if (migrated.current) return;
+    migrated.current = true;
+    if (settings.provider && settings.protocol) return;
+    setSettings((prev) => {
+      const looksLikeOpenAi = /openai\.com/.test(prev.baseUrl ?? '') || (prev.model ?? '').startsWith('gpt');
+      const preset = providerOf(looksLikeOpenAi ? 'openai' : 'deepseek');
+      return {
+        ...DEFAULT_AGENT_SETTINGS,
+        ...prev,
+        provider: preset.id,
+        protocol: preset.protocol,
+        baseUrl: prev.baseUrl || preset.baseUrl,
+        model: prev.model || preset.model,
+      };
+    });
+  }, [settings, setSettings]);
 
   useEffect(() => {
     if (!open) return;
@@ -84,7 +106,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
         userText: question,
         settings,
       });
-      historyRef.current = result.items;
+      historyRef.current = result.history;
       setTurns((prev) => [
         ...prev,
         {
@@ -118,6 +140,30 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     setTurns([]);
   };
 
+  /** 切换服务商：地址、模型、协议一起换，并重置上下文（两套协议的历史不通用）。 */
+  const switchProvider = (id: AgentProviderId) => {
+    const preset = providerOf(id);
+    setSettings((prev) => ({
+      ...prev,
+      provider: id,
+      protocol: preset.protocol,
+      baseUrl: preset.baseUrl,
+      model: preset.model || prev.model,
+    }));
+    setProbe(null);
+    if (turns.length || historyRef.current.length) {
+      historyRef.current = [];
+      setTurns((prev) => [
+        ...prev,
+        {
+          id: nextId(),
+          role: 'assistant',
+          text: `已切换到 ${preset.label}，对话上下文已重置。`,
+        },
+      ]);
+    }
+  };
+
   const runProbe = async () => {
     setProbing(true);
     setProbe(null);
@@ -149,7 +195,8 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
             <div className="agent-title">
               <strong>AI 行程助手</strong>
               <small>
-                {settings.mode === 'direct' ? '直连模式' : '代理模式'} · {settings.model}
+                {providerOf(settings.provider).label} · {settings.mode === 'direct' ? '直连' : '代理'} ·{' '}
+                {settings.model}
               </small>
             </div>
             <div className="agent-head-actions">
@@ -167,6 +214,22 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
 
           {settingsOpen ? (
             <div className="agent-settings">
+              <div className="agent-field">
+                <span>服务商</span>
+                <div className="provider-row">
+                  {PROVIDERS.map((provider) => (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      className={settings.provider === provider.id ? 'mode-btn is-active' : 'mode-btn'}
+                      onClick={() => switchProvider(provider.id)}
+                    >
+                      {provider.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="agent-mode">
                 <button
                   type="button"
@@ -187,21 +250,21 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
               {settings.mode === 'direct' ? (
                 <>
                   <label className="agent-field">
-                    <span>OpenAI API Key</span>
+                    <span>{providerOf(settings.provider).label} API Key</span>
                     <input
                       type="password"
                       value={settings.apiKey}
-                      placeholder="sk-..."
+                      placeholder={providerOf(settings.provider).keyHint}
                       autoComplete="off"
                       onChange={(event) => setSettings((prev) => ({ ...prev, apiKey: event.target.value }))}
                     />
                   </label>
                   <label className="agent-field">
-                    <span>API 地址（留空用官方，可填自建中转）</span>
+                    <span>API 地址（切换服务商时自动填好，可手改）</span>
                     <input
                       type="url"
                       value={settings.baseUrl}
-                      placeholder="https://api.openai.com/v1"
+                      placeholder={providerOf(settings.provider).baseUrl || 'https://your-endpoint/v1'}
                       autoComplete="off"
                       onChange={(event) => setSettings((prev) => ({ ...prev, baseUrl: event.target.value }))}
                     />
@@ -241,11 +304,13 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
                   onChange={(event) => setSettings((prev) => ({ ...prev, model: event.target.value }))}
                 />
                 <datalist id="agent-model-hints">
-                  {MODEL_HINTS.map((model) => (
+                  {providerOf(settings.provider).models.map((model) => (
                     <option key={model} value={model} />
                   ))}
                 </datalist>
               </label>
+
+              <p className="agent-note">{providerOf(settings.provider).note}</p>
 
               <p className="agent-note">
                 {settings.mode === 'direct'

@@ -7,10 +7,69 @@ import { buildRoute, formatClock, formatDuration } from './planner';
 /** 直连 = 浏览器带着自己的 API Key 直接请求；代理 = 请求转发到自建 Serverless，由服务端持钥。 */
 export type AgentMode = 'direct' | 'proxy';
 
+/**
+ * 两种接口协议：
+ * - responses：OpenAI 的 Responses API（工具调用只能用这个）
+ * - chat：OpenAI 兼容的 Chat Completions（DeepSeek、通义、智谱、Kimi 等都用这个）
+ */
+export type AgentProtocol = 'responses' | 'chat';
+
+export type AgentProviderId = 'deepseek' | 'openai' | 'custom';
+
+export interface AgentProvider {
+  id: AgentProviderId;
+  label: string;
+  protocol: AgentProtocol;
+  baseUrl: string;
+  model: string;
+  models: string[];
+  keyHint: string;
+  note: string;
+}
+
+export const PROVIDERS: AgentProvider[] = [
+  {
+    id: 'deepseek',
+    label: 'DeepSeek',
+    protocol: 'chat',
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-chat',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
+    keyHint: 'sk-...',
+    note: '国内可直连，浏览器跨域已实测放行。「deepseek-chat」支持工具调用。',
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    protocol: 'responses',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-6-astra',
+    models: ['gpt-6-astra', 'gpt-5.6', 'gpt-5.4'],
+    keyHint: 'sk-...',
+    note: '国内网络常无法直连，且部分网络会拦截 POST，建议配代理模式。',
+  },
+  {
+    id: 'custom',
+    label: '自定义',
+    protocol: 'chat',
+    baseUrl: '',
+    model: '',
+    models: [],
+    keyHint: '按服务商要求填写',
+    note: '任何 OpenAI 兼容接口都可以，填到 /v1 这一层为止，例如 https://dashscope.aliyuncs.com/compatible-mode/v1。',
+  },
+];
+
+export function providerOf(id: AgentProviderId): AgentProvider {
+  return PROVIDERS.find((item) => item.id === id) ?? PROVIDERS[0];
+}
+
 export interface AgentSettings {
   mode: AgentMode;
+  provider: AgentProviderId;
+  protocol: AgentProtocol;
   apiKey: string;
-  /** 直连模式下的 API 地址，留空即官方地址。可填自建中转或其他兼容网关。 */
+  /** 接口基地址，切换服务商时会自动填好，也可以手改。 */
   baseUrl: string;
   proxyUrl: string;
   /** 代理模式下的访问口令，对应 Worker 的 APP_TOKEN。前端可见，只用于挡住随手滥用。 */
@@ -20,20 +79,35 @@ export interface AgentSettings {
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   mode: 'direct',
+  provider: 'deepseek',
+  protocol: 'chat',
   apiKey: '',
-  baseUrl: '',
+  baseUrl: 'https://api.deepseek.com',
   proxyUrl: '',
   proxyToken: '',
-  model: 'gpt-6-astra',
+  model: 'deepseek-chat',
 };
-
-export const MODEL_HINTS = ['gpt-6-astra', 'gpt-5.6', 'gpt-5.4'];
 
 const DIRECT_BASE = 'https://api.openai.com/v1';
 const MAX_ROUNDS = 6;
 const REQUEST_TIMEOUT_MS = 60_000;
 
 export type AgentInputItem = Record<string, unknown>;
+
+/** Chat Completions 协议下的消息结构。 */
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null;
+  tool_calls?: {
+    id: string;
+    type: 'function';
+    function: { name: string; arguments: string };
+  }[];
+  tool_call_id?: string;
+}
+
+/** 会话历史：Responses 协议存原始 items，Chat 协议存 messages。 */
+export type AgentHistory = AgentInputItem[] | ChatMessage[];
 
 export interface ToolCall {
   name: string;
@@ -51,7 +125,7 @@ export interface AgentToolContext {
 
 export interface AgentTurnResult {
   text: string;
-  items: AgentInputItem[];
+  history: AgentHistory;
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;
   spotIds: string[];
@@ -368,20 +442,23 @@ export function runTool(
 /* ------------------------------------------------------------------ */
 
 export function resolveEndpoint(settings: AgentSettings): string {
+  const path = settings.protocol === 'chat' ? '/chat/completions' : '/responses';
   if (settings.mode === 'proxy') {
-    const url = settings.proxyUrl.trim();
+    const url = settings.proxyUrl.trim().replace(/\/+$/, '');
     if (!url) throw new Error('还没有填写代理地址。');
     if (!/^https?:\/\//i.test(url)) throw new Error('代理地址需要以 https:// 或 http:// 开头。');
-    return url;
+    return `${url}${path}`;
   }
   if (!settings.apiKey.trim()) throw new Error('还没有填写 API Key。');
-  return `${resolveBase(settings)}/responses`;
+  return `${resolveBase(settings)}${path}`;
 }
 
-/** 直连模式的基地址：留空用官方地址，填了就用自定义网关。 */
+/** 直连模式的基地址：留空就用服务商的默认地址。 */
 export function resolveBase(settings: AgentSettings): string {
   const custom = (settings.baseUrl ?? '').trim().replace(/\/+$/, '');
-  if (!custom) return DIRECT_BASE;
+  if (!custom) {
+    return settings.provider === 'openai' ? DIRECT_BASE : providerOf(settings.provider).baseUrl;
+  }
   if (!/^https?:\/\//i.test(custom)) {
     throw new Error('API 地址需要以 https:// 或 http:// 开头。');
   }
@@ -434,6 +511,61 @@ export function extractOutputText(response: unknown): string {
   return parts.join('\n').trim();
 }
 
+/* ------------------------------------------------------------------ */
+/* Chat Completions 适配（DeepSeek / 通义 / 智谱 等 OpenAI 兼容接口）  */
+/* ------------------------------------------------------------------ */
+
+/** 统一工具定义转成 Chat Completions 结构；strict 只有 Responses 支持，这里去掉。 */
+export function toChatTools(): Record<string, unknown>[] {
+  return TOOL_SCHEMAS.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    },
+  }));
+}
+
+export function buildChatPayload(
+  settings: AgentSettings,
+  messages: ChatMessage[],
+): Record<string, unknown> {
+  return {
+    model: settings.model.trim() || providerOf(settings.provider).model,
+    messages: [{ role: 'system', content: SYSTEM_INSTRUCTIONS }, ...messages],
+    tools: toChatTools(),
+    tool_choice: 'auto',
+    stream: false,
+  };
+}
+
+export interface ChatTurn {
+  text: string;
+  toolCalls: ToolCall[];
+  rawToolCalls?: NonNullable<ChatMessage['tool_calls']>;
+}
+
+export function parseChatResponse(response: unknown): ChatTurn {
+  const choices = (response as { choices?: unknown[] } | null)?.choices;
+  const message = (Array.isArray(choices) ? choices[0] : null) as
+    | { message?: { content?: unknown; tool_calls?: unknown } }
+    | null;
+  const raw = message?.message;
+  const text = typeof raw?.content === 'string' ? raw.content.trim() : '';
+  const rawToolCalls = Array.isArray(raw?.tool_calls)
+    ? (raw?.tool_calls as NonNullable<ChatMessage['tool_calls']>)
+    : undefined;
+  const toolCalls: ToolCall[] = (rawToolCalls ?? [])
+    .filter((call) => call?.function?.name)
+    .map((call) => ({
+      name: call.function.name,
+      callId: call.id || `call_${call.function.name}`,
+      arguments: call.function.arguments ?? '{}',
+    }));
+  return { text, toolCalls, rawToolCalls };
+}
+
 function describeError(status: number, payload: unknown, settings: AgentSettings): string {
   const message = (payload as { error?: { message?: string } } | null)?.error?.message;
   const detail = message ? `：${message}` : '';
@@ -442,12 +574,14 @@ function describeError(status: number, payload: unknown, settings: AgentSettings
       return `请求被拒绝（400）${detail}`;
     case 401:
       return settings.mode === 'direct'
-        ? 'API Key 无效或已过期（401），请重新填写。'
+        ? `${providerOf(settings.provider).label} 的 API Key 无效或已过期（401），请重新填写。`
         : '代理拒绝了请求（401），检查代理上的密钥或访问口令。';
     case 403:
       return `当前密钥没有访问该模型的权限（403）${detail}`;
     case 404:
-      return `模型「${settings.model}」不存在或你的账号不可用（404），可以在设置里换成 gpt-5.6 等可用模型。`;
+      return `模型「${settings.model}」不存在或你的账号不可用（404），可以换成 ${
+        providerOf(settings.provider).models.slice(0, 2).join(' / ') || '服务商支持的模型'
+      }。`;
     case 429:
       return '触发限流或额度不足（429），稍后再试，或到 OpenAI 后台检查用量与额度。';
     default:
@@ -455,9 +589,9 @@ function describeError(status: number, payload: unknown, settings: AgentSettings
   }
 }
 
-async function callResponses(
+async function requestModel(
   settings: AgentSettings,
-  input: AgentInputItem[],
+  body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const endpoint = resolveEndpoint(settings);
   const headers: Record<string, string> = { 'content-type': 'application/json' };
@@ -474,7 +608,7 @@ async function callResponses(
     response = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify(buildRequestPayload(settings, input)),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
   } catch {
@@ -500,8 +634,83 @@ async function callResponses(
 /* 主循环                                                              */
 /* ------------------------------------------------------------------ */
 
+const EMPTY_REPLY = '（模型没有返回文字，换个问法再试一次。）';
+
+interface LoopOutcome {
+  text: string;
+  history: AgentHistory;
+  rounds: number;
+}
+
+/** Responses API（OpenAI 专用协议）的工具调用循环。 */
+async function runResponsesLoop(
+  history: AgentInputItem[],
+  userText: string,
+  settings: AgentSettings,
+  context: AgentToolContext,
+): Promise<LoopOutcome> {
+  let input: AgentInputItem[] = [...history, { role: 'user', content: userText }];
+
+  for (let round = 1; round <= MAX_ROUNDS; round += 1) {
+    const response = await requestModel(settings, buildRequestPayload(settings, input));
+    const output = (response.output as AgentInputItem[] | undefined) ?? [];
+    input = [...input, ...output];
+
+    const calls = extractToolCalls(response);
+    if (!calls.length) {
+      return { text: extractOutputText(response) || EMPTY_REPLY, history: input, rounds: round };
+    }
+
+    for (const call of calls) {
+      input.push({
+        type: 'function_call_output',
+        call_id: call.callId,
+        output: runTool(call.name, call.arguments, context),
+      });
+    }
+  }
+
+  throw new Error('工具调用轮次过多，把问题拆小一点再试。');
+}
+
+/** Chat Completions（DeepSeek、通义、智谱等 OpenAI 兼容接口）的工具调用循环。 */
+async function runChatLoop(
+  history: ChatMessage[],
+  userText: string,
+  settings: AgentSettings,
+  context: AgentToolContext,
+): Promise<LoopOutcome> {
+  let messages: ChatMessage[] = [...history, { role: 'user', content: userText }];
+
+  for (let round = 1; round <= MAX_ROUNDS; round += 1) {
+    const response = await requestModel(settings, buildChatPayload(settings, messages));
+    const turn = parseChatResponse(response);
+
+    const assistant: ChatMessage = {
+      role: 'assistant',
+      content: turn.text || null,
+    };
+    if (turn.rawToolCalls?.length) assistant.tool_calls = turn.rawToolCalls;
+    messages = [...messages, assistant];
+
+    if (!turn.toolCalls.length) {
+      return { text: turn.text || EMPTY_REPLY, history: messages, rounds: round };
+    }
+
+    for (const call of turn.toolCalls) {
+      messages.push({
+        role: 'tool',
+        tool_call_id: call.callId,
+        content: runTool(call.name, call.arguments, context),
+      });
+    }
+  }
+
+  throw new Error('工具调用轮次过多，把问题拆小一点再试。');
+}
+
 export async function runAgentTurn(params: {
-  history: AgentInputItem[];
+  history: AgentHistory;
   userText: string;
   settings: AgentSettings;
 }): Promise<AgentTurnResult> {
@@ -514,38 +723,21 @@ export async function runAgentTurn(params: {
     trace: [],
   };
 
-  let input: AgentInputItem[] = [...history, { role: 'user', content: userText }];
+  const outcome =
+    settings.protocol === 'chat'
+      ? await runChatLoop(history as ChatMessage[], userText, settings, context)
+      : await runResponsesLoop(history as AgentInputItem[], userText, settings, context);
 
-  for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-    const response = await callResponses(settings, input);
-    const output = (response.output as AgentInputItem[] | undefined) ?? [];
-    input = [...input, ...output];
-
-    const calls = extractToolCalls(response);
-    if (!calls.length) {
-      return {
-        text: extractOutputText(response) || '（模型没有返回文字，换个问法再试一次。）',
-        items: input,
-        plan: context.plan,
-        planOptions: context.planOptions,
-        spotIds: [...context.spotIds],
-        tripIds: [...context.tripIds],
-        trace: [...context.trace],
-        rounds: round,
-      };
-    }
-
-    for (const call of calls) {
-      const output1 = runTool(call.name, call.arguments, context);
-      input.push({
-        type: 'function_call_output',
-        call_id: call.callId,
-        output: output1,
-      });
-    }
-  }
-
-  throw new Error('工具调用轮次过多，把问题拆小一点再试。');
+  return {
+    text: outcome.text,
+    history: outcome.history,
+    plan: context.plan,
+    planOptions: context.planOptions,
+    spotIds: [...context.spotIds],
+    tripIds: [...context.tripIds],
+    trace: [...context.trace],
+    rounds: outcome.rounds,
+  };
 }
 
 export function describePlanOption(options: PlanOptions): string {
@@ -587,11 +779,12 @@ function errorDetail(error: unknown): string {
  */
 async function probePost(
   base: string,
+  path: string,
   model: string,
   signal: AbortSignal,
 ): Promise<{ ok: boolean; status?: number; detail?: string }> {
   try {
-    const response = await fetch(`${base}/responses`, {
+    const response = await fetch(`${base}${path}`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -645,37 +838,36 @@ export async function probeConnection(settings: AgentSettings): Promise<ProbeRes
 
       const ms = elapsed();
 
-     if (response.status === 401) {
-        const post = await probePost(base, settings.model.trim(), controller.signal);
-        if (!post.ok) {
-          return {
-            ok: false,
-            status: 401,
-            latencyMs: ms,
-            message:
-              '网络能连上 OpenAI，但浏览器发不出 POST 请求（跨域策略或安全软件拦截）。直连模式用不了，请改用代理模式；顺带一提，当前密钥也无效（401）。',
-            detail: post.detail,
-          };
-        }
+      const postPath = settings.protocol === 'chat' ? '/chat/completions' : '/responses';
+      const post = await probePost(base, postPath, settings.model.trim(), controller.signal);
+      if (!post.ok) {
+        const keyNote =
+          response.status === 401 ? '顺带一提，当前密钥也无效（401）。' : '密钥和网络本身是通的。';
+        return {
+          ok: false,
+          status: response.status,
+          latencyMs: ms,
+          message: `能连上服务器，但浏览器发不出 POST 请求（接口：${postPath}）。直连模式用不了，请改用代理模式。${keyNote}`,
+          detail: post.detail,
+        };
+      }
+
+      if (response.status === 401) {
         return { ok: false, status: 401, latencyMs: ms, message: '网络与跨域都正常，但 API Key 无效或已过期（401）。' };
       }
       if (response.status === 403) {
         return { ok: false, status: 403, latencyMs: ms, message: '网络是通的，但密钥没有权限（403）。' };
       }
-      if (!response.ok) {
-        return { ok: false, status: response.status, latencyMs: ms, message: `能连上服务器，但返回 HTTP ${response.status}。` };
-      }
-
-      const post = await probePost(base, settings.model.trim(), controller.signal);
-      if (!post.ok) {
+      if (response.status === 404) {
         return {
-          ok: false,
+          ok: true,
           status: 200,
           latencyMs: ms,
-          message:
-            '密钥和网络都没问题，但浏览器发不出 POST 请求：GET 能通、POST 被拦（跨域策略或安全软件）。直连模式在这台设备上用不了，请改用代理模式。',
-          detail: post.detail,
+          message: `连接正常：服务器可达、也能发出 POST 请求（${ms} ms）。该服务商没有 /models 接口，密钥是否有效需要发一条消息才知道。`,
         };
+      }
+      if (!response.ok) {
+        return { ok: false, status: response.status, latencyMs: ms, message: `能连上服务器，但返回 HTTP ${response.status}。` };
       }
 
       const payload = (await response.json().catch(() => null)) as { data?: { id?: string }[] } | null;

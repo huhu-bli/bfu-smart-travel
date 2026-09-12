@@ -5,12 +5,16 @@
  * 部署：见同目录 README.md（Cloudflare Workers，免费额度足够个人使用）。
  *
  * 环境变量：
- *   OPENAI_API_KEY  必填，OpenAI 密钥，用 `wrangler secret put` 写入
+ *   OPENAI_API_KEY  必填，服务商的密钥（DeepSeek / OpenAI 等），用 `wrangler secret put` 写入
+ *   UPSTREAM_BASE   选填，上游基地址，默认 https://api.openai.com/v1；
+ *                   用 DeepSeek 就填 https://api.deepseek.com
  *   APP_TOKEN       选填，设置后前端必须带 x-app-token 请求头才能调用
- *   ALLOWED_MODELS  选填，逗号分隔的模型白名单，例如 "gpt-6-astra,gpt-5.6"
+ *   ALLOWED_MODELS  选填，逗号分隔的模型白名单，例如 "deepseek-chat,gpt-5.6"
  */
 
-const UPSTREAM = 'https://api.openai.com/v1/responses';
+const DEFAULT_UPSTREAM = 'https://api.openai.com/v1';
+/** 允许转发的接口路径：Responses 与 Chat Completions 各一个。 */
+const ALLOWED_PATHS = ['/responses', '/chat/completions'];
 
 const CORS_HEADERS = {
   'access-control-allow-origin': '*',
@@ -44,6 +48,14 @@ export default {
       return json({ error: { message: '访问口令不正确。' } }, 401);
     }
 
+    const path = new URL(request.url).pathname.replace(/\/+$/, '');
+    if (!ALLOWED_PATHS.includes(path)) {
+      return json(
+        { error: { message: `不支持的接口路径 ${path}，只允许 ${ALLOWED_PATHS.join(' 或 ')}。` } },
+        404,
+      );
+    }
+
     const raw = await request.text();
     if (raw.length > 200_000) {
       return json({ error: { message: '请求体过大。' } }, 413);
@@ -63,17 +75,27 @@ export default {
       }
     }
 
-    // 只允许 Responses API 里我们需要的字段，避免代理被当成通用转发器。
-    const body = JSON.stringify({
-      model: payload.model,
-      instructions: payload.instructions,
-      input: payload.input,
-      tools: payload.tools,
-      tool_choice: payload.tool_choice ?? 'auto',
-      parallel_tool_calls: payload.parallel_tool_calls ?? false,
-    });
+    // 只转发我们需要的字段，避免代理被当成通用转发器。
+    const upstreamBase = (env.UPSTREAM_BASE || DEFAULT_UPSTREAM).replace(/\/+$/, '');
+    const body =
+      path === '/responses'
+        ? JSON.stringify({
+            model: payload.model,
+            instructions: payload.instructions,
+            input: payload.input,
+            tools: payload.tools,
+            tool_choice: payload.tool_choice ?? 'auto',
+            parallel_tool_calls: payload.parallel_tool_calls ?? false,
+          })
+        : JSON.stringify({
+            model: payload.model,
+            messages: payload.messages,
+            tools: payload.tools,
+            tool_choice: payload.tool_choice ?? 'auto',
+            stream: false,
+          });
 
-    const upstream = await fetch(UPSTREAM, {
+    const upstream = await fetch(`${upstreamBase}${path}`, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${env.OPENAI_API_KEY}`,
