@@ -10,6 +10,8 @@ export type AgentMode = 'direct' | 'proxy';
 export interface AgentSettings {
   mode: AgentMode;
   apiKey: string;
+  /** 直连模式下的 API 地址，留空即官方地址。可填自建中转或其他兼容网关。 */
+  baseUrl: string;
   proxyUrl: string;
   /** 代理模式下的访问口令，对应 Worker 的 APP_TOKEN。前端可见，只用于挡住随手滥用。 */
   proxyToken: string;
@@ -19,6 +21,7 @@ export interface AgentSettings {
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   mode: 'direct',
   apiKey: '',
+  baseUrl: '',
   proxyUrl: '',
   proxyToken: '',
   model: 'gpt-6-astra',
@@ -26,7 +29,7 @@ export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
 
 export const MODEL_HINTS = ['gpt-6-astra', 'gpt-5.6', 'gpt-5.4'];
 
-const DIRECT_ENDPOINT = 'https://api.openai.com/v1/responses';
+const DIRECT_BASE = 'https://api.openai.com/v1';
 const MAX_ROUNDS = 6;
 const REQUEST_TIMEOUT_MS = 60_000;
 
@@ -372,7 +375,17 @@ export function resolveEndpoint(settings: AgentSettings): string {
     return url;
   }
   if (!settings.apiKey.trim()) throw new Error('还没有填写 API Key。');
-  return DIRECT_ENDPOINT;
+  return `${resolveBase(settings)}/responses`;
+}
+
+/** 直连模式的基地址：留空用官方地址，填了就用自定义网关。 */
+export function resolveBase(settings: AgentSettings): string {
+  const custom = (settings.baseUrl ?? '').trim().replace(/\/+$/, '');
+  if (!custom) return DIRECT_BASE;
+  if (!/^https?:\/\//i.test(custom)) {
+    throw new Error('API 地址需要以 https:// 或 http:// 开头。');
+  }
+  return custom;
 }
 
 export function buildRequestPayload(
@@ -465,10 +478,14 @@ async function callResponses(
       signal: controller.signal,
     });
   } catch {
+    const hint =
+      settings.mode === 'direct'
+        ? `如果「测试连接」也失败，说明这台设备访问不了 ${resolveBase(settings).replace(/\/+$/, '')}：常见原因是被网络环境拦截（校园网、公司网、运营商）、浏览器插件拦截，或需要用代理模式。`
+        : '请确认代理已部署成功、地址拼写正确，并且设置了 CORS 响应头。';
     throw new Error(
       settings.mode === 'direct'
-        ? '网络请求失败：可能是跨域被拦截、密钥无效或网络不通。可以改用代理模式，或换一个网络再试。'
-        : '网络请求失败：代理地址不可达，或没有正确返回 CORS 头。检查代理是否部署成功。',
+        ? `网络请求失败：浏览器没能把请求发出去。${hint}`
+        : `网络请求失败：代理地址不可达。${hint}`,
     );
   } finally {
     globalThis.clearTimeout(timer);
@@ -545,4 +562,119 @@ export function describePlanOption(options: PlanOptions): string {
 
 export function formatPlanSummary(plan: RoutePlan): string {
   return `${plan.title}（${formatDuration(plan.totalMinutes)} / 约 ${plan.totalMeters} 米）`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 连接自检                                                            */
+/* ------------------------------------------------------------------ */
+
+export interface ProbeResult {
+  ok: boolean;
+  status?: number;
+  latencyMs: number;
+  message: string;
+  detail?: string;
+}
+
+function errorDetail(error: unknown): string {
+  if (error instanceof Error) return `${error.name}: ${error.message}`;
+  return String(error);
+}
+
+/**
+ * 用一次廉价请求判断「到底是网络不通，还是密钥/配置有问题」。
+ * 直连模式打 /models（不会产生生成费用），代理模式打一次 GET。
+ */
+export async function probeConnection(settings: AgentSettings): Promise<ProbeResult> {
+  const started = Date.now();
+  const elapsed = () => Date.now() - started;
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    if (settings.mode === 'direct') {
+      let base: string;
+      try {
+        base = resolveBase(settings);
+      } catch (error) {
+        return { ok: false, latencyMs: 0, message: errorDetail(error) };
+      }
+      if (!settings.apiKey.trim()) {
+        return { ok: false, latencyMs: 0, message: '先填写 API Key 再测试。' };
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(`${base}/models`, {
+          headers: { authorization: `Bearer ${settings.apiKey.trim()}` },
+          signal: controller.signal,
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          latencyMs: elapsed(),
+          message: `连不上 ${base}：这台设备的网络到不了该地址，直连模式用不了。`,
+          detail: errorDetail(error),
+        };
+      }
+
+      const ms = elapsed();
+      if (response.status === 401) {
+        return { ok: false, status: 401, latencyMs: ms, message: '网络是通的，但 API Key 无效或已过期（401）。' };
+      }
+      if (response.status === 403) {
+        return { ok: false, status: 403, latencyMs: ms, message: '网络是通的，但密钥没有权限（403）。' };
+      }
+      if (!response.ok) {
+        return { ok: false, status: response.status, latencyMs: ms, message: `能连上服务器，但返回 HTTP ${response.status}。` };
+      }
+
+      const payload = (await response.json().catch(() => null)) as { data?: { id?: string }[] } | null;
+      const ids = (payload?.data ?? [])
+        .map((item) => item?.id)
+        .filter((id): id is string => typeof id === 'string');
+      const model = settings.model.trim();
+      if (model && ids.length && !ids.includes(model)) {
+        return {
+          ok: true,
+          status: 200,
+          latencyMs: ms,
+          message: `网络与密钥都正常（${ms} ms），但可用模型里没有「${model}」，建议换成 ${ids.slice(0, 3).join(' / ')}。`,
+        };
+      }
+      return { ok: true, status: 200, latencyMs: ms, message: `连接正常，密钥有效（${ms} ms）。` };
+    }
+
+    const url = settings.proxyUrl.trim();
+    if (!url) return { ok: false, latencyMs: 0, message: '先填写代理地址再测试。' };
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: settings.proxyToken.trim() ? { 'x-app-token': settings.proxyToken.trim() } : {},
+        signal: controller.signal,
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        latencyMs: elapsed(),
+        message: `代理地址不可达：${url}`,
+        detail: errorDetail(error),
+      };
+    }
+
+    const ms = elapsed();
+    if (response.status === 401) {
+      return { ok: false, status: 401, latencyMs: ms, message: '代理可达，但访问口令不正确（401）。' };
+    }
+    return {
+      ok: true,
+      status: response.status,
+      latencyMs: ms,
+      message: `代理可达（HTTP ${response.status}，${ms} ms），并且返回了跨域头。`,
+    };
+  } finally {
+    globalThis.clearTimeout(timer);
+  }
 }

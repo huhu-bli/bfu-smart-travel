@@ -46,6 +46,20 @@ npm run typecheck # TypeScript 类型检查
 
 密钥只写入当前浏览器的 `localStorage`，本项目没有后端，也没有任何地方会把它传出去。**请不要把密钥写进仓库或截图分享。**
 
+### 连不上怎么办
+
+设置面板里有「测试连接」按钮，它打一次不产生生成费用的请求，直接把问题定位到具体环节：
+
+| 提示 | 含义 | 处理 |
+| --- | --- | --- |
+| 连不上 `https://api.openai.com/v1` | 这台设备的网络到不了 OpenAI | 换网络，或改用代理模式；若代理域名也被拦，给 Worker 绑一个自己的域名 |
+| 网络是通的，但 API Key 无效（401） | 网络没问题，是密钥 | 换一个有效的密钥 |
+| 可用模型里没有 `xxx` | 网络和密钥都正常 | 换成提示里列出的可用模型 |
+
+网络到不了 OpenAI 时，浏览器只会报一个笼统的「网络请求失败」，所以先点测试连接再排查，能省很多时间。
+
+如果你已经有自己的 OpenAI 兼容中转，可以在「API 地址」里填它的 `/v1` 地址（例如 `https://your-relay.com/v1`），留空就用官方地址。
+
 ### 代理模式
 
 见 [`worker/README.md`](worker/README.md)，三步：`wrangler login` → `wrangler secret put OPENAI_API_KEY` → `wrangler deploy`。拿到 `https://xxx.workers.dev` 后填进设置面板即可，建议同时设置 `APP_TOKEN` 访问口令。

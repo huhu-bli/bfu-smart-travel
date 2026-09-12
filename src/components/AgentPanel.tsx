@@ -6,9 +6,11 @@ import {
   MODEL_HINTS,
   describePlanOption,
   formatPlanSummary,
+  probeConnection,
   runAgentTurn,
   type AgentInputItem,
   type AgentSettings,
+  type ProbeResult,
 } from '../lib/agent';
 import { useLocalStorage } from '../lib/storage';
 import type { PlanOptions, RoutePlan } from '../types';
@@ -51,6 +53,8 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [probing, setProbing] = useState(false);
+  const [probe, setProbe] = useState<ProbeResult | null>(null);
   const historyRef = useRef<AgentInputItem[]>([]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -114,6 +118,22 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     setTurns([]);
   };
 
+  const runProbe = async () => {
+    setProbing(true);
+    setProbe(null);
+    try {
+      setProbe(await probeConnection(settings));
+    } catch (error) {
+      setProbe({
+        ok: false,
+        latencyMs: 0,
+        message: error instanceof Error ? error.message : '测试失败。',
+      });
+    } finally {
+      setProbing(false);
+    }
+  };
+
   return (
     <>
       {open ? null : (
@@ -165,16 +185,28 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
               </div>
 
               {settings.mode === 'direct' ? (
-                <label className="agent-field">
-                  <span>OpenAI API Key</span>
-                  <input
-                    type="password"
-                    value={settings.apiKey}
-                    placeholder="sk-..."
-                    autoComplete="off"
-                    onChange={(event) => setSettings((prev) => ({ ...prev, apiKey: event.target.value }))}
-                  />
-                </label>
+                <>
+                  <label className="agent-field">
+                    <span>OpenAI API Key</span>
+                    <input
+                      type="password"
+                      value={settings.apiKey}
+                      placeholder="sk-..."
+                      autoComplete="off"
+                      onChange={(event) => setSettings((prev) => ({ ...prev, apiKey: event.target.value }))}
+                    />
+                  </label>
+                  <label className="agent-field">
+                    <span>API 地址（留空用官方，可填自建中转）</span>
+                    <input
+                      type="url"
+                      value={settings.baseUrl}
+                      placeholder="https://api.openai.com/v1"
+                      autoComplete="off"
+                      onChange={(event) => setSettings((prev) => ({ ...prev, baseUrl: event.target.value }))}
+                    />
+                  </label>
+                </>
               ) : (
                 <>
                   <label className="agent-field">
@@ -220,6 +252,19 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
                   ? '密钥只保存在这台设备的浏览器里，不会上传到本项目的服务器（本项目也没有服务器）。但浏览器直连会暴露给使用者，公开分享请改用代理模式。'
                   : '代理模式下密钥保存在你的 Serverless 环境变量里，浏览器只请求代理地址。部署方法见仓库 README 的「AI 行程助手」章节。'}
               </p>
+
+              <div className="agent-probe">
+                <button type="button" className="ghost-btn" onClick={() => void runProbe()} disabled={probing}>
+                  {probing ? '测试中…' : '测试连接'}
+                </button>
+                {probe ? (
+                  <span className={probe.ok ? 'probe-result is-ok' : 'probe-result is-bad'}>
+                    {probe.ok ? '✅ ' : '❌ '}
+                    {probe.message}
+                  </span>
+                ) : null}
+              </div>
+              {probe?.detail ? <p className="agent-note">技术细节：{probe.detail}</p> : null}
             </div>
           ) : null}
 

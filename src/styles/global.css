@@ -1882,6 +1882,33 @@ a {
   color: var(--muted);
 }
 
+.agent-probe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.agent-probe .ghost-btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.probe-result {
+  font-size: 11.5px;
+  line-height: 1.6;
+  flex: 1;
+  min-width: 160px;
+}
+
+.probe-result.is-ok {
+  color: var(--brand-dark);
+}
+
+.probe-result.is-bad {
+  color: #a8452a;
+}
+
 .agent-body {
   flex: 1;
   min-height: 180px;
