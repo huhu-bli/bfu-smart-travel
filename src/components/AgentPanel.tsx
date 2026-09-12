@@ -172,13 +172,17 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
 
   /** 切换服务商：地址、模型、协议一起换，并重置上下文（两套协议的历史不通用）。 */
   const switchProvider = (id: AgentProviderId) => {
+    if (id === settings.provider) return;
     const preset = providerOf(id);
+    const hadKey = settings.apiKey.trim().length > 0;
     setSettings((prev) => ({
       ...prev,
       provider: id,
       protocol: preset.protocol,
       baseUrl: preset.baseUrl,
       model: preset.model || prev.model,
+      // 各家密钥不通用，切换时清掉，避免把 A 家的密钥发给 B 家。
+      apiKey: '',
     }));
     setProbe(null);
     if (turns.length || historyRef.current.length) {
@@ -188,9 +192,11 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
         {
           id: nextId(),
           role: 'assistant',
-          text: `已切换到 ${preset.label}，对话上下文已重置。`,
+          text: `已切换到 ${preset.label}，对话上下文已重置。${hadKey ? '原来的密钥不属于这家服务商，已清空，请重新填写。' : ''}`,
         },
       ]);
+    } else if (hadKey) {
+      historyRef.current = [];
     }
   };
 
