@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import AgentPanel from './components/AgentPanel';
 import CampusMap from './components/CampusMap';
 import Checklist from './components/Checklist';
 import Footer from './components/Footer';
@@ -13,7 +14,7 @@ import { SPOTS, SPOT_MAP } from './data/spots';
 import { TRIPS } from './data/trips';
 import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
-import type { InterestId, PaceId, RoutePlan } from './types';
+import type { InterestId, PaceId, PlanOptions, RoutePlan } from './types';
 
 const REPO_URL = 'https://github.com/huhu-bli/bfu-smart-travel';
 
@@ -39,10 +40,15 @@ export default function App() {
   const [plan, setPlan] = useState<RoutePlan>(() => buildRoute(SPOTS, options));
   const [dirty, setDirty] = useState(false);
   const firstRender = useRef(true);
+  const skipDirty = useRef(false);
 
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
+      return;
+    }
+    if (skipDirty.current) {
+      skipDirty.current = false;
       return;
     }
     setDirty(true);
@@ -59,6 +65,26 @@ export default function App() {
   const selectStart = (id: string) => {
     setStartId(id);
     setTab('planner');
+  };
+
+  /** 由 AI 助手生成的路线：同步回规划器控件，避免出现“参数不一致”的割裂感。 */
+  const applyPlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
+    skipDirty.current = true;
+    setPlan(nextPlan);
+    setDirty(false);
+    setInterestIds(nextOptions.interests);
+    setPaceId(nextOptions.pace.id);
+    setStartId(nextOptions.startId);
+    const closest = DURATIONS.reduce((best, item) =>
+      Math.abs(item.minutes - nextOptions.minutes) < Math.abs(best.minutes - nextOptions.minutes)
+        ? item
+        : best,
+    );
+    setDurationId(closest.id);
+    setTab('planner');
+    window.setTimeout(() => {
+      document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
 
   const activeSpot = activeSpotId ? SPOT_MAP[activeSpotId] : null;
@@ -183,6 +209,13 @@ export default function App() {
       </main>
 
       <Footer repoUrl={REPO_URL} />
+
+      <AgentPanel
+        onSelectSpot={setActiveSpotId}
+        onApplyPlan={applyPlanFromAgent}
+        onOpenMap={() => setTab('map')}
+        onOpenTrips={() => setTab('trips')}
+      />
 
       {activeSpot ? (
         <SpotDetail

@@ -13,6 +13,7 @@
 | 点位图鉴 | 19 个校园点位，支持关键词搜索、兴趣筛选、收藏（保存在浏览器本地） |
 | 周边一日游 | 奥森、圆明园、颐和园、香山、鹫峰实验林场、五道口 6 条线路，含时间轴、预算、交通与提示 |
 | 出行清单 | 五大类打包清单，勾选进度自动保存到 `localStorage` |
+| AI 行程助手 | 右下角对话面板，用自然语言排路线、讲点位、推校外行程；支持「直连（自用）」与「代理（可公开）」双模式 |
 
 ## 快速开始
 
@@ -23,6 +24,44 @@ npm run build    # 构建到 dist/
 npm run preview  # 预览构建产物
 npm run typecheck # TypeScript 类型检查
 ```
+
+## AI 行程助手（Agent）
+
+右下角的小机器人就是入口。它用 OpenAI 的 Responses API + 工具调用，把大模型接到本项目已有的数据和算法上：模型负责理解需求、选参数，路线和点位内容全部由本地函数产出，不会出现模型编造点位或时间的情况。
+
+### 两种模式
+
+| 模式 | 密钥位置 | 适用 | 怎么配 |
+| --- | --- | --- | --- |
+| 直连（自用） | 浏览器 `localStorage` | 自己用、本地演示 | 设置里粘贴 API Key |
+| 代理（可公开） | Serverless 环境变量 | 分享给同学、公开部署 | 部署 `worker/`，设置里填代理地址 |
+
+直连零部署，但密钥在使用者的浏览器里；代理需要多部署一个 Cloudflare Worker，密钥永远不出服务端。两种模式在同一个面板里切换。
+
+### 直连模式
+
+1. 到 [OpenAI API keys](https://platform.openai.com/settings/organization/api-keys) 建一个密钥（建议单独建一个，方便随时吊销）。
+2. 打开应用右下角「AI 行程助手」→ ⚙ → 选 **直连（自用）** → 粘贴密钥。
+3. 直接提问，例如「我只有 1 小时，从东门进，怎么逛最值？」
+
+密钥只写入当前浏览器的 `localStorage`，本项目没有后端，也没有任何地方会把它传出去。**请不要把密钥写进仓库或截图分享。**
+
+### 代理模式
+
+见 [`worker/README.md`](worker/README.md)，三步：`wrangler login` → `wrangler secret put OPENAI_API_KEY` → `wrangler deploy`。拿到 `https://xxx.workers.dev` 后填进设置面板即可，建议同时设置 `APP_TOKEN` 访问口令。
+
+### 暴露给模型的工具
+
+| 工具 | 作用 | 对应的本地实现 |
+| --- | --- | --- |
+| `list_spots` | 按兴趣或关键词查点位、拿点位 id | `src/data/spots.ts` |
+| `build_route` | 生成路线，返回有序站点与时间 | `src/lib/planner.ts` 的 `buildRoute()` |
+| `get_spot_detail` | 取某点位的讲解、亮点、最佳时段、贴士 | `src/data/spots.ts` |
+| `suggest_trip` | 推荐校外半日/一日行程 | `src/data/trips.ts` |
+
+模型返回工具调用后，前端执行本地函数，把结果作为 `function_call_output` 回传，再拿最终回复——就是官方文档里的标准五步循环。工具使用 `strict: true`，并要求 `additionalProperties: false`、所有字段都出现在 `required` 里；同时设了 `parallel_tool_calls: false`，避免一次并发调用多个工具。
+
+模型名在设置里可改，默认 `gpt-6-astra`（官方文档指出该模型的工具调用需走 Responses API），也可以换成 `gpt-5.6` 等账号可用的模型。
 
 ## 部署到 GitHub Pages
 
@@ -47,12 +86,14 @@ bfu-smart-travel/
 │  │  └─ interests.ts             # 兴趣标签、时长、步速、门岗
 │  ├─ lib/
 │  │  ├─ planner.ts               # 路线生成算法
+│  │  ├─ agent.ts                 # 工具定义 + Responses API 调用循环
 │  │  └─ storage.ts               # localStorage 状态钩子
 │  ├─ styles/global.css
 │  └─ types.ts
 ├─ index.html
 ├─ vite.config.ts
-└─ tsconfig.json
+├─ tsconfig.json
+└─ worker/                        # 代理模式下使用的 Cloudflare Worker
 ```
 
 ## 路线是怎么算出来的
