@@ -582,6 +582,31 @@ function errorDetail(error: unknown): string {
 }
 
 /**
+ * 用一把无效密钥试发一次 POST：不花钱，但能判断浏览器到底能不能发出 POST。
+ * 很多网络环境（校园网、安全客户端、浏览器插件）会放行 GET、拦掉 POST。
+ */
+async function probePost(
+  base: string,
+  model: string,
+  signal: AbortSignal,
+): Promise<{ ok: boolean; status?: number; detail?: string }> {
+  try {
+    const response = await fetch(`${base}/responses`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: 'Bearer sk-not-a-real-key-probe',
+      },
+      body: JSON.stringify({ model: model || 'gpt-5.6', input: 'ping' }),
+      signal,
+    });
+    return { ok: true, status: response.status };
+  } catch (error) {
+    return { ok: false, detail: errorDetail(error) };
+  }
+}
+
+/**
  * 用一次廉价请求判断「到底是网络不通，还是密钥/配置有问题」。
  * 直连模式打 /models（不会产生生成费用），代理模式打一次 GET。
  */
@@ -619,14 +644,38 @@ export async function probeConnection(settings: AgentSettings): Promise<ProbeRes
       }
 
       const ms = elapsed();
-      if (response.status === 401) {
-        return { ok: false, status: 401, latencyMs: ms, message: '网络是通的，但 API Key 无效或已过期（401）。' };
+
+     if (response.status === 401) {
+        const post = await probePost(base, settings.model.trim(), controller.signal);
+        if (!post.ok) {
+          return {
+            ok: false,
+            status: 401,
+            latencyMs: ms,
+            message:
+              '网络能连上 OpenAI，但浏览器发不出 POST 请求（跨域策略或安全软件拦截）。直连模式用不了，请改用代理模式；顺带一提，当前密钥也无效（401）。',
+            detail: post.detail,
+          };
+        }
+        return { ok: false, status: 401, latencyMs: ms, message: '网络与跨域都正常，但 API Key 无效或已过期（401）。' };
       }
       if (response.status === 403) {
         return { ok: false, status: 403, latencyMs: ms, message: '网络是通的，但密钥没有权限（403）。' };
       }
       if (!response.ok) {
         return { ok: false, status: response.status, latencyMs: ms, message: `能连上服务器，但返回 HTTP ${response.status}。` };
+      }
+
+      const post = await probePost(base, settings.model.trim(), controller.signal);
+      if (!post.ok) {
+        return {
+          ok: false,
+          status: 200,
+          latencyMs: ms,
+          message:
+            '密钥和网络都没问题，但浏览器发不出 POST 请求：GET 能通、POST 被拦（跨域策略或安全软件）。直连模式在这台设备上用不了，请改用代理模式。',
+          detail: post.detail,
+        };
       }
 
       const payload = (await response.json().catch(() => null)) as { data?: { id?: string }[] } | null;
@@ -642,7 +691,12 @@ export async function probeConnection(settings: AgentSettings): Promise<ProbeRes
           message: `网络与密钥都正常（${ms} ms），但可用模型里没有「${model}」，建议换成 ${ids.slice(0, 3).join(' / ')}。`,
         };
       }
-      return { ok: true, status: 200, latencyMs: ms, message: `连接正常，密钥有效（${ms} ms）。` };
+      return {
+        ok: true,
+        status: 200,
+        latencyMs: ms,
+        message: `连接正常：密钥有效、浏览器也能发出 POST 请求（${ms} ms）。`,
+      };
     }
 
     const url = settings.proxyUrl.trim();
