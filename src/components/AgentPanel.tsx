@@ -183,6 +183,15 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     }
   };
 
+  /** 一键回到初始配置：换服务商、密钥填错、想把上下文清干净时用。 */
+  const resetSettings = () => {
+    setSettings(DEFAULT_AGENT_SETTINGS);
+    historyRef.current = [];
+    setTurns([]);
+    setProbe(null);
+    setSettingsOpen(true);
+  };
+
   return (
     <>
       {open ? null : (
@@ -324,6 +333,9 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
               <div className="agent-probe">
                 <button type="button" className="ghost-btn" onClick={() => void runProbe()} disabled={probing}>
                   {probing ? '测试中…' : '测试连接'}
+                </button>
+                <button type="button" className="ghost-btn" onClick={resetSettings}>
+                  清空配置
                 </button>
                 {probe ? (
                   <span className={probe.ok ? 'probe-result is-ok' : 'probe-result is-bad'}>
