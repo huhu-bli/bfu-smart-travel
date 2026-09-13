@@ -124,6 +124,23 @@ export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   model: SITE_PRESET.model,
 };
 
+/**
+ * 站点内置密钥的直连配置：代理不通时（workers.dev 在国内时常抽风）可以兜底。
+ * 只有配置了 VITE_AGENT_API_KEY 才存在；注意密钥会随网页公开。
+ */
+export const SITE_DIRECT_FALLBACK: AgentSettings | null = SITE_API_KEY
+  ? {
+      mode: 'direct',
+      provider: SITE_PROVIDER,
+      protocol: SITE_PRESET.protocol,
+      apiKey: SITE_API_KEY,
+      baseUrl: SITE_PRESET.baseUrl,
+      proxyUrl: '',
+      proxyToken: '',
+      model: SITE_PRESET.model,
+    }
+  : null;
+
 const DIRECT_BASE = 'https://api.openai.com/v1';
 const MAX_ROUNDS = 6;
 const REQUEST_TIMEOUT_MS = 60_000;

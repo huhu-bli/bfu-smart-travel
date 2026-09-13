@@ -5,6 +5,7 @@ import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
   DEFAULT_AGENT_SETTINGS,
   PROVIDERS,
+  SITE_DIRECT_FALLBACK,
   describePlanOption,
   formatPlanSummary,
   probeConnection,
@@ -108,6 +109,32 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     if (!configured) setSettingsOpen(true);
   }, [configured]);
 
+  /**
+   * 代理不通时（workers.dev 在国内会时断时续）先重试一次，再失败就改用站点内置密钥直连，
+   * 都失败才回退到内置助手。
+   */
+  const runWithFallback = async (question: string) => {
+    const attempt = (activeSettings: AgentSettings) =>
+      runAgentTurn({ history: historyRef.current, userText: question, settings: activeSettings });
+    const isNetworkFailure = (error: unknown) =>
+      error instanceof Error && error.message.includes('网络请求失败');
+
+    try {
+      return await attempt(settings);
+    } catch (error) {
+      if (!isNetworkFailure(error)) throw error;
+      try {
+        return await attempt(settings);
+      } catch (retryError) {
+        if (settings.mode === 'proxy' && SITE_DIRECT_FALLBACK && SITE_DIRECT_FALLBACK.apiKey) {
+          const result = await attempt(SITE_DIRECT_FALLBACK);
+          return { ...result, trace: ['代理不通，已自动改用直连', ...result.trace] };
+        }
+        throw retryError;
+      }
+    }
+  };
+
   const send = async (text: string) => {
     const question = text.trim();
     if (!question || busy) return;
@@ -141,11 +168,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     }
 
     try {
-      const result = await runAgentTurn({
-        history: historyRef.current,
-        userText: question,
-        settings,
-      });
+      const result = await runWithFallback(question);
       historyRef.current = result.history;
       setTurns((prev) => [
         ...prev,
