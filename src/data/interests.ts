@@ -27,7 +27,7 @@ export const PACES: PaceOption[] = [
 ];
 
 /** 出发门岗，用于计算起点。 */
-export const GATE_IDS = ['north-gate', 'east-gate', 'south-gate', 'west-gate'];
+export const GATE_IDS = ['gate-main', 'gate-north', 'gate-southeast', 'gate-southwest'];
 
 export function gatesOf(spots: Spot[]): Spot[] {
   return GATE_IDS.map((id) => spots.find((spot) => spot.id === id)).filter(

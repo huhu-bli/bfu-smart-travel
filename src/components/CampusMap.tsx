@@ -1,3 +1,11 @@
+import {
+  CAMPUS_ATTRIBUTION,
+  CAMPUS_BOUNDARY,
+  CAMPUS_BUILDINGS,
+  CAMPUS_GREENS,
+  CAMPUS_ROADS,
+  CAMPUS_VIEWBOX,
+} from '../data/campusGeometry';
 import type { RoutePlan, Spot } from '../types';
 
 interface Props {
@@ -8,40 +16,49 @@ interface Props {
   compact?: boolean;
 }
 
-const ROADS = [
-  'M 500 30 L 500 250 L 470 590',
-  'M 55 300 L 945 300',
-  'M 560 120 L 560 300',
-  'M 470 580 L 650 520',
-  'M 620 300 L 800 455',
-  'M 200 120 C 400 55, 700 75, 865 180 C 945 275, 905 490, 760 545 C 600 605, 370 595, 235 545 C 115 480, 85 300, 118 220 C 138 168, 158 140, 200 120',
-];
+/** "x,y x,y ..." → SVG path */
+function toPath(points: string, close = true): string {
+  const pairs = points.split(' ').filter(Boolean);
+  if (!pairs.length) return '';
+  const [first, ...rest] = pairs;
+  const head = `M ${first.replace(',', ' ')}`;
+  const body = rest.map((pair) => ` L ${pair.replace(',', ' ')}`).join('');
+  return close ? `${head}${body} Z` : `${head}${body}`;
+}
 
-const CANVAS = { width: 1000, height: 620 };
+const GREENS = CAMPUS_GREENS.map((green) => toPath(green.points));
+const BUILDINGS = CAMPUS_BUILDINGS.map((building) => toPath(building.points));
+const ROADS = CAMPUS_ROADS.map((road) => {
+  const path = toPath(road.points, false);
+  const wide = road.kind === 'secondary' || road.kind === 'tertiary' || road.kind === 'residential';
+  return { path, wide };
+});
 
-/** 紧凑模式只展示路线范围，自动放大，避免小尺寸下文字过小。 */
+/** 紧凑地图只显示路线范围，自动放大，避免小尺寸下文字过小。 */
 function routeViewBox(spots: Spot[]): string {
-  if (!spots.length) return `0 0 ${CANVAS.width} ${CANVAS.height}`;
-
+  const size = CAMPUS_VIEWBOX;
+  if (!spots.length) return `0 0 ${size} ${size}`;
   const xs = spots.map((spot) => spot.x);
   const ys = spots.map((spot) => spot.y);
-  let left = Math.min(...xs) - 120;
-  let top = Math.min(...ys) - 110;
-  const right = Math.max(...xs) + 120;
-  const bottom = Math.max(...ys) + 110;
+  const minWidth = 360;
+  const minHeight = 360;
+  const pad = 90;
+  let left = Math.min(...xs) - pad;
+  let top = Math.min(...ys) - pad;
+  const right = Math.max(...xs) + pad;
+  const bottom = Math.max(...ys) + pad;
 
-  if (right - left < 460) {
+  if (right - left < minWidth) {
     const center = (left + right) / 2;
-    left = Math.max(0, Math.min(center - 230, CANVAS.width - 460));
+    left = Math.max(0, Math.min(center - minWidth / 2, size - minWidth));
   }
-  if (bottom - top < 340) {
+  if (bottom - top < minHeight) {
     const center = (top + bottom) / 2;
-    top = Math.max(0, Math.min(center - 170, CANVAS.height - 340));
+    top = Math.max(0, Math.min(center - minHeight / 2, size - minHeight));
   }
 
-  const width = Math.min(Math.max(right - left, 460), CANVAS.width - left);
-  const height = Math.min(Math.max(bottom - top, 340), CANVAS.height - top);
-
+  const width = Math.min(Math.max(right - left, minWidth), size - left);
+  const height = Math.min(Math.max(bottom - top, minHeight), size - top);
   return `${Math.round(left)} ${Math.round(top)} ${Math.round(width)} ${Math.round(height)}`;
 }
 
@@ -53,51 +70,52 @@ export default function CampusMap({ spots, plan, activeId, onSelect, compact = f
 
   const visible = compact && plan ? spots.filter((spot) => routeIds.has(spot.id)) : spots;
   const routeKey = routeSpots.map((spot) => spot.id).join('-');
-  const viewBox = compact ? routeViewBox(routeSpots) : `0 0 ${CANVAS.width} ${CANVAS.height}`;
+  const viewBox = compact
+    ? routeViewBox(routeSpots)
+    : `0 0 ${CAMPUS_VIEWBOX} ${CAMPUS_VIEWBOX}`;
 
   return (
     <div className={compact ? 'map-shell map-shell--compact' : 'map-shell'}>
-      <svg viewBox={viewBox} role="img" aria-label="北京林业大学校园示意图">
+      <svg
+        viewBox={viewBox}
+        role="img"
+        aria-label="北京林业大学校园地图（数据来自 OpenStreetMap）"
+      >
         <defs>
           <linearGradient id="map-bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#eef6ee" />
-            <stop offset="1" stopColor="#e3efe4" />
+            <stop offset="0" stopColor="#f3f8f2" />
+            <stop offset="1" stopColor="#e9f2e8" />
           </linearGradient>
-          <pattern id="map-dots" width="26" height="26" patternUnits="userSpaceOnUse">
-            <circle cx="2" cy="2" r="1.1" fill="#cfe2d2" />
-          </pattern>
         </defs>
 
-        <rect x="0" y="0" width={CANVAS.width} height={CANVAS.height} fill="url(#map-bg)" />
-        <rect x="0" y="0" width={CANVAS.width} height={CANVAS.height} fill="url(#map-dots)" opacity="0.7" />
-        <rect
-          x="38"
-          y="18"
-          width="924"
-          height="584"
-          rx="52"
-          fill="#ffffff"
-          fillOpacity="0.55"
-          stroke="#bcd6c1"
-          strokeWidth="3"
-          strokeDasharray="10 8"
-        />
+        <rect x="-200" y="-200" width={CAMPUS_VIEWBOX + 400} height={CAMPUS_VIEWBOX + 400} fill="url(#map-bg)" />
 
-        {ROADS.map((road) => (
-          <path key={`o-${road}`} d={road} fill="none" stroke="#cfe0d2" strokeWidth="20" strokeLinecap="round" />
-        ))}
-        {ROADS.map((road) => (
-          <path key={`i-${road}`} d={road} fill="none" stroke="#ffffff" strokeWidth="13" strokeLinecap="round" />
+        {/* 绿地 */}
+        {GREENS.map((path, index) => (
+          <path key={`g-${index}`} d={path} fill="#d8ead3" stroke="#c7dfc2" strokeWidth="0.8" />
         ))}
 
-        <ellipse cx="545" cy="212" rx="105" ry="66" fill="#cfe9cd" opacity="0.85" />
-        <ellipse cx="215" cy="462" rx="62" ry="44" fill="#dcefcf" opacity="0.9" />
-        <ellipse cx="120" cy="545" rx="58" ry="40" fill="#e6f2d5" opacity="0.9" />
-        <path d="M 60 560 C 200 470, 340 520, 470 460" fill="none" stroke="#bfe0f0" strokeWidth="14" strokeLinecap="round" opacity="0.75" />
+        {/* 校园边界 */}
+        <path d={toPath(CAMPUS_BOUNDARY)} fill="#ffffff" fillOpacity="0.5" stroke="#8fb69a" strokeWidth="2.5" strokeDasharray="9 7" />
 
-        <text x="52" y="52" className="map-region">教学 · 科研区</text>
-        <text x="905" y="600" textAnchor="end" className="map-region">生活 · 运动区</text>
-        <text x="948" y="292" textAnchor="end" className="map-region">清华东路方向</text>
+        {/* 道路 */}
+        {ROADS.map((road, index) => (
+          <path key={`ro-${index}`} d={road.path} fill="none" stroke="#e3e9e2" strokeWidth={road.wide ? 11 : 6} strokeLinecap="round" />
+        ))}
+        {ROADS.map((road, index) => (
+          <path key={`ri-${index}`} d={road.path} fill="none" stroke="#ffffff" strokeWidth={road.wide ? 7.5 : 4} strokeLinecap="round" />
+        ))}
+
+        {/* 建筑 */}
+        {BUILDINGS.map((path, index) => (
+          <path
+            key={`b-${index}`}
+            d={path}
+            fill={CAMPUS_BUILDINGS[index].name ? '#dfe6e0' : '#eceeea'}
+            stroke="#c8d2c8"
+            strokeWidth="0.8"
+          />
+        ))}
 
         {plan ? (
           <polyline
@@ -118,6 +136,7 @@ export default function CampusMap({ spots, plan, activeId, onSelect, compact = f
           const isRoute = order >= 0;
           const isOrigin = plan ? spot.id === plan.origin.id : false;
           const dim = Boolean(plan) && !compact && !isRoute;
+          const showLabel = compact || isRoute || isActive || spot.kind === '入口' || Boolean(spot.mustSee);
 
           return (
             <g
@@ -137,30 +156,32 @@ export default function CampusMap({ spots, plan, activeId, onSelect, compact = f
                 if (event.key === 'Enter' || event.key === ' ') onSelect(spot.id);
               }}
             >
-              <circle cx={spot.x} cy={spot.y} r="27" className="map-hit" />
-              <circle cx={spot.x} cy={spot.y} r="15" className="map-dot" />
+              <circle cx={spot.x} cy={spot.y} r="26" className="map-hit" />
+              <circle cx={spot.x} cy={spot.y} r="14" className="map-dot" />
               <text x={spot.x} y={spot.y + 5} textAnchor="middle" className="map-emoji">
                 {spot.emoji}
               </text>
               {isRoute && !isOrigin ? (
                 <g className="map-badge">
-                  <circle cx={spot.x + 17} cy={spot.y - 17} r="11" />
-                  <text x={spot.x + 17} y={spot.y - 13} textAnchor="middle">
+                  <circle cx={spot.x + 15} cy={spot.y - 15} r="10" />
+                  <text x={spot.x + 15} y={spot.y - 11.5} textAnchor="middle">
                     {order}
                   </text>
                 </g>
               ) : null}
               {isOrigin ? (
                 <g className="map-badge map-badge--origin">
-                  <circle cx={spot.x + 17} cy={spot.y - 17} r="11" />
-                  <text x={spot.x + 17} y={spot.y - 13} textAnchor="middle">
+                  <circle cx={spot.x + 15} cy={spot.y - 15} r="10" />
+                  <text x={spot.x + 15} y={spot.y - 11.5} textAnchor="middle">
                     起
                   </text>
                 </g>
               ) : null}
-              <text x={spot.x} y={spot.y + 36} textAnchor="middle" className="map-label">
-                {spot.name}
-              </text>
+              {showLabel ? (
+                <text x={spot.x} y={spot.y + 30} textAnchor="middle" className="map-label">
+                  {spot.name}
+                </text>
+              ) : null}
             </g>
           );
         })}
@@ -176,11 +197,9 @@ export default function CampusMap({ spots, plan, activeId, onSelect, compact = f
             <i className="legend-dot" />
             可游览点位
           </span>
-          <span>
-            <i className="legend-dot legend-dot--fav" />
-            已收藏
+          <span className="map-legend-note">
+            点击任意点位查看讲解 · {CAMPUS_ATTRIBUTION}
           </span>
-          <span className="map-legend-note">点击任意点位查看讲解</span>
         </div>
       ) : null}
 

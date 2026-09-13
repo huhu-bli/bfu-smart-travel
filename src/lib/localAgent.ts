@@ -38,28 +38,35 @@ const INTEREST_KEYWORDS: Record<InterestId, string[]> = {
 };
 
 const GATE_KEYWORDS: [RegExp, string][] = [
-  [/东门/, 'east-gate'],
-  [/南门/, 'south-gate'],
-  [/西门/, 'west-gate'],
-  [/北门/, 'north-gate'],
+  // 注意顺序：「小南门 / 东南门」必须先判断，否则会被「南门」抢先匹配。
+  [/东南门/, 'gate-southeast'],
+  [/小南门|西南门/, 'gate-southwest'],
+  [/正门|主校门|南门/, 'gate-main'],
+  [/北门/, 'gate-north'],
 ];
 
 const SPOT_KEYWORDS: [RegExp, string][] = [
   [/银杏/, 'ginkgo-avenue'],
-  [/博物馆|标本/, 'museum'],
   [/校史/, 'history-hall'],
-  [/老图书馆|老馆/, 'old-library'],
-  [/图书馆|阅读空间/, 'gardening-hall'],
-  [/主楼|学研/, 'main-building'],
-  [/静园/, 'jing-yuan'],
-  [/牡丹/, 'peony-garden'],
-  [/月季/, 'rose-garden'],
-  [/竹/, 'bamboo-path'],
-  [/温室|苗圃/, 'greenhouse'],
-  [/水土保持|实验室/, 'soil-lab'],
-  [/体育馆|田家炳/, 'gym'],
-  [/田径场|球场|运动场/, 'sports-field'],
-  [/食堂|禾园/, 'canteen'],
+  [/图书馆/, 'library'],
+  [/主楼/, 'main-hall'],
+  [/学研/, 'xueyan'],
+  [/林之心/, 'forest-heart'],
+  [/雨水花园/, 'rain-garden'],
+  [/闪电广场/, 'lightning-square'],
+  [/苗圃|三顷园/, 'nursery'],
+  [/水土保持|水保|林学院/, 'soil-college'],
+  [/生物/, 'biology-college'],
+  [/理学院/, 'science-college'],
+  [/活动中心/, 'activity-center'],
+  [/田家炳|体育馆/, 'gym'],
+  [/操场|田径场|运动场|跑道/, 'stadium'],
+  [/一食堂/, 'canteen-1'],
+  [/二食堂/, 'canteen-2'],
+  [/禾谷园/, 'hegu-yuan'],
+  [/咖啡/, 'cafe'],
+  [/一教|第一教学/, 'teaching-1'],
+  [/三教|第三教学/, 'teaching-3'],
 ];
 
 const OUTSIDE_KEYWORDS =
@@ -194,7 +201,7 @@ export function answerLocally(rawText: string, previous?: LocalMemory | null): L
     interests: base
       ? mergeInterests(text, parsedInterests, base.interests)
       : parsedInterests,
-    gateId: matchGate(text) ?? base?.gateId ?? 'east-gate',
+    gateId: matchGate(text) ?? base?.gateId ?? 'gate-main',
   };
 
   return { ...answerCore(rawText, memory), memory };
