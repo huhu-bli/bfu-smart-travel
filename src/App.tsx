@@ -27,7 +27,7 @@ export default function App() {
   ]);
   const [durationId, setDurationId] = useLocalStorage<string>('duration', '60');
   const [paceId, setPaceId] = useLocalStorage<PaceId>('pace', 'normal');
-  const [startId, setStartId] = useLocalStorage<string>('start', 'east-gate');
+  const [startId, setStartId] = useLocalStorage<string>('start', 'gate-main');
   const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
 

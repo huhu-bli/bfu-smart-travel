@@ -84,7 +84,11 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
     ? interests
     : (['plant', 'culture', 'photo'] as InterestId[]);
 
-  const start = spots.find((spot) => spot.id === startId) ?? spots[0];
+  // 起点兜底：找不到指定门岗时，退到任意一个门岗，再退到第一个点位。
+  const start =
+    spots.find((spot) => spot.id === startId) ??
+    spots.find((spot) => GATE_IDS.includes(spot.id)) ??
+    spots[0];
   const pool = spots.filter((spot) => !GATE_IDS.includes(spot.id));
   const used = new Set<string>();
   const stops: RouteStop[] = [];
