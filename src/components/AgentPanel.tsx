@@ -72,6 +72,14 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   useEffect(() => {
     if (migrated.current) return;
     migrated.current = true;
+    // 站点已经配好共享代理，而用户自己什么都没配（没有密钥/没有代理）→ 直接用站点配置。
+    const siteDefault = DEFAULT_AGENT_SETTINGS;
+    const userConfigured =
+      settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
+    if (siteDefault.proxyUrl && !userConfigured) {
+      setSettings(siteDefault);
+      return;
+    }
     if (settings.provider && settings.protocol) return;
     setSettings((prev) => {
       // 早期版本没有服务商概念：地址指向 OpenAI 就沿用，否则迁移到默认的 DeepSeek。
