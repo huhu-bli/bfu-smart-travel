@@ -123,15 +123,12 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
       return await attempt(settings);
     } catch (error) {
       if (!isNetworkFailure(error)) throw error;
-      try {
-        return await attempt(settings);
-      } catch (retryError) {
-        if (settings.mode === 'proxy' && SITE_DIRECT_FALLBACK && SITE_DIRECT_FALLBACK.apiKey) {
-          const result = await attempt(SITE_DIRECT_FALLBACK);
-          return { ...result, trace: ['代理不通，已自动改用直连', ...result.trace] };
-        }
-        throw retryError;
+      // 代理走不通就直接换直连（国内连百炼稳定），不再对着坏路重试。
+      if (settings.mode === 'proxy' && SITE_DIRECT_FALLBACK && SITE_DIRECT_FALLBACK.apiKey) {
+        const result = await attempt(SITE_DIRECT_FALLBACK);
+        return { ...result, trace: ['代理不通，已自动改用直连', ...result.trace] };
       }
+      throw error;
     }
   };
 

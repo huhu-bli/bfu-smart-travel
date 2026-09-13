@@ -144,6 +144,8 @@ export const SITE_DIRECT_FALLBACK: AgentSettings | null = SITE_API_KEY
 const DIRECT_BASE = 'https://api.openai.com/v1';
 const MAX_ROUNDS = 6;
 const REQUEST_TIMEOUT_MS = 60_000;
+/** 代理在国内时通时不通，超时设短一点，好尽快切到直连兜底。 */
+const PROXY_TIMEOUT_MS = 20_000;
 
 export type AgentInputItem = Record<string, unknown>;
 
@@ -655,7 +657,8 @@ async function requestModel(
   }
 
   const controller = new AbortController();
-  const timer = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = settings.mode === 'proxy' ? PROXY_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const timer = globalThis.setTimeout(() => controller.abort(), timeout);
   let response: Response;
   try {
     response = await fetch(endpoint, {
