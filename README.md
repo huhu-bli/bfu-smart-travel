@@ -107,6 +107,8 @@ AI 助手在没有配置密钥时会自动切到**内置助手**：用规则解�
 
 ### 想让所有访客都用上 AI：注入站点级代理
 
+> 本站已经这么做了：代理部署在 Cloudflare Worker（`bfu-smart-travel-agent`），上游是通义百炼的 `qwen3.8-flash`。GitHub 仓库里配置了 `AGENT_PROXY_URL` / `AGENT_PROXY_TOKEN` / `AGENT_PROVIDER` 三个 Actions variables，所以**访客打开网页就能直接聊，不需要填任何密钥**。下面是把这套流程复制到别的站点的方法。
+
 浏览器直连 API 意味着每个访客都得自己填密钥。要让访客开箱即用，就把密钥放到代理里，再把代理地址注入到构建产物：
 
 1. 部署代理（见 [`worker/README.md`](worker/README.md)）。用 DeepSeek 的话把 `UPSTREAM_BASE` 设为 `https://api.deepseek.com`。
