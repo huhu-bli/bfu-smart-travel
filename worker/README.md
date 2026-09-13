@@ -25,6 +25,19 @@ npx wrangler secret put ALLOWED_MODELS     # 例如 deepseek-chat,deepseek-reaso
 
 Worker 只接受两个路径：`/responses`（OpenAI Responses API）和 `/chat/completions`（DeepSeek 等 OpenAI 兼容接口），其余路径一律 404。
 
+### 限流（防止共享额度被刷）
+
+Worker 内置了限流，不用额外配置就有默认值：
+
+| 变量 | 默认值 | 含义 |
+| --- | --- | --- |
+| `IP_LIMIT` | 20 | 单个 IP 在时间窗内的请求上限 |
+| `IP_WINDOW_MS` | 600000 | 单 IP 时间窗（10 分钟） |
+| `GLOBAL_LIMIT` | 200 | 全局时间窗内的请求上限，兜住额度被刷 |
+| `GLOBAL_WINDOW_MS` | 3600000 | 全局时间窗（1 小时） |
+
+超限时返回 `429`，前端会显示「你问得有点快，休息一会儿再来吧」。计数器存放在 Worker isolate 的内存里，对脚本刷量足够，但不是分布式精确限流；要更严格可以再加 Cloudflare 的 Rate limiting 绑定。
+
 ## 在前端使用
 
 打开应用右下角的「AI 行程助手」→ ⚙ 设置 → 切到 **代理（可公开）** → 填代理地址和访问口令。

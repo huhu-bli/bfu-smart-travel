@@ -11,10 +11,46 @@
  *                   通义百炼 填 https://dashscope.aliyuncs.com/compatible-mode/v1
  *   APP_TOKEN       选填，设置后前端必须带 x-app-token 请求头才能调用
  *   ALLOWED_MODELS  选填，逗号分隔的模型白名单
+ *   IP_LIMIT        选填，单个 IP 在时间窗内允许的请求数，默认 20
+ *   IP_WINDOW_MS    选填，单 IP 限流时间窗（毫秒），默认 10 分钟
+ *   GLOBAL_LIMIT    选填，全局时间窗内的请求上限，默认 200（兜住额度被刷）
+ *   GLOBAL_WINDOW_MS 选填，全局限流时间窗（毫秒），默认 1 小时
  */
 
 var DEFAULT_UPSTREAM = 'https://api.openai.com/v1';
 var ALLOWED_PATHS = ['/responses', '/chat/completions'];
+
+/** 简易限流：每个 isolate 维护自己的计数，够挡住脚本刷量。 */
+var buckets = new Map();
+var MAX_BUCKETS = 5000;
+
+function numberFrom(value, fallback) {
+  var n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function allowRequest(key, limit, windowMs) {
+  var now = Date.now();
+  if (buckets.size > MAX_BUCKETS) buckets.clear();
+  var entry = buckets.get(key);
+  if (!entry || now - entry.start >= windowMs) {
+    buckets.set(key, { start: now, count: 1 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= limit;
+}
+
+function rateLimit(env, ip) {
+  var ipLimit = numberFrom(env.IP_LIMIT, 20);
+  var ipWindow = numberFrom(env.IP_WINDOW_MS, 600000);
+  var globalLimit = numberFrom(env.GLOBAL_LIMIT, 200);
+  var globalWindow = numberFrom(env.GLOBAL_WINDOW_MS, 3600000);
+
+  if (!allowRequest('ip:' + ip, ipLimit, ipWindow)) return 'ip';
+  if (!allowRequest('global', globalLimit, globalWindow)) return 'global';
+  return null;
+}
 
 var CORS_HEADERS = {
   'access-control-allow-origin': '*',
@@ -100,6 +136,17 @@ export default {
     }
 
     var upstreamBase = (env.UPSTREAM_BASE || DEFAULT_UPSTREAM).replace(/\/+$/, '');
+
+    // 只有真正要花额度的请求才计数：前面那些参数错误不该扣用户的配额。
+    var ip = request.headers.get('cf-connecting-ip') || 'unknown';
+    var limited = rateLimit(env, ip);
+    if (limited === 'ip') {
+      return errorResponse('你问得有点快，休息一会儿再来吧。', 429);
+    }
+    if (limited === 'global') {
+      return errorResponse('共享额度暂时用完了，晚点再来试试。', 429);
+    }
+
     var upstream = await fetch(upstreamBase + path, {
       method: 'POST',
       headers: {
