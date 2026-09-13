@@ -100,16 +100,22 @@ function readSiteEnv(key: string): string {
 
 const SITE_PROXY_URL = readSiteEnv('VITE_AGENT_PROXY_URL');
 const SITE_PROXY_TOKEN = readSiteEnv('VITE_AGENT_PROXY_TOKEN');
+/** 站方提供的密钥：填了这个，访客不用配任何东西就能直接用 AI（密钥会出现在网页源码里）。 */
+const SITE_API_KEY = readSiteEnv('VITE_AGENT_API_KEY');
+
+/** 内置密钥时默认用通义（国内可直连），否则默认 DeepSeek。 */
+const SITE_PROVIDER: AgentProviderId = SITE_API_KEY ? 'qwen' : 'deepseek';
+const SITE_PRESET = providerOf(SITE_PROVIDER);
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   mode: SITE_PROXY_URL ? 'proxy' : 'direct',
-  provider: 'deepseek',
-  protocol: 'chat',
-  apiKey: '',
-  baseUrl: 'https://api.deepseek.com',
+  provider: SITE_PROVIDER,
+  protocol: SITE_PRESET.protocol,
+  apiKey: SITE_PROXY_URL ? '' : SITE_API_KEY,
+  baseUrl: SITE_PRESET.baseUrl,
   proxyUrl: SITE_PROXY_URL,
   proxyToken: SITE_PROXY_TOKEN,
-  model: 'deepseek-chat',
+  model: SITE_PRESET.model,
 };
 
 const DIRECT_BASE = 'https://api.openai.com/v1';

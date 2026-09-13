@@ -153,13 +153,22 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
         },
       ]);
     } catch (error) {
+      // AI 调不通时不让用户对着报错干瞪眼：退回内置助手，并把原因写在下面一行。
+      const reason = error instanceof Error ? error.message : '请求失败';
+      const fallback = answerLocally(question, localMemoryRef.current);
+      localMemoryRef.current = fallback.memory;
       setTurns((prev) => [
         ...prev,
         {
           id: nextId(),
           role: 'assistant',
-          text: error instanceof Error ? error.message : '请求失败，请稍后重试。',
-          isError: true,
+          text: fallback.text,
+          plan: fallback.plan,
+          planOptions: fallback.planOptions,
+          spotIds: fallback.spotIds,
+          tripIds: fallback.tripIds,
+          trace: [`AI 暂时不可用（${reason}），已用内置助手作答`, ...fallback.trace],
+          offline: true,
         },
       ]);
     } finally {
