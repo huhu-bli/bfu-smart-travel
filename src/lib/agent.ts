@@ -103,8 +103,14 @@ const SITE_PROXY_TOKEN = readSiteEnv('VITE_AGENT_PROXY_TOKEN');
 /** 站方提供的密钥：填了这个，访客不用配任何东西就能直接用 AI（密钥会出现在网页源码里）。 */
 const SITE_API_KEY = readSiteEnv('VITE_AGENT_API_KEY');
 
-/** 内置密钥时默认用通义（国内可直连），否则默认 DeepSeek。 */
-const SITE_PROVIDER: AgentProviderId = SITE_API_KEY ? 'qwen' : 'deepseek';
+/** 站点默认服务商：优先用 VITE_AGENT_PROVIDER，其次内置密钥场景默认通义，最后 DeepSeek。 */
+const SITE_PROVIDER_ENV = readSiteEnv('VITE_AGENT_PROVIDER');
+const SITE_PROVIDER: AgentProviderId =
+  SITE_PROVIDER_ENV && PROVIDERS.some((item) => item.id === SITE_PROVIDER_ENV)
+    ? (SITE_PROVIDER_ENV as AgentProviderId)
+    : SITE_API_KEY
+      ? 'qwen'
+      : 'deepseek';
 const SITE_PRESET = providerOf(SITE_PROVIDER);
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {

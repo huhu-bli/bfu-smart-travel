@@ -31,6 +31,7 @@ jobs:
           VITE_AGENT_PROXY_TOKEN: ${{ vars.AGENT_PROXY_TOKEN }}
           # 或者直接注入一把站方密钥（密钥会出现在网页源码里，仅适合免费额度场景）。
           VITE_AGENT_API_KEY: ${{ vars.AGENT_API_KEY }}
+          VITE_AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
