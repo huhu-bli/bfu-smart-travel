@@ -1653,6 +1653,54 @@ a {
 }
 
 @media (max-width: 720px) {
+  /* 手机上 SVG 会被缩到 1/3，元素尺寸要按比例放大才看得清、点得准 */
+  .map-label {
+    font-size: 30px;
+  }
+
+  .map-emoji {
+    font-size: 32px;
+  }
+
+  .map-dot {
+    r: 20px;
+  }
+
+  .map-hit {
+    r: 46px;
+  }
+
+  .map-badge circle {
+    r: 14px;
+  }
+
+  .map-badge text {
+    font-size: 16px;
+  }
+
+  .map-shell--compact .map-label {
+    font-size: 30px;
+  }
+
+  .map-shell--compact .map-emoji {
+    font-size: 32px;
+  }
+
+  .nav-pill {
+    padding: 12px 16px;
+  }
+
+  .gh-link {
+    padding: 10px 14px;
+  }
+
+  button,
+  .chip,
+  .nav-pill,
+  .map-spot {
+    touch-action: manipulation;
+  }
+
   .header-inner {
     flex-wrap: wrap;
     gap: 10px;
