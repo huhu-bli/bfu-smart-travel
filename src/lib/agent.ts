@@ -119,7 +119,8 @@ export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   mode: SITE_API_KEY || !SITE_PROXY_URL ? 'direct' : 'proxy',
   provider: SITE_PROVIDER,
   protocol: SITE_PRESET.protocol,
-  apiKey: SITE_PROXY_URL ? '' : SITE_API_KEY,
+  // 站点内置了密钥就一定带上：直连模式要靠它，切到代理模式时它只是闲置。
+  apiKey: SITE_API_KEY,
   baseUrl: SITE_PRESET.baseUrl,
   proxyUrl: SITE_PROXY_URL,
   proxyToken: SITE_PROXY_TOKEN,
