@@ -86,7 +86,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     const siteDefault = DEFAULT_AGENT_SETTINGS;
     const userConfigured =
       settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
-    if (siteDefault.proxyUrl && !userConfigured) {
+    if ((siteDefault.proxyUrl || siteDefault.apiKey) && !userConfigured) {
       setSettings(siteDefault);
       return;
     }
@@ -168,6 +168,14 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
       error instanceof Error && error.message.includes('网络请求失败');
     const canFallbackToDirect =
       settings.mode === 'proxy' && Boolean(SITE_DIRECT_FALLBACK && SITE_DIRECT_FALLBACK.apiKey);
+    // 反向兜底：直连走不通（少数网络会挡 dashscope）时，改走站点代理
+    const canFallbackToProxy = settings.mode === 'direct' && Boolean(DEFAULT_AGENT_SETTINGS.proxyUrl);
+    const proxySettings: AgentSettings = {
+      ...settings,
+      mode: 'proxy',
+      proxyUrl: DEFAULT_AGENT_SETTINGS.proxyUrl,
+      proxyToken: DEFAULT_AGENT_SETTINGS.proxyToken,
+    };
 
     // 代理刚被判定不通：直接走直连，不再白等一次超时
     if (canFallbackToDirect && Date.now() < proxyDownUntilRef.current) {
@@ -189,6 +197,10 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
           ...result,
           trace: ['代理不通，已自动改用直连（10 分钟内不再重试代理）', ...result.trace],
         };
+      }
+      if (canFallbackToProxy) {
+        const result = await attempt(proxySettings);
+        return { ...result, trace: ['直连不通，已自动改用站点代理', ...result.trace] };
       }
       throw error;
     }

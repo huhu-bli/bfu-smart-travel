@@ -114,7 +114,9 @@ const SITE_PROVIDER: AgentProviderId =
 const SITE_PRESET = providerOf(SITE_PROVIDER);
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
-  mode: SITE_PROXY_URL ? 'proxy' : 'direct',
+  // 站点已经内置密钥时直接走直连：密钥本来就随网页公开，少一跳反而更稳更快。
+  // 没内置密钥但配了代理时，才默认走代理（密钥不出服务端）。
+  mode: SITE_API_KEY || !SITE_PROXY_URL ? 'direct' : 'proxy',
   provider: SITE_PROVIDER,
   protocol: SITE_PRESET.protocol,
   apiKey: SITE_PROXY_URL ? '' : SITE_API_KEY,
