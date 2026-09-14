@@ -49,6 +49,8 @@ const QUICK_PROMPTS = [
 /** 聊天记录存在本地，刷新页面还能接着聊；只保留最近 30 条显示消息。 */
 const CHAT_STORAGE_KEY = 'bfu-smart-travel:chat';
 const KEEP_TURNS = 30;
+/** 代理一旦判定不通，这么多毫秒内不再重试，避免每次提问都先等超时。 */
+const PROXY_RETRY_AFTER_MS = 10 * 60 * 1000;
 
 let turnSeed = 0;
 const nextId = () => {
@@ -73,6 +75,8 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const migrated = useRef(false);
   const localMemoryRef = useRef<LocalMemory | null>(null);
   const chatRestored = useRef(false);
+  /** 代理被判不通的截止时间戳；在此时刻前直接走直连，不再白等超时。 */
+  const proxyDownUntilRef = useRef(0);
 
   // 兼容早期版本保存的设置：缺 provider/protocol 时补齐。
   useEffect(() => {
@@ -162,15 +166,29 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
       runAgentTurn({ history: historyRef.current, userText: question, settings: activeSettings });
     const isNetworkFailure = (error: unknown) =>
       error instanceof Error && error.message.includes('网络请求失败');
+    const canFallbackToDirect =
+      settings.mode === 'proxy' && Boolean(SITE_DIRECT_FALLBACK && SITE_DIRECT_FALLBACK.apiKey);
+
+    // 代理刚被判定不通：直接走直连，不再白等一次超时
+    if (canFallbackToDirect && Date.now() < proxyDownUntilRef.current) {
+      const result = await attempt(SITE_DIRECT_FALLBACK as AgentSettings);
+      return { ...result, trace: ['代理刚才连不通，这次直接走直连', ...result.trace] };
+    }
 
     try {
-      return await attempt(settings);
+      const result = await attempt(settings);
+      proxyDownUntilRef.current = 0; // 代理恢复，下次继续优先用它
+      return result;
     } catch (error) {
       if (!isNetworkFailure(error)) throw error;
       // 代理走不通就直接换直连（国内连百炼稳定），不再对着坏路重试。
-      if (settings.mode === 'proxy' && SITE_DIRECT_FALLBACK && SITE_DIRECT_FALLBACK.apiKey) {
-        const result = await attempt(SITE_DIRECT_FALLBACK);
-        return { ...result, trace: ['代理不通，已自动改用直连', ...result.trace] };
+      if (canFallbackToDirect) {
+        proxyDownUntilRef.current = Date.now() + PROXY_RETRY_AFTER_MS;
+        const result = await attempt(SITE_DIRECT_FALLBACK as AgentSettings);
+        return {
+          ...result,
+          trace: ['代理不通，已自动改用直连（10 分钟内不再重试代理）', ...result.trace],
+        };
       }
       throw error;
     }
@@ -293,7 +311,10 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     setProbing(true);
     setProbe(null);
     try {
-      setProbe(await probeConnection(settings));
+      const result = await probeConnection(settings);
+      setProbe(result);
+      // 手动测通了就把"代理不可用"的标记清掉，下次提问重新优先走代理
+      if (result.ok) proxyDownUntilRef.current = 0;
     } catch (error) {
       setProbe({
         ok: false,
