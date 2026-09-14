@@ -143,6 +143,10 @@ export const SITE_DIRECT_FALLBACK: AgentSettings | null = SITE_API_KEY
 
 const DIRECT_BASE = 'https://api.openai.com/v1';
 const MAX_ROUNDS = 6;
+/** 发给模型的历史最多保留最近这么多轮，避免请求无限增长。 */
+const MAX_HISTORY_GROUPS = 10;
+/** 历史体积硬上限（字符数），超了继续从最早的轮次开始丢。 */
+const MAX_HISTORY_CHARS = 60000;
 const REQUEST_TIMEOUT_MS = 60_000;
 /** 代理在国内时通时不通，超时设短一点，好尽快切到直连兜底。 */
 const PROXY_TIMEOUT_MS = 20_000;
@@ -181,6 +185,8 @@ export interface AgentToolContext {
 export interface AgentTurnResult {
   text: string;
   history: AgentHistory;
+  /** 是否因为过长而省略了较早的对话 */
+  trimmed: boolean;
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;
   spotIds: string[];
@@ -692,10 +698,46 @@ async function requestModel(
 
 const EMPTY_REPLY = '（模型没有返回文字，换个问法再试一次。）';
 
+function isUserItem(item: unknown): boolean {
+  return Boolean(item) && (item as { role?: string }).role === 'user';
+}
+
+/** 找出每个「用户提问」在历史里的起始下标 —— 按轮裁剪才不会拆散工具调用与结果。 */
+function groupStarts(history: AgentHistory): number[] {
+  const starts: number[] = [];
+  history.forEach((item, index) => {
+    if (isUserItem(item)) starts.push(index);
+  });
+  return starts;
+}
+
+/**
+ * 只保留最近若干轮对话：
+ * - 按「用户提问」为边界裁剪，保证 function_call / tool 结果不会被拆开
+ * - 再按体积兜底裁一次，避免某一轮里工具返回特别大
+ */
+export function trimHistory(history: AgentHistory): { history: AgentHistory; trimmed: boolean } {
+  const starts = groupStarts(history);
+  if (starts.length <= MAX_HISTORY_GROUPS && JSON.stringify(history).length <= MAX_HISTORY_CHARS) {
+    return { history, trimmed: false };
+  }
+
+  let keepFrom = starts.length > MAX_HISTORY_GROUPS ? starts[starts.length - MAX_HISTORY_GROUPS] : 0;
+  let slice = history.slice(keepFrom);
+  while (slice.length > 2 && JSON.stringify(slice).length > MAX_HISTORY_CHARS) {
+    const inner = groupStarts(slice);
+    if (inner.length <= 1) break;
+    keepFrom = inner[1];
+    slice = slice.slice(keepFrom);
+  }
+  return { history: slice, trimmed: true };
+}
+
 interface LoopOutcome {
   text: string;
   history: AgentHistory;
   rounds: number;
+  trimmed: boolean;
 }
 
 /** Responses API（OpenAI 专用协议）的工具调用循环。 */
@@ -705,7 +747,11 @@ async function runResponsesLoop(
   settings: AgentSettings,
   context: AgentToolContext,
 ): Promise<LoopOutcome> {
-  let input: AgentInputItem[] = [...history, { role: 'user', content: userText }];
+  const trimmedHistory = trimHistory(history);
+  let input: AgentInputItem[] = [
+    ...(trimmedHistory.history as AgentInputItem[]),
+    { role: 'user', content: userText },
+  ];
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
     const response = await requestModel(settings, buildRequestPayload(settings, input));
@@ -714,7 +760,12 @@ async function runResponsesLoop(
 
     const calls = extractToolCalls(response);
     if (!calls.length) {
-      return { text: extractOutputText(response) || EMPTY_REPLY, history: input, rounds: round };
+      return {
+        text: extractOutputText(response) || EMPTY_REPLY,
+        history: input,
+        rounds: round,
+        trimmed: trimmedHistory.trimmed,
+      };
     }
 
     for (const call of calls) {
@@ -736,7 +787,8 @@ async function runChatLoop(
   settings: AgentSettings,
   context: AgentToolContext,
 ): Promise<LoopOutcome> {
-  let messages: ChatMessage[] = [...history, { role: 'user', content: userText }];
+  const trimmedHistory = trimHistory(history);
+  let messages: ChatMessage[] = [...(trimmedHistory.history as ChatMessage[]), { role: 'user', content: userText }];
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
     const response = await requestModel(settings, buildChatPayload(settings, messages));
@@ -750,7 +802,12 @@ async function runChatLoop(
     messages = [...messages, assistant];
 
     if (!turn.toolCalls.length) {
-      return { text: turn.text || EMPTY_REPLY, history: messages, rounds: round };
+      return {
+        text: turn.text || EMPTY_REPLY,
+        history: messages,
+        rounds: round,
+        trimmed: trimmedHistory.trimmed,
+      };
     }
 
     for (const call of turn.toolCalls) {
@@ -787,6 +844,7 @@ export async function runAgentTurn(params: {
   return {
     text: outcome.text,
     history: outcome.history,
+    trimmed: outcome.trimmed,
     plan: context.plan,
     planOptions: context.planOptions,
     spotIds: [...context.spotIds],

@@ -46,6 +46,10 @@ const QUICK_PROMPTS = [
   '周末想在校外玩半天，别太贵，有什么推荐？',
 ];
 
+/** 聊天记录存在本地，刷新页面还能接着聊；只保留最近 30 条显示消息。 */
+const CHAT_STORAGE_KEY = 'bfu-smart-travel:chat';
+const KEEP_TURNS = 30;
+
 let turnSeed = 0;
 const nextId = () => {
   turnSeed += 1;
@@ -68,6 +72,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const migrated = useRef(false);
   const localMemoryRef = useRef<LocalMemory | null>(null);
+  const chatRestored = useRef(false);
 
   // 兼容早期版本保存的设置：缺 provider/protocol 时补齐。
   useEffect(() => {
@@ -104,6 +109,45 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     const node = scrollRef.current;
     if (node) node.scrollTop = node.scrollHeight;
   }, [open, turns, busy]);
+
+  // 恢复上次的对话（协议一致才恢复，切换服务商后历史格式不通用）
+  useEffect(() => {
+    if (chatRestored.current) return;
+    chatRestored.current = true;
+    try {
+      const raw = window.localStorage.getItem(CHAT_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { protocol?: string; history?: AgentHistory; turns?: ChatTurn[] };
+      if (!saved || saved.protocol !== settings.protocol) return;
+      if (Array.isArray(saved.turns) && saved.turns.length) {
+        historyRef.current = saved.history ?? [];
+        setTurns(saved.turns);
+      }
+    } catch {
+      // 解析失败就当没有历史
+    }
+  }, [settings.protocol]);
+
+  // 保存对话
+  useEffect(() => {
+    if (!chatRestored.current) return;
+    try {
+      if (!turns.length) {
+        window.localStorage.removeItem(CHAT_STORAGE_KEY);
+        return;
+      }
+      window.localStorage.setItem(
+        CHAT_STORAGE_KEY,
+        JSON.stringify({
+          protocol: settings.protocol,
+          history: historyRef.current,
+          turns: turns.slice(-KEEP_TURNS),
+        }),
+      );
+    } catch {
+      // 超出配额就放弃保存，不影响使用
+    }
+  }, [turns, settings.protocol]);
 
   useEffect(() => {
     if (!configured) setSettingsOpen(true);
@@ -177,7 +221,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
           planOptions: result.planOptions,
           spotIds: result.spotIds,
           tripIds: result.tripIds,
-          trace: result.trace,
+          trace: result.trimmed ? ['已省略较早的对话（保持请求体积可控）', ...result.trace] : result.trace,
         },
       ]);
     } catch (error) {
@@ -208,6 +252,11 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     historyRef.current = [];
     localMemoryRef.current = null;
     setTurns([]);
+    try {
+      window.localStorage.removeItem(CHAT_STORAGE_KEY);
+    } catch {
+      // 忽略
+    }
   };
 
   /** 切换服务商：地址、模型、协议一起换，并重置上下文（两套协议的历史不通用）。 */
