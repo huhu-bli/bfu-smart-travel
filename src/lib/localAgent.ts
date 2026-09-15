@@ -2,6 +2,7 @@ import { SPOTS, SPOT_MAP } from '../data/spots';
 import type { InterestId, PlanOptions, RoutePlan } from '../types';
 import { formatDuration } from './planner';
 import { runTool, type AgentToolContext } from './agent';
+import { routeScene, type Scene } from './sceneRouter';
 
 /**
  * 内置助手：不联网、不需要任何密钥，用规则解析中文问题后调用与 AI 完全相同的工具。
@@ -20,9 +21,11 @@ export interface LocalAnswer {
 }
 
 export interface LocalMemory {
+  scene: Scene;
   minutes: number;
   interests: InterestId[];
   gateId: string;
+  selectedSpotId?: string;
 }
 
 const NEGATION = /(不要|不看|不去|不逛|去掉|去掉|别去|不想看|不想去|没有兴趣)/;
@@ -193,18 +196,27 @@ export function answerLocally(rawText: string, previous?: LocalMemory | null): L
   const text = rawText.trim();
   const following = Boolean(previous) && !RESET.test(text);
   const base = following && previous ? previous : null;
+  const parsedSpot = parseSpot(text);
+  const routed = routeScene(text, base?.scene ?? 'unknown');
+  const scene: Scene = routed === 'unknown' && parsedSpot ? 'spot-detail' : routed;
 
   const explicitMinutes = parseMinutes(text);
   const parsedInterests = parseInterests(text);
   const memory: LocalMemory = {
+    scene,
     minutes: explicitMinutes ?? base?.minutes ?? 60,
     interests: base
       ? mergeInterests(text, parsedInterests, base.interests)
       : parsedInterests,
     gateId: matchGate(text) ?? base?.gateId ?? 'gate-main',
+    selectedSpotId: parsedSpot ?? base?.selectedSpotId,
   };
 
-  return { ...answerCore(rawText, memory), memory };
+  const answer = answerCore(rawText, memory);
+  return {
+    ...answer,
+    memory: { ...memory, selectedSpotId: answer.spotIds[0] ?? memory.selectedSpotId },
+  };
 }
 
 function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'memory'> {
@@ -215,10 +227,39 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
   const interests = memory.interests;
   const gateId = matchGate(text) ?? memory.gateId;
   const gateName = SPOT_MAP[gateId]?.name ?? '东门（正门）';
-  const spotId = parseSpot(text);
+  const spotId = parseSpot(text) ?? memory.selectedSpotId ?? null;
+
+  if (memory.scene === 'system-help') {
+    return {
+      text: [
+        '我是北林行程助手，可以：',
+        '· 排校园路线：「我只有 1 小时，从东门进，怎么逛最值」',
+        '· 讲点位：「银杏大道值得专门去吗」',
+        '· 推校外行程：「周末想出去玩半天，别太贵」',
+        '',
+        '当前使用内置助手，不需要密钥，也不消耗额度。',
+      ].join('\n'),
+      plan: null,
+      planOptions: null,
+      spotIds: [],
+      tripIds: [],
+      trace: [],
+    };
+  }
+
+  if (memory.scene === 'unknown') {
+    return {
+      text: '你想规划北林校园内的路线，还是了解学校周边的校外线路？也可以直接询问某个校园点位。',
+      plan: null,
+      planOptions: null,
+      spotIds: [],
+      tripIds: [],
+      trace: [],
+    };
+  }
 
   // 1) 校外行程
-  if (OUTSIDE_KEYWORDS.test(text)) {
+  if (memory.scene === 'outside-trip' || OUTSIDE_KEYWORDS.test(text)) {
     const duration = /(一天|整天|全天)/.test(text) ? 'full' : 'half';
     const theme = parseTripTheme(text);
     const result = safeParse<{ trips: { name: string; theme: string; duration: string; budget: string; transport: string; summary: string }[] }>(
@@ -242,7 +283,7 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
 
   // 2) 点位讲解
   const wantsDetail = /(值得|怎么样|好不好|是什么|介绍|讲讲|说说|开放|几点|好玩|看看)/.test(text);
-  if (spotId && (wantsDetail || !explicitMinutes)) {
+  if (memory.scene === 'spot-detail' && spotId && (wantsDetail || !explicitMinutes)) {
     const detail = safeParse<{ name: string; description: string; highlights: string[]; bestTime: string; visitMinutes: number; tips: string }>(
       runTool('get_spot_detail', JSON.stringify({ spot_id: spotId }), context),
     );

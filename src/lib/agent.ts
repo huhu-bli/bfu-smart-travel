@@ -3,6 +3,7 @@ import { SPOTS, SPOT_MAP } from '../data/spots';
 import { TRIPS } from '../data/trips';
 import type { InterestId, PaceId, PlanOptions, RoutePlan } from '../types';
 import { buildRoute, formatClock, formatDuration } from './planner';
+import { routeScene, sceneInstruction, sceneTools, type Scene } from './sceneRouter';
 
 /** 直连 = 浏览器带着自己的 API Key 直接请求；代理 = 请求转发到自建 Serverless，由服务端持钥。 */
 export type AgentMode = 'direct' | 'proxy';
@@ -186,6 +187,7 @@ export interface AgentToolContext {
 }
 
 export interface AgentTurnResult {
+  scene: Scene;
   text: string;
   history: AgentHistory;
   /** 是否因为过长而省略了较早的对话 */
@@ -532,13 +534,15 @@ export function resolveBase(settings: AgentSettings): string {
 export function buildRequestPayload(
   settings: AgentSettings,
   input: AgentInputItem[],
+  scene: Scene = 'unknown',
 ): Record<string, unknown> {
+  const tools = TOOL_SCHEMAS.filter((tool) => sceneTools(scene).includes(tool.name));
   return {
     model: settings.model.trim() || DEFAULT_AGENT_SETTINGS.model,
-    instructions: SYSTEM_INSTRUCTIONS,
+    instructions: `${SYSTEM_INSTRUCTIONS}\n${sceneInstruction(scene)}`,
     input,
-    tools: TOOL_SCHEMAS,
-    tool_choice: 'auto',
+    tools,
+    tool_choice: tools.length ? 'auto' : 'none',
     parallel_tool_calls: false,
   };
 }
@@ -580,8 +584,8 @@ export function extractOutputText(response: unknown): string {
 /* ------------------------------------------------------------------ */
 
 /** 统一工具定义转成 Chat Completions 结构；strict 只有 Responses 支持，这里去掉。 */
-export function toChatTools(): Record<string, unknown>[] {
-  return TOOL_SCHEMAS.map((tool) => ({
+export function toChatTools(scene: Scene = 'unknown'): Record<string, unknown>[] {
+  return TOOL_SCHEMAS.filter((tool) => sceneTools(scene).includes(tool.name)).map((tool) => ({
     type: 'function',
     function: {
       name: tool.name,
@@ -594,12 +598,14 @@ export function toChatTools(): Record<string, unknown>[] {
 export function buildChatPayload(
   settings: AgentSettings,
   messages: ChatMessage[],
+  scene: Scene = 'unknown',
 ): Record<string, unknown> {
+  const tools = toChatTools(scene);
   return {
     model: settings.model.trim() || providerOf(settings.provider).model,
-    messages: [{ role: 'system', content: SYSTEM_INSTRUCTIONS }, ...messages],
-    tools: toChatTools(),
-    tool_choice: 'auto',
+    messages: [{ role: 'system', content: `${SYSTEM_INSTRUCTIONS}\n${sceneInstruction(scene)}` }, ...messages],
+    tools,
+    tool_choice: tools.length ? 'auto' : 'none',
     stream: false,
   };
 }
@@ -749,6 +755,7 @@ async function runResponsesLoop(
   userText: string,
   settings: AgentSettings,
   context: AgentToolContext,
+  scene: Scene,
 ): Promise<LoopOutcome> {
   const trimmedHistory = trimHistory(history);
   let input: AgentInputItem[] = [
@@ -757,7 +764,7 @@ async function runResponsesLoop(
   ];
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-    const response = await requestModel(settings, buildRequestPayload(settings, input));
+    const response = await requestModel(settings, buildRequestPayload(settings, input, scene));
     const output = (response.output as AgentInputItem[] | undefined) ?? [];
     input = [...input, ...output];
 
@@ -789,12 +796,13 @@ async function runChatLoop(
   userText: string,
   settings: AgentSettings,
   context: AgentToolContext,
+  scene: Scene,
 ): Promise<LoopOutcome> {
   const trimmedHistory = trimHistory(history);
   let messages: ChatMessage[] = [...(trimmedHistory.history as ChatMessage[]), { role: 'user', content: userText }];
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-    const response = await requestModel(settings, buildChatPayload(settings, messages));
+    const response = await requestModel(settings, buildChatPayload(settings, messages, scene));
     const turn = parseChatResponse(response);
 
     const assistant: ChatMessage = {
@@ -829,8 +837,10 @@ export async function runAgentTurn(params: {
   history: AgentHistory;
   userText: string;
   settings: AgentSettings;
+  scene?: Scene;
 }): Promise<AgentTurnResult> {
   const { history, userText, settings } = params;
+  const scene = routeScene(userText, params.scene ?? 'unknown');
   const context: AgentToolContext = {
     plan: null,
     planOptions: null,
@@ -841,10 +851,11 @@ export async function runAgentTurn(params: {
 
   const outcome =
     settings.protocol === 'chat'
-      ? await runChatLoop(history as ChatMessage[], userText, settings, context)
-      : await runResponsesLoop(history as AgentInputItem[], userText, settings, context);
+      ? await runChatLoop(history as ChatMessage[], userText, settings, context, scene)
+      : await runResponsesLoop(history as AgentInputItem[], userText, settings, context, scene);
 
   return {
+    scene,
     text: outcome.text,
     history: outcome.history,
     trimmed: outcome.trimmed,

@@ -16,6 +16,7 @@ import {
   type AgentSettings,
   type ProbeResult,
 } from '../lib/agent';
+import { routeScene, sceneLabel, type Scene } from '../lib/sceneRouter';
 import { useLocalStorage } from '../lib/storage';
 import type { PlanOptions, RoutePlan } from '../types';
 
@@ -71,9 +72,11 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const [probing, setProbing] = useState(false);
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const historyRef = useRef<AgentHistory>([]);
+  const historiesRef = useRef<Partial<Record<Scene, AgentHistory>>>({});
+  const activeSceneRef = useRef<Scene>('unknown');
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const migrated = useRef(false);
-  const localMemoryRef = useRef<LocalMemory | null>(null);
+  const localMemoryBySceneRef = useRef<Partial<Record<Scene, LocalMemory>>>({});
   const chatRestored = useRef(false);
   /** 代理被判不通的截止时间戳；在此时刻前直接走直连，不再白等超时。 */
   const proxyDownUntilRef = useRef(0);
@@ -121,10 +124,18 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     try {
       const raw = window.localStorage.getItem(CHAT_STORAGE_KEY);
       if (!raw) return;
-      const saved = JSON.parse(raw) as { protocol?: string; history?: AgentHistory; turns?: ChatTurn[] };
+      const saved = JSON.parse(raw) as {
+        protocol?: string;
+        history?: AgentHistory;
+        histories?: Partial<Record<Scene, AgentHistory>>;
+        activeScene?: Scene;
+        turns?: ChatTurn[];
+      };
       if (!saved || saved.protocol !== settings.protocol) return;
       if (Array.isArray(saved.turns) && saved.turns.length) {
-        historyRef.current = saved.history ?? [];
+        historiesRef.current = saved.histories ?? {};
+        activeSceneRef.current = saved.activeScene ?? 'unknown';
+        historyRef.current = historiesRef.current[activeSceneRef.current] ?? saved.history ?? [];
         setTurns(saved.turns);
       }
     } catch {
@@ -145,6 +156,8 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
         JSON.stringify({
           protocol: settings.protocol,
           history: historyRef.current,
+          histories: historiesRef.current,
+          activeScene: activeSceneRef.current,
           turns: turns.slice(-KEEP_TURNS),
         }),
       );
@@ -163,7 +176,12 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
    */
   const runWithFallback = async (question: string) => {
     const attempt = (activeSettings: AgentSettings) =>
-      runAgentTurn({ history: historyRef.current, userText: question, settings: activeSettings });
+      runAgentTurn({
+        history: historyRef.current,
+        userText: question,
+        settings: activeSettings,
+        scene: activeSceneRef.current,
+      });
     const isNetworkFailure = (error: unknown) =>
       error instanceof Error && error.message.includes('网络请求失败');
     const canFallbackToDirect =
@@ -212,12 +230,15 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     setInput('');
     setTurns((prev) => [...prev, { id: nextId(), role: 'user', text: question }]);
     setBusy(true);
+    const scene = routeScene(question, activeSceneRef.current);
+    activeSceneRef.current = scene;
+    historyRef.current = historiesRef.current[scene] ?? [];
 
     // 没配置密钥时用内置助手作答，保证任何访客都能直接用。
     if (!configured) {
       try {
-        const local = answerLocally(question, localMemoryRef.current);
-        localMemoryRef.current = local.memory;
+        const local = answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
+        localMemoryBySceneRef.current[local.memory.scene] = local.memory;
         setTurns((prev) => [
           ...prev,
           {
@@ -228,7 +249,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
             planOptions: local.planOptions,
             spotIds: local.spotIds,
             tripIds: local.tripIds,
-            trace: local.trace,
+            trace: [`场景：${sceneLabel(local.memory.scene)}`, ...local.trace],
             offline: true,
           },
         ]);
@@ -241,6 +262,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     try {
       const result = await runWithFallback(question);
       historyRef.current = result.history;
+      historiesRef.current[result.scene] = result.history;
       setTurns((prev) => [
         ...prev,
         {
@@ -251,14 +273,18 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
           planOptions: result.planOptions,
           spotIds: result.spotIds,
           tripIds: result.tripIds,
-          trace: result.trimmed ? ['已省略较早的对话（保持请求体积可控）', ...result.trace] : result.trace,
+          trace: [
+            `场景：${sceneLabel(result.scene)}`,
+            ...(result.trimmed ? ['已省略较早的对话（保持请求体积可控）'] : []),
+            ...result.trace,
+          ],
         },
       ]);
     } catch (error) {
       // AI 调不通时不让用户对着报错干瞪眼：退回内置助手，并把原因写在下面一行。
       const reason = error instanceof Error ? error.message : '请求失败';
-      const fallback = answerLocally(question, localMemoryRef.current);
-      localMemoryRef.current = fallback.memory;
+      const fallback = answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
+      localMemoryBySceneRef.current[fallback.memory.scene] = fallback.memory;
       setTurns((prev) => [
         ...prev,
         {
@@ -269,7 +295,11 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
           planOptions: fallback.planOptions,
           spotIds: fallback.spotIds,
           tripIds: fallback.tripIds,
-          trace: [`AI 暂时不可用（${reason}），已用内置助手作答`, ...fallback.trace],
+          trace: [
+            `场景：${sceneLabel(fallback.memory.scene)}`,
+            `AI 暂时不可用（${reason}），已用内置助手作答`,
+            ...fallback.trace,
+          ],
           offline: true,
         },
       ]);
@@ -280,7 +310,9 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
 
   const reset = () => {
     historyRef.current = [];
-    localMemoryRef.current = null;
+    historiesRef.current = {};
+    localMemoryBySceneRef.current = {};
+    activeSceneRef.current = 'unknown';
     setTurns([]);
     try {
       window.localStorage.removeItem(CHAT_STORAGE_KEY);
@@ -306,6 +338,9 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
     setProbe(null);
     if (turns.length || historyRef.current.length) {
       historyRef.current = [];
+      historiesRef.current = {};
+      localMemoryBySceneRef.current = {};
+      activeSceneRef.current = 'unknown';
       setTurns((prev) => [
         ...prev,
         {
@@ -342,7 +377,9 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   const resetSettings = () => {
     setSettings(DEFAULT_AGENT_SETTINGS);
     historyRef.current = [];
-    localMemoryRef.current = null;
+    historiesRef.current = {};
+    localMemoryBySceneRef.current = {};
+    activeSceneRef.current = 'unknown';
     setTurns([]);
     setProbe(null);
     setSettingsOpen(true);
