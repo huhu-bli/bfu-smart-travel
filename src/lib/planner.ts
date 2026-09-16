@@ -80,6 +80,8 @@ function nearestCurrent(current: Spot, candidates: Spot[]): Spot | null {
 
 export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
   const { interests, minutes, pace, startId } = options;
+  const included = new Set(options.includeSpotIds ?? []);
+  const excluded = new Set(options.excludeSpotIds ?? []);
   const wanted: InterestId[] = interests.length
     ? interests
     : (['plant', 'culture', 'photo'] as InterestId[]);
@@ -89,7 +91,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
     spots.find((spot) => spot.id === startId) ??
     spots.find((spot) => GATE_IDS.includes(spot.id)) ??
     spots[0];
-  const pool = spots.filter((spot) => !GATE_IDS.includes(spot.id));
+  const pool = spots.filter((spot) => !GATE_IDS.includes(spot.id) && !excluded.has(spot.id));
   const used = new Set<string>();
   const stops: RouteStop[] = [];
   let current = start;
@@ -107,7 +109,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
         const dwell = dwellMinutes(spot, pace.dwell);
         const relevance = spot.interests.filter((id) => wanted.includes(id)).length;
         const score =
-          relevance * 3 + (spot.mustSee ? 1.4 : 0) - walk * 0.22 - spot.visit * 0.012;
+          relevance * 3 + (included.has(spot.id) ? 100 : 0) + (spot.mustSee ? 1.4 : 0) - walk * 0.22 - spot.visit * 0.012;
         return { spot, meters, walk, dwell, relevance, score };
       })
       .filter((item) => item.relevance > 0 || item.spot.mustSee);

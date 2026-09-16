@@ -1,16 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatClock, formatDuration, routeToText } from '../lib/planner';
-import type { RoutePlan } from '../types';
+import type { RoutePlan, Spot } from '../types';
 import CampusMap from './CampusMap';
 
 interface Props {
   plan: RoutePlan;
+  availableSpots: Spot[];
   onSelectSpot: (id: string) => void;
   onOpenMap: () => void;
+  onEditRoute: (includedSpotIds: string[], excludedSpotIds: string[]) => void;
 }
 
-export default function RouteResult({ plan, onSelectSpot, onOpenMap }: Props) {
+export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpenMap, onEditRoute }: Props) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!editing) {
+      setSelectedSpotIds(plan.stops.map((stop) => stop.spot.id));
+    }
+  }, [plan, editing]);
+
+  const currentSpotIds = new Set(plan.stops.map((stop) => stop.spot.id));
+  const routeCandidates = availableSpots.filter((spot) => spot.id !== plan.origin.id && spot.kind !== '入口');
+
+  const toggleSpot = (spotId: string) => {
+    setSelectedSpotIds((previous) => {
+      if (previous.includes(spotId)) return previous.filter((id) => id !== spotId);
+      if (previous.length >= 8) return previous;
+      return [...previous, spotId];
+    });
+  };
+
+  const cancelEditing = () => {
+    setSelectedSpotIds(plan.stops.map((stop) => stop.spot.id));
+    setEditing(false);
+  };
+
+  const applyEditing = () => {
+    const selected = new Set(selectedSpotIds);
+    const excluded = routeCandidates.filter((spot) => !selected.has(spot.id)).map((spot) => spot.id);
+    onEditRoute(selectedSpotIds, excluded);
+    setEditing(false);
+  };
 
   const handleCopy = async () => {
     const text = routeToText(plan, plan.origin.name);
@@ -32,6 +65,16 @@ export default function RouteResult({ plan, onSelectSpot, onOpenMap }: Props) {
           <p className="route-sub">{plan.subtitle}</p>
         </div>
         <div className="route-actions">
+          <button
+            type="button"
+            className={editing ? 'ghost-btn is-active' : 'ghost-btn'}
+            onClick={() => {
+              if (!editing) setSelectedSpotIds(plan.stops.map((stop) => stop.spot.id));
+              setEditing((previous) => !previous);
+            }}
+          >
+            {editing ? '收起编辑' : '编辑路线'}
+          </button>
           <button type="button" className="ghost-btn" onClick={handleCopy}>
             {copied ? '已复制 ✓' : '复制路线'}
           </button>
@@ -40,6 +83,51 @@ export default function RouteResult({ plan, onSelectSpot, onOpenMap }: Props) {
           </button>
         </div>
       </div>
+
+      {editing ? (
+        <div className="route-editor">
+          <div className="route-editor-head">
+            <div>
+              <strong>选择要去的站点</strong>
+              <p>取消勾选即可删除，勾选其他点位即可加入。</p>
+            </div>
+            <span>{selectedSpotIds.length} / 8 个站点</span>
+          </div>
+          <div className="route-editor-grid">
+            {routeCandidates.map((spot) => {
+              const checked = selectedSpotIds.includes(spot.id);
+              const disabled = !checked && selectedSpotIds.length >= 8;
+              return (
+                <label key={spot.id} className={checked ? 'route-editor-option is-selected' : 'route-editor-option'}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggleSpot(spot.id)}
+                  />
+                  <span>
+                    <strong>
+                      {spot.emoji} {spot.name}
+                    </strong>
+                    <small>{currentSpotIds.has(spot.id) ? '当前路线' : spot.kind}</small>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="route-editor-foot">
+            <span>系统会按当前时长重新排序，时间不足的点位可能不会加入。</span>
+            <div>
+              <button type="button" className="ghost-btn" onClick={cancelEditing}>
+                取消
+              </button>
+              <button type="button" className="primary-btn primary-btn--sm" onClick={applyEditing}>
+                应用修改
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="route-stats">
         <div className="stat">

@@ -595,6 +595,12 @@ a {
   background: var(--brand-soft);
 }
 
+.ghost-btn.is-active {
+  border-color: var(--brand);
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
 /* ---------- planner / route ---------- */
 .planner-layout {
   display: grid;
@@ -646,6 +652,111 @@ a {
   display: flex;
   gap: 8px;
   align-items: flex-start;
+}
+
+.route-editor {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #f8fbf8;
+}
+
+.route-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.route-editor-head strong {
+  color: var(--brand-dark);
+  font-size: 14px;
+}
+
+.route-editor-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.route-editor-head > span {
+  flex-shrink: 0;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.route-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.route-editor-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.route-editor-option:hover,
+.route-editor-option.is-selected {
+  border-color: rgba(31, 122, 77, 0.45);
+  background: var(--brand-soft);
+}
+
+.route-editor-option input {
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--brand);
+}
+
+.route-editor-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.route-editor-option strong {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-editor-option small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.route-editor-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.route-editor-foot > span {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.route-editor-foot > div {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
 }
 
 .route-stats {
@@ -1879,6 +1990,24 @@ a {
 
   .route-head {
     flex-direction: column;
+  }
+
+  .route-editor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .route-editor-foot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .route-editor-foot > div {
+    width: 100%;
+  }
+
+  .route-editor-foot .ghost-btn,
+  .route-editor-foot .primary-btn {
+    flex: 1;
   }
 
   .map-legend-note {

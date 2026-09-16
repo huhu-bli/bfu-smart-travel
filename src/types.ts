@@ -66,6 +66,10 @@ export interface PlanOptions {
   minutes: number;
   pace: PaceOption;
   startId: string;
+  /** 用户在编辑路线时希望加入的点位。 */
+  includeSpotIds?: string[];
+  /** 用户在编辑路线时明确移除的点位。 */
+  excludeSpotIds?: string[];
 }
 
 export interface RoutePlan {

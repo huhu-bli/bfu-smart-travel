@@ -29,12 +29,21 @@ export default function App() {
   const [startId, setStartId] = useLocalStorage<string>('start', 'gate-main');
   const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
+  const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
+  const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
 
   const options = useMemo(() => {
     const duration = DURATIONS.find((item) => item.id === durationId) ?? DURATIONS[1];
     const pace = PACES.find((item) => item.id === paceId) ?? PACES[1];
-    return { interests: interestIds, minutes: duration.minutes, pace, startId };
-  }, [interestIds, durationId, paceId, startId]);
+    return {
+      interests: interestIds,
+      minutes: duration.minutes,
+      pace,
+      startId,
+      includeSpotIds: includedSpotIds,
+      excludeSpotIds: excludedSpotIds,
+    };
+  }, [interestIds, durationId, paceId, startId, includedSpotIds, excludedSpotIds]);
 
   const [plan, setPlan] = useState<RoutePlan>(() => buildRoute(SPOTS, options));
   const [dirty, setDirty] = useState(false);
@@ -71,6 +80,8 @@ export default function App() {
     skipDirty.current = true;
     setPlan(nextPlan);
     setDirty(false);
+    setIncludedSpotIds([]);
+    setExcludedSpotIds([]);
     setInterestIds(nextOptions.interests);
     setPaceId(nextOptions.pace.id);
     setStartId(nextOptions.startId);
@@ -84,6 +95,19 @@ export default function App() {
     window.setTimeout(() => {
       document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
+  };
+
+  const applyRouteEdits = (nextIncludedIds: string[], nextExcludedIds: string[]) => {
+    const nextOptions = {
+      ...options,
+      includeSpotIds: nextIncludedIds,
+      excludeSpotIds: nextExcludedIds,
+    };
+    skipDirty.current = true;
+    setIncludedSpotIds(nextIncludedIds);
+    setExcludedSpotIds(nextExcludedIds);
+    setPlan(buildRoute(SPOTS, nextOptions));
+    setDirty(false);
   };
 
   const activeSpot = activeSpotId ? SPOT_MAP[activeSpotId] : null;
@@ -143,7 +167,13 @@ export default function App() {
                 onGenerate={generate}
                 dirty={dirty}
               />
-              <RouteResult plan={plan} onSelectSpot={setActiveSpotId} onOpenMap={() => setTab('map')} />
+              <RouteResult
+                plan={plan}
+                availableSpots={SPOTS}
+                onSelectSpot={setActiveSpotId}
+                onOpenMap={() => setTab('map')}
+                onEditRoute={applyRouteEdits}
+              />
             </div>
           ) : null}
 
