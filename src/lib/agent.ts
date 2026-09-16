@@ -1,9 +1,13 @@
-import { DURATIONS, GATE_IDS, INTERESTS, PACES } from '../data/interests';
-import { SPOTS, SPOT_MAP } from '../data/spots';
-import { TRIPS } from '../data/trips';
-import type { InterestId, PaceId, PlanOptions, RoutePlan } from '../types';
-import { buildRoute, formatClock, formatDuration } from './planner';
-import { routeScene, sceneInstruction, sceneTools, type Scene } from './sceneRouter';
+import { DURATIONS, INTERESTS } from '../data/interests';
+import type { PlanOptions, RoutePlan } from '../types';
+import { promptForScene } from '../prompts/scenePrompts';
+import { formatDuration } from './planner';
+import { routeScene, sceneTools, type Scene } from './sceneRouter';
+import { TOOL_SCHEMAS } from './toolSchemas';
+import { runTool } from './toolExecutor';
+
+export { TOOL_SCHEMAS } from './toolSchemas';
+export { runTool } from './toolExecutor';
 
 /** 直连 = 浏览器带着自己的 API Key 直接请求；代理 = 请求转发到自建 Serverless，由服务端持钥。 */
 export type AgentMode = 'direct' | 'proxy';
@@ -201,309 +205,6 @@ export interface AgentTurnResult {
 }
 
 /* ------------------------------------------------------------------ */
-/* 工具定义                                                            */
-/* ------------------------------------------------------------------ */
-
-const INTEREST_IDS = INTERESTS.map((item) => item.id);
-
-const INTEREST_REFERENCE = INTERESTS.map(
-  (item) => `${item.id}=${item.label}`,
-).join('、');
-
-const GATE_REFERENCE = GATE_IDS.map((id) => {
-  const spot = SPOT_MAP[id];
-  return `${id}=${spot ? spot.name : id}`;
-}).join('、');
-
-export const TOOL_SCHEMAS = [
-  {
-    type: 'function',
-    name: 'list_spots',
-    description:
-      '查询校园点位列表。需要知道有哪些点位、某个点位的 id，或按兴趣/关键词筛选点位时调用。返回精简字段，不含完整讲解。',
-    strict: true,
-    parameters: {
-      type: 'object',
-      properties: {
-        interests: {
-          type: 'array',
-          items: { type: 'string', enum: INTEREST_IDS },
-          description: '兴趣方向过滤。传空数组表示不限。',
-        },
-        keyword: {
-          type: 'string',
-          description: '关键词，匹配名称、简介或亮点。传空字符串表示不过滤。',
-        },
-      },
-      required: ['interests', 'keyword'],
-      additionalProperties: false,
-    },
-  },
-  {
-    type: 'function',
-    name: 'build_route',
-    description:
-      '按兴趣、可用时长、步速和出发门岗生成一条校园游览路线，返回有序站点、到达/离开时间、步行距离与推荐理由。用户提出「规划路线 / 多长时间怎么逛」时调用。不要自己编造点位和时间。',
-    strict: true,
-    parameters: {
-      type: 'object',
-      properties: {
-        interests: {
-          type: 'array',
-          items: { type: 'string', enum: INTEREST_IDS },
-          description: '用户的兴趣方向，可多选。传空数组表示按默认综合兴趣推荐。',
-        },
-        minutes: {
-          type: 'integer',
-          description: '可用总时长（分钟），常见取值 30 / 60 / 120 / 240。',
-        },
-        pace: {
-          type: 'string',
-          enum: ['easy', 'normal', 'packed'],
-          description: '步速节奏：easy=悠闲，normal=标准，packed=紧凑。',
-        },
-        start_gate: {
-          type: 'string',
-          enum: GATE_IDS,
-          description: '出发门岗。',
-        },
-      },
-      required: ['interests', 'minutes', 'pace', 'start_gate'],
-      additionalProperties: false,
-    },
-  },
-  {
-    type: 'function',
-    name: 'get_spot_detail',
-    description:
-      '获取某个校园点位的完整讲解、亮点、最佳观赏时段与小贴士。用户问「这里值得去吗 / 这是什么地方」时调用。',
-    strict: true,
-    parameters: {
-      type: 'object',
-      properties: {
-        spot_id: {
-          type: 'string',
-          description: '点位 id，例如 ginkgo-avenue。可先调用 list_spots 获取。',
-        },
-      },
-      required: ['spot_id'],
-      additionalProperties: false,
-    },
-  },
-  {
-    type: 'function',
-    name: 'suggest_trip',
-    description:
-      '推荐校园周边的校外行程（奥林匹克森林公园、圆明园、颐和园、香山、鹫峰实验林场、五道口等），返回时间轴、预算、交通与提示。用户想「出去玩 / 一日游 / 周末去哪」时调用。',
-    strict: true,
-    parameters: {
-      type: 'object',
-      properties: {
-        duration: {
-          type: 'string',
-          enum: ['half', 'full'],
-          description: 'half=半天，full=一整天。',
-        },
-        theme: {
-          type: 'string',
-          description: '主题关键词，例如 自然、历史、登山、美食。传空字符串表示不限。',
-        },
-        budget_max: {
-          type: 'integer',
-          description: '人均预算上限（元）。传 0 表示不限。',
-        },
-      },
-      required: ['duration', 'theme', 'budget_max'],
-      additionalProperties: false,
-    },
-  },
-] as const;
-
-export const SYSTEM_INSTRUCTIONS = [
-  '你是「北林智能旅行」的行程助手，服务对象是来北京林业大学（北林）校园游览或想在学校周边出行的学生和访客。',
-  `可用兴趣 id：${INTEREST_REFERENCE}。`,
-  `可用门岗 id：${GATE_REFERENCE}。`,
-  '规则：',
-  '1. 涉及校园路线时必须调用 build_route，涉及点位介绍时调用 get_spot_detail，涉及校外行程时调用 suggest_trip；不确定点位 id 就先调用 list_spots。',
-  '2. 时间、距离、顺序一律来自工具返回结果，不要自行编造或改写数字。',
-  '3. 用中文回答，先给结论，再给理由；控制在 200 字以内，需要展开时用短列表。',
-  '4. 所有数据都是示意数据：提到开放时间、票价、入校政策时，提醒以学校和景区最新公告为准。',
-  '5. 如果用户没说清楚兴趣或时长，可以先按常见组合给一版，并在末尾用一句话询问是否要调整。',
-].join('\n');
-
-/* ------------------------------------------------------------------ */
-/* 工具执行                                                            */
-/* ------------------------------------------------------------------ */
-
-function asStringArray(value: unknown, allowed: readonly string[]): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter(
-    (item): item is string => typeof item === 'string' && allowed.includes(item),
-  );
-}
-
-function resolveSpotId(raw: unknown): string | null {
-  if (typeof raw !== 'string') return null;
-  const value = raw.trim();
-  if (SPOT_MAP[value]) return value;
-  const lowered = value.toLowerCase();
-  const byId = SPOTS.find((spot) => spot.id.toLowerCase() === lowered);
-  if (byId) return byId.id;
-  const byName = SPOTS.find(
-    (spot) => spot.name === value || spot.name.includes(value) || value.includes(spot.name),
-  );
-  return byName ? byName.id : null;
-}
-
-export function runTool(
-  name: string,
-  rawArguments: string,
-  context: AgentToolContext,
-): string {
-  let args: Record<string, unknown> = {};
-  try {
-    args = rawArguments ? (JSON.parse(rawArguments) as Record<string, unknown>) : {};
-  } catch {
-    return JSON.stringify({ error: '参数不是合法 JSON，请重新调用。' });
-  }
-
-  if (name === 'list_spots') {
-    const interests = asStringArray(args.interests, INTEREST_IDS);
-    const keyword = typeof args.keyword === 'string' ? args.keyword.trim() : '';
-    const matched = SPOTS.filter((spot) => {
-      if (spot.kind === '入口') return false;
-      const hitInterest = interests.length === 0 || spot.interests.some((id) => interests.includes(id));
-      const hitKeyword =
-        !keyword ||
-        spot.name.includes(keyword) ||
-        spot.short.includes(keyword) ||
-        spot.highlights.some((highlight) => highlight.includes(keyword));
-      return hitInterest && hitKeyword;
-    });
-    context.trace.push(`list_spots(${matched.length} 个点位)`);
-    return JSON.stringify({
-      count: matched.length,
-      spots: matched.slice(0, 12).map((spot) => ({
-        id: spot.id,
-        name: spot.name,
-        kind: spot.kind,
-        short: spot.short,
-        bestTime: spot.bestTime,
-        interests: spot.interests,
-      })),
-    });
-  }
-
-  if (name === 'build_route') {
-    const interests = asStringArray(args.interests, INTEREST_IDS) as InterestId[];
-    const rawMinutes = typeof args.minutes === 'number' ? args.minutes : Number(args.minutes);
-    const minutes = Number.isFinite(rawMinutes) ? Math.min(480, Math.max(15, Math.round(rawMinutes))) : 60;
-    const paceId = (typeof args.pace === 'string' && PACES.some((p) => p.id === args.pace)
-      ? args.pace
-      : 'normal') as PaceId;
-    const pace = PACES.find((item) => item.id === paceId) ?? PACES[1];
-    const startId =
-      typeof args.start_gate === 'string' && GATE_IDS.includes(args.start_gate)
-        ? args.start_gate
-        : 'east-gate';
-
-    const options: PlanOptions = { interests, minutes, pace, startId };
-    const plan = buildRoute(SPOTS, options);
-    context.plan = plan;
-    context.planOptions = options;
-    context.trace.push(`build_route(${plan.stops.length} 站 / ${Math.round(plan.totalMinutes)} 分钟)`);
-
-    return JSON.stringify({
-      title: plan.title,
-      subtitle: plan.subtitle,
-      origin: plan.origin.name,
-      totalMinutes: Math.round(plan.totalMinutes),
-      totalMeters: plan.totalMeters,
-      stops: plan.stops.map((stop, index) => ({
-        order: index + 1,
-        name: stop.spot.name,
-        spotId: stop.spot.id,
-        arrive: formatClock(stop.arrive),
-        leave: formatClock(stop.leave),
-        walkMinutes: stop.walkMinutes,
-        reason: stop.reason,
-      })),
-      note: '时间与距离为示意估算，出行前请确认开放情况。',
-    });
-  }
-
-  if (name === 'get_spot_detail') {
-    const id = resolveSpotId(args.spot_id);
-    if (!id) {
-      context.trace.push('get_spot_detail(未找到)');
-      return JSON.stringify({
-        error: '没有找到这个点位，请先调用 list_spots 获取正确的 spot_id。',
-        candidates: SPOTS.filter((spot) => spot.kind !== '入口')
-          .slice(0, 8)
-          .map((spot) => ({ id: spot.id, name: spot.name })),
-      });
-    }
-    const spot = SPOT_MAP[id];
-    if (!context.spotIds.includes(id)) context.spotIds.push(id);
-    context.trace.push(`get_spot_detail(${spot.name})`);
-    return JSON.stringify({
-      id: spot.id,
-      name: spot.name,
-      kind: spot.kind,
-      description: spot.description,
-      highlights: spot.highlights,
-      bestTime: spot.bestTime,
-      visitMinutes: spot.visit,
-      tips: spot.tips ?? '',
-    });
-  }
-
-  if (name === 'suggest_trip') {
-    const duration = args.duration === 'full' ? 'full' : 'half';
-    const theme = typeof args.theme === 'string' ? args.theme.trim() : '';
-    const budget = typeof args.budget_max === 'number' ? args.budget_max : Number(args.budget_max) || 0;
-
-    const wantsFullDay = duration === 'full';
-    const matched = TRIPS.filter((trip) => {
-      const durationHit = wantsFullDay
-        ? trip.duration.includes('一天')
-        : trip.duration.includes('半天');
-      const themeHit =
-        !theme ||
-        trip.theme.includes(theme) ||
-        trip.summary.includes(theme) ||
-        trip.name.includes(theme) ||
-        trip.tips.some((tip) => tip.includes(theme));
-      return durationHit && themeHit;
-    });
-    const shortlisted = (matched.length ? matched : TRIPS).slice(0, 3);
-    shortlisted.forEach((trip) => {
-      if (!context.tripIds.includes(trip.id)) context.tripIds.push(trip.id);
-    });
-    context.trace.push(`suggest_trip(${shortlisted.length} 条线路)`);
-
-    return JSON.stringify({
-      budgetMax: budget,
-      trips: shortlisted.map((trip) => ({
-        id: trip.id,
-        name: trip.name,
-        theme: trip.theme,
-        duration: trip.duration,
-        budget: trip.budget,
-        transport: trip.transport,
-        bestSeason: trip.bestSeason,
-        summary: trip.summary,
-        timeline: trip.timeline,
-        tips: trip.tips,
-      })),
-    });
-  }
-
-  context.trace.push(`${name}(未知工具)`);
-  return JSON.stringify({ error: `未知工具：${name}` });
-}
-
-/* ------------------------------------------------------------------ */
 /* 请求与解析                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -539,7 +240,7 @@ export function buildRequestPayload(
   const tools = TOOL_SCHEMAS.filter((tool) => sceneTools(scene).includes(tool.name));
   return {
     model: settings.model.trim() || DEFAULT_AGENT_SETTINGS.model,
-    instructions: `${SYSTEM_INSTRUCTIONS}\n${sceneInstruction(scene)}`,
+    instructions: promptForScene(scene),
     input,
     tools,
     tool_choice: tools.length ? 'auto' : 'none',
@@ -603,7 +304,7 @@ export function buildChatPayload(
   const tools = toChatTools(scene);
   return {
     model: settings.model.trim() || providerOf(settings.provider).model,
-    messages: [{ role: 'system', content: `${SYSTEM_INSTRUCTIONS}\n${sceneInstruction(scene)}` }, ...messages],
+    messages: [{ role: 'system', content: promptForScene(scene) }, ...messages],
     tools,
     tool_choice: tools.length ? 'auto' : 'none',
     stream: false,
