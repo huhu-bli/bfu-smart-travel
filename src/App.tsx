@@ -11,7 +11,6 @@ import SpotsGallery from './components/SpotsGallery';
 import Trips from './components/Trips';
 import { DURATIONS, GATE_IDS, PACES } from './data/interests';
 import { SPOTS, SPOT_MAP } from './data/spots';
-import { TRIPS } from './data/trips';
 import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
 import type { InterestId, PaceId, PlanOptions, RoutePlan } from './types';
@@ -100,25 +99,11 @@ export default function App() {
             <h1>
               把北林逛明白，
               <br />
-              只需要回答四个问题。
+              先选兴趣，再生成路线。
             </h1>
             <p>
-              选兴趣、给时长、定步速、挑一个门进去，系统自动排出一条顺路的校园路线。点位讲解、示意图地图、周边一日游和出行清单，都在同一个页面里。
+              选择兴趣、时长和出发门岗，生成一条顺路的校园路线。想了解点位或周边出行，可以使用右下角的 AI 助手。
             </p>
-            <div className="hero-stats">
-              <div>
-                <strong>{SPOTS.length}</strong>
-                <span>校园点位</span>
-              </div>
-              <div>
-                <strong>{TRIPS.length}</strong>
-                <span>周边线路</span>
-              </div>
-              <div>
-                <strong>0</strong>
-                <span>需要登录</span>
-              </div>
-            </div>
           </div>
           <div className="hero-art" aria-hidden="true">
             <svg viewBox="0 0 320 260">

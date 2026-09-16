@@ -45,7 +45,7 @@ export default function Header({ tab, onChange, repoUrl }: Props) {
         </button>
 
         <nav className="site-nav" aria-label="主导航">
-          {NAV.map((item) => (
+          {NAV.slice(0, 2).map((item) => (
             <button
               key={item.id}
               type="button"
@@ -55,6 +55,33 @@ export default function Header({ tab, onChange, repoUrl }: Props) {
               {item.label}
             </button>
           ))}
+          <div className="nav-secondary">
+            {NAV.slice(2).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={item.id === tab ? 'nav-pill is-active' : 'nav-pill'}
+                onClick={() => onChange(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <details className={tab !== 'planner' && tab !== 'map' ? 'nav-more is-active' : 'nav-more'}>
+            <summary>更多</summary>
+            <div className="nav-more-menu">
+              {NAV.slice(2).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={item.id === tab ? 'nav-more-item is-active' : 'nav-more-item'}
+                  onClick={() => onChange(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </details>
         </nav>
 
         <a className="gh-link" href={repoUrl} target="_blank" rel="noreferrer">

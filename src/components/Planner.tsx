@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { DURATIONS, INTERESTS, PACES, gatesOf } from '../data/interests';
 import { SPOTS } from '../data/spots';
 import type { InterestId, PaceId } from '../types';
@@ -28,12 +29,14 @@ export default function Planner({
   dirty,
 }: Props) {
   const gates = gatesOf(SPOTS);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const selectedPace = PACES.find((pace) => pace.id === paceId) ?? PACES[1];
 
   return (
     <section className="planner-card">
       <div className="planner-head">
         <h2>告诉我你想怎么逛</h2>
-        <p>选兴趣、给时长、定步速，下面会自动排出一条顺路的校园路线。</p>
+        <p>选兴趣和时长，下面会自动排出一条顺路的校园路线。</p>
       </div>
 
       <div className="field">
@@ -77,26 +80,32 @@ export default function Planner({
         </div>
       </div>
 
-      <div className="field">
-        <label className="field-label">3 · 步速节奏</label>
-        <div className="seg-grid seg-grid--three">
-          {PACES.map((pace) => (
-            <button
-              key={pace.id}
-              type="button"
-              className={pace.id === paceId ? 'segment is-active' : 'segment'}
-              onClick={() => onPace(pace.id)}
-            >
-              <strong>{pace.label}</strong>
-              <small>{pace.desc}</small>
-            </button>
-          ))}
+      <details className="advanced-settings" open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
+        <summary>
+          更多设置
+          <span>步速：{selectedPace.label}</span>
+        </summary>
+        <div className="field field--nested">
+          <label className="field-label">步速节奏</label>
+          <div className="seg-grid seg-grid--three">
+            {PACES.map((pace) => (
+              <button
+                key={pace.id}
+                type="button"
+                className={pace.id === paceId ? 'segment is-active' : 'segment'}
+                onClick={() => onPace(pace.id)}
+              >
+                <strong>{pace.label}</strong>
+                <small>{pace.desc}</small>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </details>
 
       <div className="field">
         <label className="field-label" htmlFor="start-gate">
-          4 · 从哪个门出发
+          3 · 从哪个门出发
         </label>
         <select id="start-gate" className="select" value={startId} onChange={(event) => onStart(event.target.value)}>
           {gates.map((gate) => (

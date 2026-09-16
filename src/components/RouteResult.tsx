@@ -51,12 +51,8 @@ export default function RouteResult({ plan, onSelectSpot, onOpenMap }: Props) {
           <strong>约 {plan.totalMeters} 米</strong>
         </div>
         <div className="stat">
-          <span className="stat-label">点位数量</span>
+          <span className="stat-label">游览站点</span>
           <strong>{plan.stops.length} 个</strong>
-        </div>
-        <div className="stat">
-          <span className="stat-label">出发门岗</span>
-          <strong>{plan.origin.name}</strong>
         </div>
       </div>
 
@@ -85,12 +81,15 @@ export default function RouteResult({ plan, onSelectSpot, onOpenMap }: Props) {
                     {formatClock(stop.arrive)} - {formatClock(stop.leave)}
                   </span>
                 </button>
-                <p className="stop-reason">{stop.reason}</p>
-                <div className="stop-meta">
-                  <span>步行 {stop.walkMinutes} 分钟 · {stop.walkMeters} 米</span>
-                  <span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span>
-                  <span>最佳时段 {stop.spot.bestTime}</span>
-                </div>
+                <details className="stop-details">
+                  <summary>查看停留建议</summary>
+                  <p className="stop-reason">{stop.reason}</p>
+                  <div className="stop-meta">
+                    <span>步行 {stop.walkMinutes} 分钟 · {stop.walkMeters} 米</span>
+                    <span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span>
+                    <span>最佳时段 {stop.spot.bestTime}</span>
+                  </div>
+                </details>
               </div>
             </li>
           ))}
