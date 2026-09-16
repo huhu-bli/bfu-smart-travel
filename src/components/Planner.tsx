@@ -29,17 +29,26 @@ export default function Planner({
   dirty,
 }: Props) {
   const gates = gatesOf(SPOTS);
+  const [manualOpen, setManualOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const selectedPace = PACES.find((pace) => pace.id === paceId) ?? PACES[1];
 
   return (
     <section className="planner-card">
       <div className="planner-head">
-        <h2>告诉我你想怎么逛</h2>
-        <p>选兴趣和时长，下面会自动排出一条顺路的校园路线。</p>
+        <span className="planner-kicker">备用入口</span>
+        <h2>自己设置路线</h2>
+        <p>不想和 Agent 对话时，也可以手动选择兴趣和时间。</p>
       </div>
 
-      <div className="field">
+      <details className="manual-planner" open={manualOpen} onToggle={(event) => setManualOpen(event.currentTarget.open)}>
+        <summary>
+          打开手动选项
+          <span>兴趣 · 时长 · 门岗</span>
+        </summary>
+
+        <div className="manual-planner-body">
+        <div className="field">
         <label className="field-label">1 · 你更想看什么</label>
         <div className="chip-grid">
           {INTERESTS.map((interest) => {
@@ -61,9 +70,9 @@ export default function Planner({
         <p className="field-hint">
           {interestIds.length ? `已选 ${interestIds.length} 个兴趣方向` : '不选也可以，默认按园林植物 + 建筑人文 + 摄影推荐'}
         </p>
-      </div>
+        </div>
 
-      <div className="field">
+        <div className="field">
         <label className="field-label">2 · 你有多少时间</label>
         <div className="seg-grid">
           {DURATIONS.map((duration) => (
@@ -78,7 +87,7 @@ export default function Planner({
             </button>
           ))}
         </div>
-      </div>
+        </div>
 
       <details className="advanced-settings" open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
         <summary>
@@ -103,7 +112,7 @@ export default function Planner({
         </div>
       </details>
 
-      <div className="field">
+        <div className="field">
         <label className="field-label" htmlFor="start-gate">
           3 · 从哪个门出发
         </label>
@@ -114,7 +123,7 @@ export default function Planner({
             </option>
           ))}
         </select>
-      </div>
+        </div>
 
       <button type="button" className={dirty ? 'primary-btn is-dirty' : 'primary-btn'} onClick={onGenerate}>
         {dirty ? '生成我的路线' : '重新生成路线'}
@@ -125,6 +134,8 @@ export default function Planner({
           />
         </svg>
       </button>
+        </div>
+      </details>
     </section>
   );
 }

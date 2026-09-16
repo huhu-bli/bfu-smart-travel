@@ -29,6 +29,7 @@ export default function App() {
   const [startId, setStartId] = useLocalStorage<string>('start', 'gate-main');
   const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
+  const [agentOpen, setAgentOpen] = useState(false);
   const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
   const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
 
@@ -123,11 +124,18 @@ export default function App() {
             <h1>
               把北林逛明白，
               <br />
-              先选兴趣，再生成路线。
+              直接告诉我，想怎么逛。
             </h1>
             <p>
-              选择兴趣、时长和出发门岗，生成一条顺路的校园路线。想了解点位或周边出行，可以使用右下角的 AI 助手。
+              说出你的兴趣、时间和出发位置，Agent 会帮你规划路线、讲解点位，也能继续修改当前行程。
             </p>
+            <div className="hero-agent-entry">
+              <button type="button" className="hero-agent-btn" onClick={() => setAgentOpen(true)}>
+                <span aria-hidden="true">🤖</span>
+                让 Agent 帮我规划
+              </button>
+              <span>例如：我只有 1 小时，从东门进，想拍照和看植物</span>
+            </div>
           </div>
           <div className="hero-art" aria-hidden="true">
             <svg viewBox="0 0 320 260">
@@ -226,6 +234,11 @@ export default function App() {
       <Footer repoUrl={REPO_URL} />
 
       <AgentPanel
+        open={agentOpen}
+        onOpen={() => setAgentOpen(true)}
+        onClose={() => setAgentOpen(false)}
+        currentPlan={plan}
+        currentPlanOptions={options}
         onSelectSpot={setActiveSpotId}
         onApplyPlan={applyPlanFromAgent}
         onOpenMap={() => setTab('map')}

@@ -82,8 +82,11 @@ export function runTool(
       typeof args.start_gate === 'string' && GATE_IDS.includes(args.start_gate)
         ? args.start_gate
         : 'east-gate';
+    const validSpotIds = SPOTS.filter((spot) => spot.kind !== '入口').map((spot) => spot.id);
+    const includeSpotIds = asStringArray(args.include_spot_ids, validSpotIds);
+    const excludeSpotIds = asStringArray(args.exclude_spot_ids, validSpotIds);
 
-    const options: PlanOptions = { interests, minutes, pace, startId };
+    const options: PlanOptions = { interests, minutes, pace, startId, includeSpotIds, excludeSpotIds };
     const plan = buildRoute(SPOTS, options);
     context.plan = plan;
     context.planOptions = options;

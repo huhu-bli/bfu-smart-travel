@@ -7,6 +7,7 @@ const SCENE_PROMPTS: Record<Exclude<Scene, 'unknown'>, string> = {
     '当前场景：校园路线。',
     '只处理北林校园内的路线规划、时间预算、兴趣和出发门岗。',
     '用户要求规划或调整路线时调用 build_route；需要确认校园点位时可调用 list_spots。',
+    '如果用户说“当前路线、刚才那条路线”并要求加入或删除站点，参考当前路线上下文，用 include_spot_ids 和 exclude_spot_ids 传递修改；没有修改时传空数组。',
     '不要调用校外线路工具，也不要把校外交通信息混入校园路线。',
   ].join('\n'),
   'spot-detail': [
@@ -35,4 +36,3 @@ const UNKNOWN_SCENE_PROMPT = [
 export function promptForScene(scene: Scene): string {
   return `${BASE_AGENT_PROMPT}\n\n${scene === 'unknown' ? UNKNOWN_SCENE_PROMPT : SCENE_PROMPTS[scene]}`;
 }
-

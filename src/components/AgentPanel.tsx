@@ -21,6 +21,11 @@ import { useLocalStorage } from '../lib/storage';
 import type { PlanOptions, RoutePlan } from '../types';
 
 interface Props {
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  currentPlan: RoutePlan | null;
+  currentPlanOptions: PlanOptions | null;
   onSelectSpot: (id: string) => void;
   onApplyPlan: (plan: RoutePlan, options: PlanOptions) => void;
   onOpenMap: () => void;
@@ -59,8 +64,17 @@ const nextId = () => {
   return `turn-${turnSeed}`;
 };
 
-export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpenTrips }: Props) {
-  const [open, setOpen] = useState(false);
+export default function AgentPanel({
+  open,
+  onOpen,
+  onClose,
+  currentPlan,
+  currentPlanOptions,
+  onSelectSpot,
+  onApplyPlan,
+  onOpenMap,
+  onOpenTrips,
+}: Props) {
   const [settings, setSettings] = useLocalStorage<AgentSettings>('agent', DEFAULT_AGENT_SETTINGS);
   const configured =
     settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
@@ -181,6 +195,8 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
         userText: question,
         settings: activeSettings,
         scene: activeSceneRef.current,
+        currentPlan,
+        currentPlanOptions,
       });
     const isNetworkFailure = (error: unknown) =>
       error instanceof Error && error.message.includes('网络请求失败');
@@ -388,7 +404,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
   return (
     <>
       {open ? null : (
-        <button type="button" className="agent-fab" onClick={() => setOpen(true)}>
+        <button type="button" className="agent-fab" onClick={onOpen}>
           <span className="agent-fab-icon">🤖</span>
           <span className="agent-fab-text">AI 行程助手</span>
         </button>
@@ -411,7 +427,7 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
               <button type="button" className="icon-btn" onClick={reset} title="清空对话">
                 ⟲
               </button>
-              <button type="button" className="icon-btn" onClick={() => setOpen(false)} title="收起">
+              <button type="button" className="icon-btn" onClick={onClose} title="收起">
                 ✕
               </button>
             </div>
@@ -584,10 +600,24 @@ export default function AgentPanel({ onSelectSpot, onApplyPlan, onOpenMap, onOpe
                       ))}
                     </ol>
                     <div className="agent-card-actions">
-                      <button type="button" className="ghost-btn" onClick={() => onApplyPlan(turn.plan!, turn.planOptions!)}>
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        onClick={() => {
+                          onApplyPlan(turn.plan!, turn.planOptions!);
+                          onClose();
+                        }}
+                      >
                         载入规划器
                       </button>
-                      <button type="button" className="ghost-btn" onClick={onOpenMap}>
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        onClick={() => {
+                          onOpenMap();
+                          onClose();
+                        }}
+                      >
                         在地图中查看
                       </button>
                     </div>

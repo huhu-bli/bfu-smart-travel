@@ -204,6 +204,22 @@ export interface AgentTurnResult {
   rounds: number;
 }
 
+function formatCurrentPlanContext(plan: RoutePlan | null, options: PlanOptions | null): string {
+  if (!plan) return '';
+  const stops = plan.stops.map((stop, index) => `${index + 1}. ${stop.spot.name}（id: ${stop.spot.id}）`).join('；');
+  const optionNote = options
+    ? `当前参数：${options.minutes} 分钟，${options.pace.label}步速，出发门岗 ${options.startId}。`
+    : '';
+  return [
+    '当前页面已有一条校园路线。用户说“当前路线 / 刚才那条路线”时，优先基于它调整：',
+    `起点：${plan.origin.name}（id: ${plan.origin.id}）。站点：${stops || '暂无站点'}。`,
+    optionNote,
+    '调整站点时，调用 build_route，并把保留/新增站点放入 include_spot_ids，把要删除的站点放入 exclude_spot_ids。',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 /* ------------------------------------------------------------------ */
 /* 请求与解析                                                          */
 /* ------------------------------------------------------------------ */
@@ -236,11 +252,12 @@ export function buildRequestPayload(
   settings: AgentSettings,
   input: AgentInputItem[],
   scene: Scene = 'unknown',
+  contextHint = '',
 ): Record<string, unknown> {
   const tools = TOOL_SCHEMAS.filter((tool) => sceneTools(scene).includes(tool.name));
   return {
     model: settings.model.trim() || DEFAULT_AGENT_SETTINGS.model,
-    instructions: promptForScene(scene),
+    instructions: [promptForScene(scene), contextHint].filter(Boolean).join('\n\n'),
     input,
     tools,
     tool_choice: tools.length ? 'auto' : 'none',
@@ -300,11 +317,15 @@ export function buildChatPayload(
   settings: AgentSettings,
   messages: ChatMessage[],
   scene: Scene = 'unknown',
+  contextHint = '',
 ): Record<string, unknown> {
   const tools = toChatTools(scene);
   return {
     model: settings.model.trim() || providerOf(settings.provider).model,
-    messages: [{ role: 'system', content: promptForScene(scene) }, ...messages],
+    messages: [
+      { role: 'system', content: [promptForScene(scene), contextHint].filter(Boolean).join('\n\n') },
+      ...messages,
+    ],
     tools,
     tool_choice: tools.length ? 'auto' : 'none',
     stream: false,
@@ -457,6 +478,7 @@ async function runResponsesLoop(
   settings: AgentSettings,
   context: AgentToolContext,
   scene: Scene,
+  contextHint: string,
 ): Promise<LoopOutcome> {
   const trimmedHistory = trimHistory(history);
   let input: AgentInputItem[] = [
@@ -465,7 +487,7 @@ async function runResponsesLoop(
   ];
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-    const response = await requestModel(settings, buildRequestPayload(settings, input, scene));
+    const response = await requestModel(settings, buildRequestPayload(settings, input, scene, contextHint));
     const output = (response.output as AgentInputItem[] | undefined) ?? [];
     input = [...input, ...output];
 
@@ -498,12 +520,13 @@ async function runChatLoop(
   settings: AgentSettings,
   context: AgentToolContext,
   scene: Scene,
+  contextHint: string,
 ): Promise<LoopOutcome> {
   const trimmedHistory = trimHistory(history);
   let messages: ChatMessage[] = [...(trimmedHistory.history as ChatMessage[]), { role: 'user', content: userText }];
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-    const response = await requestModel(settings, buildChatPayload(settings, messages, scene));
+    const response = await requestModel(settings, buildChatPayload(settings, messages, scene, contextHint));
     const turn = parseChatResponse(response);
 
     const assistant: ChatMessage = {
@@ -539,21 +562,26 @@ export async function runAgentTurn(params: {
   userText: string;
   settings: AgentSettings;
   scene?: Scene;
+  currentPlan?: RoutePlan | null;
+  currentPlanOptions?: PlanOptions | null;
 }): Promise<AgentTurnResult> {
   const { history, userText, settings } = params;
   const scene = routeScene(userText, params.scene ?? 'unknown');
+  const currentPlan = scene === 'campus-route' ? params.currentPlan ?? null : null;
+  const currentPlanOptions = scene === 'campus-route' ? params.currentPlanOptions ?? null : null;
   const context: AgentToolContext = {
-    plan: null,
-    planOptions: null,
+    plan: currentPlan,
+    planOptions: currentPlanOptions,
     spotIds: [],
     tripIds: [],
     trace: [],
   };
+  const contextHint = formatCurrentPlanContext(currentPlan, currentPlanOptions);
 
   const outcome =
     settings.protocol === 'chat'
-      ? await runChatLoop(history as ChatMessage[], userText, settings, context, scene)
-      : await runResponsesLoop(history as AgentInputItem[], userText, settings, context, scene);
+      ? await runChatLoop(history as ChatMessage[], userText, settings, context, scene, contextHint)
+      : await runResponsesLoop(history as AgentInputItem[], userText, settings, context, scene, contextHint);
 
   return {
     scene,
