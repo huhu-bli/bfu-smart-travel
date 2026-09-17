@@ -46,6 +46,11 @@ interface ChatTurn {
   offline?: boolean;
 }
 
+interface PanelSize {
+  width: number;
+  height: number | null;
+}
+
 const QUICK_PROMPTS = [
   '我只有 1 小时，从东门进，怎么逛最值？',
   '银杏大道现在值得专门去一趟吗？',
@@ -57,12 +62,46 @@ const CHAT_STORAGE_KEY = 'bfu-smart-travel:chat';
 const KEEP_TURNS = 30;
 /** 代理一旦判定不通，这么多毫秒内不再重试，避免每次提问都先等超时。 */
 const PROXY_RETRY_AFTER_MS = 10 * 60 * 1000;
+const DEFAULT_PANEL_SIZE: PanelSize = { width: 396, height: null };
+const PANEL_SIZE_STORAGE_KEY = 'bfu-smart-travel:agent-panel-size';
+const MIN_PANEL_WIDTH = 320;
+const MAX_PANEL_WIDTH = 720;
+const MIN_PANEL_HEIGHT = 420;
+const MAX_PANEL_HEIGHT = 760;
 
 let turnSeed = 0;
 const nextId = () => {
   turnSeed += 1;
   return `turn-${turnSeed}`;
 };
+
+function clampPanelSize(width: number, height: number): PanelSize {
+  const viewportWidth = Math.max(window.innerWidth, 280);
+  const viewportHeight = Math.max(window.innerHeight, 280);
+  const minWidth = Math.min(MIN_PANEL_WIDTH, viewportWidth - 20);
+  const maxWidth = Math.max(minWidth, Math.min(MAX_PANEL_WIDTH, viewportWidth - 20));
+  const minHeight = Math.min(MIN_PANEL_HEIGHT, viewportHeight - 20);
+  const maxHeight = Math.max(minHeight, Math.min(MAX_PANEL_HEIGHT, viewportHeight - 20));
+
+  return {
+    width: Math.round(Math.min(maxWidth, Math.max(minWidth, width))),
+    height: Math.round(Math.min(maxHeight, Math.max(minHeight, height))),
+  };
+}
+
+function readPanelSize(): PanelSize {
+  if (typeof window === 'undefined') return DEFAULT_PANEL_SIZE;
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(PANEL_SIZE_STORAGE_KEY) ?? 'null') as Partial<PanelSize> | null;
+    if (typeof saved?.width !== 'number') return DEFAULT_PANEL_SIZE;
+    if (saved.height !== null && saved.height !== undefined && typeof saved.height !== 'number') {
+      return DEFAULT_PANEL_SIZE;
+    }
+    return { width: saved.width, height: saved.height ?? null };
+  } catch {
+    return DEFAULT_PANEL_SIZE;
+  }
+}
 
 export default function AgentPanel({
   open,
@@ -92,8 +131,102 @@ export default function AgentPanel({
   const migrated = useRef(false);
   const localMemoryBySceneRef = useRef<Partial<Record<Scene, LocalMemory>>>({});
   const chatRestored = useRef(false);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const resizeRef = useRef<{
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+  } | null>(null);
+  const [panelSize, setPanelSize] = useState<PanelSize>(readPanelSize);
+  const [isResizing, setIsResizing] = useState(false);
   /** 代理被判不通的截止时间戳；在此时刻前直接走直连，不再白等超时。 */
   const proxyDownUntilRef = useRef(0);
+
+  // 记住用户调整后的尺寸；拖拽过程中延迟写入，避免每个指针事件都访问 localStorage。
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(PANEL_SIZE_STORAGE_KEY, JSON.stringify(panelSize));
+      } catch {
+        // 忽略隐私模式或禁用存储时的写入失败
+      }
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [panelSize]);
+
+  // 对话框打开时锁住页面滚动，避免手机上滚动聊天内容把底层页面一起带动。
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const previousOverscroll = document.documentElement.style.overscrollBehavior;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      document.documentElement.style.overscrollBehavior = previousOverscroll;
+    };
+  }, [open]);
+
+  // 调整尺寸时监听窗口级指针事件，鼠标或手指移出手柄后仍能顺利完成拖拽。
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMove = (event: PointerEvent) => {
+      const start = resizeRef.current;
+      if (!start) return;
+      setPanelSize(
+        clampPanelSize(start.startWidth - (event.clientX - start.startX), start.startHeight - (event.clientY - start.startY)),
+      );
+    };
+    const handleEnd = () => {
+      resizeRef.current = null;
+      setIsResizing(false);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd);
+    window.addEventListener('pointercancel', handleEnd);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+    };
+  }, [isResizing]);
+
+  const startResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    event.preventDefault();
+    const rect = panel.getBoundingClientRect();
+    resizeRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+    };
+    setIsResizing(true);
+  };
+
+  const resizeWithKeyboard = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const step = event.shiftKey ? 48 : 16;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPanelSize(
+      clampPanelSize(
+        rect.width + (event.key === 'ArrowLeft' ? step : event.key === 'ArrowRight' ? -step : 0),
+        rect.height + (event.key === 'ArrowUp' ? step : event.key === 'ArrowDown' ? -step : 0),
+      ),
+    );
+  };
 
   // 兼容早期版本保存的设置：缺 provider/protocol 时补齐。
   useEffect(() => {
@@ -411,7 +544,23 @@ export default function AgentPanel({
       )}
 
       {open ? (
-        <section className="agent-panel" aria-label="AI 行程助手">
+        <>
+          <button
+            type="button"
+            className="agent-backdrop"
+            aria-label="关闭 AI 行程助手"
+            onClick={onClose}
+            onWheel={(event) => event.preventDefault()}
+            onTouchMove={(event) => event.preventDefault()}
+          />
+          <section
+            ref={panelRef}
+            className={isResizing ? 'agent-panel is-resizing' : 'agent-panel'}
+            style={{ width: panelSize.width, ...(panelSize.height ? { height: panelSize.height } : {}) }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="AI 行程助手"
+          >
           <header className="agent-head">
             <div className="agent-title">
               <strong>AI 行程助手</strong>
@@ -693,7 +842,16 @@ export default function AgentPanel({
               {busy ? '…' : '发送'}
             </button>
           </form>
-        </section>
+            <button
+              type="button"
+              className="agent-resize-handle"
+              aria-label="调整 AI 对话框大小"
+              title="拖动调整对话框大小；方向键也可以调整"
+              onPointerDown={startResize}
+              onKeyDown={resizeWithKeyboard}
+            />
+          </section>
+        </>
       ) : null}
     </>
   );
