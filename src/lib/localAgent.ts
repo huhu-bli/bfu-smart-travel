@@ -1,7 +1,8 @@
 import { SPOTS, SPOT_MAP } from '../data/spots';
 import type { InterestId, PlanOptions, RoutePlan } from '../types';
 import { formatDuration } from './planner';
-import { runTool, type AgentToolContext } from './agent';
+import { runTool } from './toolExecutor';
+import type { AgentToolContext } from '../agent/types';
 import { routeScene, type Scene } from './sceneRouter';
 
 /**

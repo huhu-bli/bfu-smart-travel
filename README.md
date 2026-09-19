@@ -169,9 +169,17 @@ bfu-smart-travel/
 │  │  ├─ campusGeometry.ts        # 校园矢量地图（边界/建筑/道路/绿地，来源 OSM）
 │  │  ├─ trips.ts                 # 周边线路数据（6 条）
 │  │  └─ interests.ts             # 兴趣标签、时长、步速、门岗
+│  ├─ agent/                      # Agent核心：配置、协议、历史和工具循环
+│  │  ├─ config.ts                # 服务商和默认配置
+│  │  ├─ runtime.ts               # Agent总调度
+│  │  ├─ network.ts               # 模型请求和连接测试
+│  │  ├─ history.ts               # 对话历史裁剪
+│  │  ├─ toolLoop.ts              # 工具调用循环
+│  │  └─ transports/              # Responses / Chat协议适配
 │  ├─ lib/
 │  │  ├─ planner.ts               # 路线生成算法
-│  │  ├─ agent.ts                 # 工具定义 + Responses API 调用循环
+│  │  ├─ agent.ts                 # Agent兼容入口
+│  │  ├─ localAgent.ts            # 无密钥时的规则助手
 │  │  └─ storage.ts               # localStorage 状态钩子
 │  ├─ styles/global.css
 │  └─ types.ts

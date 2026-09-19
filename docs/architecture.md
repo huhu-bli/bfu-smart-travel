@@ -83,8 +83,17 @@ src/
 ├─ prompts/                   提示词层
 │  ├─ basePrompt.ts            所有场景共享的规则
 │  └─ scenePrompts.ts          各场景的职责和边界
+├─ agent/                     Agent 核心层
+│  ├─ config.ts                服务商、默认配置和接口地址
+│  ├─ types.ts                 Agent设置、历史和工具上下文类型
+│  ├─ runtime.ts               Agent总调度和结果整理
+│  ├─ network.ts               模型请求和连接测试
+│  ├─ errors.ts                错误和连接结果格式化
+│  ├─ history.ts               对话历史裁剪
+│  ├─ toolLoop.ts              工具调用循环
+│  └─ transports/              Responses / Chat协议适配
 ├─ lib/                       业务逻辑层
-│  ├─ agent.ts                 模型调用、协议适配和工具循环
+│  ├─ agent.ts                 兼容入口，重新导出 Agent 核心层
 │  ├─ localAgent.ts            无密钥时的规则助手
 │  ├─ sceneRouter.ts           场景识别和工具白名单
 │  ├─ toolSchemas.ts           工具参数定义
@@ -306,5 +315,6 @@ Worker 负责：
 - 当前项目没有自动化测试脚本。
 - 真实 AI 是否可用取决于服务商、模型、网络和 Worker 配置。
 
-这些限制不影响课程展示和校园导览原型运行，但在接入实时天气、地图导航、门票、预约或多人协作前，需要进一步拆分服务和增加测试。
+本次重构已将原来集中在 `src/lib/agent.ts` 中的配置、网络请求、协议适配、历史裁剪、工具循环和运行调度拆分到 `src/agent/`。`src/lib/agent.ts` 目前只作为兼容入口，后续不应把这些职责重新写回该文件。
 
+这些限制不影响课程展示和校园导览原型运行，但在接入实时天气、地图导航、门票、预约或多人协作前，需要进一步拆分服务和增加测试。

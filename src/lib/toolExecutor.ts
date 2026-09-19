@@ -4,7 +4,7 @@ import { TRIPS } from '../data/trips';
 import type { InterestId, PaceId, PlanOptions } from '../types';
 import { buildRoute, formatClock } from './planner';
 import { INTEREST_IDS } from './toolSchemas';
-import type { AgentToolContext } from './agent';
+import type { AgentToolContext } from '../agent/types';
 
 /**
  * 工具执行层：只负责读取本地数据并返回结构化结果。
