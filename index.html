@@ -19,13 +19,10 @@
   </head>
   <body>
     <script>
-      // 站点级默认配置，由构建时的环境变量注入。
-      // 配好之后所有访客都会默认走这个代理，不需要自己填密钥。
+      // 公开站点只注入 Worker 地址和访问口令，千问 API Key 永不进入网页。
       window.__BFU_ENV__ = {
         VITE_AGENT_PROXY_URL: '%VITE_AGENT_PROXY_URL%',
         VITE_AGENT_PROXY_TOKEN: '%VITE_AGENT_PROXY_TOKEN%',
-        VITE_AGENT_API_KEY: '%VITE_AGENT_API_KEY%',
-        VITE_AGENT_PROVIDER: '%VITE_AGENT_PROVIDER%',
       };
     </script>
     <div id="root"></div>
