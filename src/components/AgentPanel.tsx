@@ -228,34 +228,31 @@ export default function AgentPanel({
     );
   };
 
-  // 兼容早期版本保存的设置：缺 provider/protocol 时补齐。
+  // 迁移旧版本：公开站点有 Worker 时，旧的直连或失效配置自动切换到站点代理。
   useEffect(() => {
     if (migrated.current) return;
     migrated.current = true;
-    // 站点已经配好共享代理，而用户自己什么都没配（没有密钥/没有代理）→ 直接用站点配置。
     const siteDefault = DEFAULT_AGENT_SETTINGS;
-    const userConfigured =
-      settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
-    if ((siteDefault.proxyUrl || siteDefault.apiKey) && !userConfigured) {
+    if (
+      siteDefault.proxyUrl &&
+      (settings.mode !== 'proxy' ||
+        settings.proxyUrl !== siteDefault.proxyUrl ||
+        settings.proxyToken !== siteDefault.proxyToken ||
+        settings.provider !== siteDefault.provider)
+    ) {
       setSettings(siteDefault);
       return;
     }
-    if (settings.provider && settings.protocol) return;
-    setSettings((prev) => {
-      // 早期版本没有服务商概念：地址指向 OpenAI 就沿用，否则迁移到默认的 DeepSeek。
-      const looksLikeOpenAi = /openai\.com/i.test(prev.baseUrl ?? '');
-      const preset = providerOf(looksLikeOpenAi ? 'openai' : 'deepseek');
-      return {
-        ...DEFAULT_AGENT_SETTINGS,
-        ...prev,
-        provider: preset.id,
-        protocol: preset.protocol,
-        baseUrl: prev.baseUrl || preset.baseUrl,
-        model: looksLikeOpenAi ? prev.model || preset.model : preset.model,
-        // 换了服务商，旧密钥不再适用，清掉避免误用。
-        apiKey: looksLikeOpenAi ? prev.apiKey : '',
-      };
-    });
+    if (settings.provider === 'qwen' && settings.protocol === 'chat') return;
+    setSettings((prev) => ({
+      ...DEFAULT_AGENT_SETTINGS,
+      ...prev,
+      provider: 'qwen',
+      protocol: 'chat',
+      baseUrl: DEFAULT_AGENT_SETTINGS.baseUrl,
+      model: DEFAULT_AGENT_SETTINGS.model,
+      apiKey: '',
+    }));
   }, [settings, setSettings]);
 
   useEffect(() => {
