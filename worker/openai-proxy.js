@@ -1,26 +1,25 @@
 /**
- * 北林智能旅行 · AI 行程助手代理
+ * 北林智能旅行 · 通义千问 Cloudflare Worker 代理
  *
- * 作用：把浏览器的请求转发给模型服务商，API Key 只存在于服务端环境变量里，
- *       这样访客打开网页就能直接用 AI，不需要自己填密钥。
+ * 浏览器只请求本 Worker，QWEN_API_KEY 永远保存在 Cloudflare secret 中。
+ * Worker 不提供通用上游转发，只允许通义千问 Chat Completions 接口。
  *
- * 环境变量：
- *   OPENAI_API_KEY  必填，服务商的密钥（DeepSeek / 通义百炼 / OpenAI 等）
- *   UPSTREAM_BASE   选填，上游基地址，默认 https://api.openai.com/v1
- *                   DeepSeek 填 https://api.deepseek.com
- *                   通义百炼 填 https://dashscope.aliyuncs.com/compatible-mode/v1
- *   APP_TOKEN       选填，设置后前端必须带 x-app-token 请求头才能调用
- *   ALLOWED_MODELS  选填，逗号分隔的模型白名单
- *   IP_LIMIT        选填，单个 IP 在时间窗内允许的请求数，默认 20
- *   IP_WINDOW_MS    选填，单 IP 限流时间窗（毫秒），默认 10 分钟
- *   GLOBAL_LIMIT    选填，全局时间窗内的请求上限，默认 200（兜住额度被刷）
- *   GLOBAL_WINDOW_MS 选填，全局限流时间窗（毫秒），默认 1 小时
+ * Secrets:
+ *   QWEN_API_KEY  必填，通义千问 API Key
+ *   APP_TOKEN      选填，设置后前端必须带 x-app-token
+ *
+ * 可选变量：
+ *   ALLOWED_MODELS    逗号分隔的模型白名单
+ *   IP_LIMIT          单 IP 时间窗请求数，默认 20
+ *   IP_WINDOW_MS      单 IP 时间窗，默认 10 分钟
+ *   GLOBAL_LIMIT      全局时间窗请求数，默认 200
+ *   GLOBAL_WINDOW_MS  全局时间窗，默认 1 小时
  */
 
-var DEFAULT_UPSTREAM = 'https://api.openai.com/v1';
-var ALLOWED_PATHS = ['/responses', '/chat/completions'];
+var DEFAULT_UPSTREAM = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+var CHAT_PATH = '/chat/completions';
+var DEFAULT_MODELS = ['qwen3.8-flash', 'qwen3.7-plus', 'qwen3.8-max', 'qwen-plus'];
 
-/** 简易限流：每个 isolate 维护自己的计数，够挡住脚本刷量。 */
 var buckets = new Map();
 var MAX_BUCKETS = 5000;
 
@@ -54,7 +53,7 @@ function rateLimit(env, ip) {
 
 var CORS_HEADERS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, OPTIONS',
   'access-control-allow-headers': 'content-type, x-app-token',
   'access-control-max-age': '86400',
 };
@@ -72,27 +71,44 @@ function errorResponse(message, status) {
   return json({ error: { message: message } }, status);
 }
 
+function allowedModels(env) {
+  var source = typeof env.ALLOWED_MODELS === 'string' && env.ALLOWED_MODELS.trim()
+    ? env.ALLOWED_MODELS
+    : DEFAULT_MODELS.join(',');
+  return source.split(',').map(function (item) { return item.trim(); }).filter(Boolean);
+}
+
 export default {
   async fetch(request, env) {
+    var url = new URL(request.url);
+    var path = url.pathname.replace(/\/+$/, '') || '/';
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    if (request.method !== 'POST') {
-      return errorResponse('只支持 POST 请求。', 405);
+    if (request.method === 'GET' && path === '/') {
+      return json({
+        ok: true,
+        service: 'bfu-smart-travel-qwen-proxy',
+        endpoint: CHAT_PATH,
+      });
     }
 
-    if (!env.OPENAI_API_KEY) {
-      return errorResponse('服务端没有配置 OPENAI_API_KEY。', 500);
+    if (request.method !== 'POST') {
+      return errorResponse('只支持 GET 健康检查、POST 对话请求或 OPTIONS。', 405);
+    }
+
+    if (path !== CHAT_PATH) {
+      return errorResponse('不支持的接口路径，只允许 /chat/completions。', 404);
+    }
+
+    if (!env.QWEN_API_KEY) {
+      return errorResponse('服务端没有配置 QWEN_API_KEY。', 500);
     }
 
     if (env.APP_TOKEN && request.headers.get('x-app-token') !== env.APP_TOKEN) {
       return errorResponse('访问口令不正确。', 401);
-    }
-
-    var path = new URL(request.url).pathname.replace(/\/+$/, '');
-    if (ALLOWED_PATHS.indexOf(path) === -1) {
-      return errorResponse('不支持的接口路径 ' + path + '，只允许 /responses 或 /chat/completions。', 404);
     }
 
     var raw = await request.text();
@@ -107,37 +123,15 @@ export default {
       return errorResponse('请求体不是合法 JSON。', 400);
     }
 
-    if (typeof env.ALLOWED_MODELS === 'string' && env.ALLOWED_MODELS.trim()) {
-      var allowed = env.ALLOWED_MODELS.split(',').map(function (item) { return item.trim(); }).filter(Boolean);
-      if (allowed.length && allowed.indexOf(payload.model) === -1) {
-        return errorResponse('模型 ' + payload.model + ' 不在白名单内。', 403);
-      }
+    if (!payload || !Array.isArray(payload.messages) || !payload.messages.length) {
+      return errorResponse('请求缺少 messages。', 400);
     }
 
-    // 只转发我们需要的字段，避免代理被当成通用转发器。
-    var body;
-    if (path === '/responses') {
-      body = JSON.stringify({
-        model: payload.model,
-        instructions: payload.instructions,
-        input: payload.input,
-        tools: payload.tools,
-        tool_choice: payload.tool_choice || 'auto',
-        parallel_tool_calls: payload.parallel_tool_calls || false,
-      });
-    } else {
-      body = JSON.stringify({
-        model: payload.model,
-        messages: payload.messages,
-        tools: payload.tools,
-        tool_choice: payload.tool_choice || 'auto',
-        stream: false,
-      });
+    var models = allowedModels(env);
+    if (models.indexOf(payload.model) === -1) {
+      return errorResponse('模型不在 Worker 白名单内。', 403);
     }
 
-    var upstreamBase = (env.UPSTREAM_BASE || DEFAULT_UPSTREAM).replace(/\/+$/, '');
-
-    // 只有真正要花额度的请求才计数：前面那些参数错误不该扣用户的配额。
     var ip = request.headers.get('cf-connecting-ip') || 'unknown';
     var limited = rateLimit(env, ip);
     if (limited === 'ip') {
@@ -147,10 +141,18 @@ export default {
       return errorResponse('共享额度暂时用完了，晚点再来试试。', 429);
     }
 
-    var upstream = await fetch(upstreamBase + path, {
+    var body = JSON.stringify({
+      model: payload.model,
+      messages: payload.messages,
+      tools: payload.tools,
+      tool_choice: payload.tool_choice || 'auto',
+      stream: false,
+    });
+
+    var upstream = await fetch(DEFAULT_UPSTREAM + CHAT_PATH, {
       method: 'POST',
       headers: {
-        authorization: 'Bearer ' + env.OPENAI_API_KEY,
+        authorization: 'Bearer ' + env.QWEN_API_KEY,
         'content-type': 'application/json',
       },
       body: body,
