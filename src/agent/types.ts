@@ -4,10 +4,10 @@ import type { Scene } from '../lib/sceneRouter';
 /** 直连 = 浏览器带着自己的 API Key 直接请求；代理 = 请求转发到自建 Serverless。 */
 export type AgentMode = 'direct' | 'proxy';
 
-/** 模型接口协议。 */
-export type AgentProtocol = 'responses' | 'chat';
+/** 当前公开 Agent 只接入通义千问，协议固定为 Chat Completions。 */
+export type AgentProtocol = 'chat';
 
-export type AgentProviderId = 'deepseek' | 'qwen' | 'openai' | 'custom';
+export type AgentProviderId = 'qwen';
 
 export interface AgentProvider {
   id: AgentProviderId;
@@ -35,7 +35,6 @@ export interface AgentSettings {
 
 export type AgentInputItem = Record<string, unknown>;
 
-/** Chat Completions 协议下的消息结构。 */
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string | null;
@@ -47,7 +46,6 @@ export interface ChatMessage {
   tool_call_id?: string;
 }
 
-/** Responses 协议存原始 items，Chat 协议存 messages。 */
 export type AgentHistory = AgentInputItem[] | ChatMessage[];
 
 export interface ToolCall {
@@ -77,4 +75,3 @@ export interface AgentTurnResult {
   trace: string[];
   rounds: number;
 }
-
