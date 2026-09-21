@@ -26,12 +26,11 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          # 想让所有访客都能直接用 AI，就在这里注入自己的代理地址（见 README「让别人也能用」）。
-          VITE_AGENT_PROXY_URL: ${{ vars.AGENT_PROXY_URL }}
-          VITE_AGENT_PROXY_TOKEN: ${{ vars.AGENT_PROXY_TOKEN }}
-          # 或者直接注入一把站方密钥（密钥会出现在网页源码里，仅适合免费额度场景）。
-          VITE_AGENT_API_KEY: ${{ vars.AGENT_API_KEY }}
-          VITE_AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER }}
+          # 公开站点统一通过 Cloudflare Worker 调用通义千问。
+          # Worker 地址不是密钥，固定写入构建配置，避免漏配仓库变量导致前端退回直连。
+          VITE_AGENT_PROXY_URL: https://bfu-smart-travel-agent.bfu-smart-travel-huang2026.workers.dev
+          # 访问口令只从 GitHub Actions Secret/Variable 注入，不进入仓库。
+          VITE_AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN || vars.AGENT_PROXY_TOKEN }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
