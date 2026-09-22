@@ -9,7 +9,7 @@
 - React：页面组件和交互状态
 - TypeScript：类型约束和业务逻辑
 - Vite：开发服务器和生产构建
-- Cloudflare Worker：可选的 AI 接口代理
+- Cloudflare Worker：统一的 AI 接口代理
 - GitHub Pages：静态网站部署
 
 Agent 目前采用：
@@ -20,7 +20,7 @@ Agent 目前采用：
     + 场景专用提示词
     + 场景专用工具子集
     + 本地路线算法
-    + 无密钥时的内置助手
+    + 网络异常时的内置助手兜底
 ```
 
 它不是多个模型互相协作的完整多 Agent 系统。不同场景可以共用同一个模型，但运行时会使用不同的提示词、工具和上下文。
@@ -34,10 +34,10 @@ flowchart TD
     R --> A[Agent Runtime]
     A --> P[Prompt Layer 提示词层]
     A --> T[Tool Layer 工具层]
-    A --> M[AI模型或内置助手]
+    A --> M[通义千问或内置助手]
     T --> D[本地数据]
     T --> L[路线规划算法]
-    A --> W[可选 Cloudflare Worker]
+    A --> W[Cloudflare Worker]
     W --> M
 ```
 
@@ -84,14 +84,14 @@ src/
 │  ├─ basePrompt.ts            所有场景共享的规则
 │  └─ scenePrompts.ts          各场景的职责和边界
 ├─ agent/                     Agent 核心层
-│  ├─ config.ts                服务商、默认配置和接口地址
+│  ├─ config.ts                千问 Worker 默认配置
 │  ├─ types.ts                 Agent设置、历史和工具上下文类型
 │  ├─ runtime.ts               Agent总调度和结果整理
 │  ├─ network.ts               模型请求和连接测试
 │  ├─ errors.ts                错误和连接结果格式化
 │  ├─ history.ts               对话历史裁剪
 │  ├─ toolLoop.ts              工具调用循环
-│  └─ transports/              Responses / Chat协议适配
+│  └─ transports/              Chat Completions协议适配
 ├─ lib/                       业务逻辑层
 │  ├─ agent.ts                 兼容入口，重新导出 Agent 核心层
 │  ├─ localAgent.ts            无密钥时的规则助手
@@ -156,9 +156,9 @@ worker/
 
 数据目前以 TypeScript 常量保存，适合当前规模的小型静态校园项目。以后如果需要后台管理、多人共享或频繁更新，再迁移到 API 和数据库。
 
-## 6. 两种 Agent 运行路径
+## 6. Agent 运行路径
 
-### 配置了 AI 服务时
+公开站点只保留一条真实 AI 路径：
 
 ```text
 AgentPanel
@@ -167,7 +167,9 @@ sceneRouter
   ↓
 agent.ts
   ↓
-DeepSeek / 通义 / OpenAI / 自定义兼容接口
+Cloudflare Worker
+  ↓
+通义千问 Chat Completions
   ↓
 模型返回工具调用
   ↓
@@ -178,7 +180,9 @@ toolExecutor
 模型生成最终回答
 ```
 
-### 没有配置 AI 服务时
+前端不保存千问 API Key，也不提供服务商、接口地址、模型或访问口令的编辑入口。站点构建时只注入共享 Worker 的公开地址和必要的访问配置。
+
+如果 Worker 暂时不可达，AgentPanel 会自动调用 `localAgent.ts`：
 
 ```text
 AgentPanel
@@ -192,7 +196,7 @@ localAgent.ts
 返回路线或点位回答
 ```
 
-内置助手和真实 AI 共用工具层，这是一个重要设计：即使没有 API Key，路线算法和数据结果仍然保持一致。
+内置助手和真实 AI 共用工具层，这是一个重要设计：网络异常不会阻断路线规划，且不会消耗千问额度。恢复网络后，新的请求仍会优先走 Worker。
 
 ## 7. 校园路线算法
 
@@ -241,21 +245,27 @@ Agent 上下文分为两类：
 
 ## 9. Cloudflare Worker
 
-`worker/openai-proxy.js` 是可选的服务端代理：
+`worker/openai-proxy.js` 是公开站点的统一 AI 服务端代理：
 
 ```text
-浏览器 → Cloudflare Worker → AI 服务商
+浏览器 → Cloudflare Worker → 通义千问
 ```
 
 Worker 负责：
 
-- 在服务端保存上游 API Key
-- 转发 `/responses` 或 `/chat/completions`
+- 在服务端保存 `QWEN_API_KEY`
+- 只允许千问 Chat Completions 请求
 - 校验可选的访问口令
 - 限制模型白名单
-- 限制 IP 和全局请求数量
+- 添加 CORS 和基础限流保护
 
-公开部署时，推荐使用 Worker 保存真正的 AI 密钥。前端的 `VITE_*` 配置属于公开配置，不能当作秘密保存。
+前端的 `VITE_*` 配置属于公开配置，不能当作秘密保存。真正的千问 API Key 只能通过 Wrangler Secret 写入 Worker：
+
+```bash
+npx wrangler secret put QWEN_API_KEY
+npx wrangler secret put APP_TOKEN
+npx wrangler deploy
+```
 
 ## 10. 后续扩展规则
 
