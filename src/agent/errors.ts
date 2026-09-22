@@ -22,19 +22,16 @@ export function describeError(status: number, payload: unknown, settings: AgentS
     case 400:
       return `请求被拒绝（400）${detail}`;
     case 401:
-      return settings.mode === 'direct'
-        ? `${provider} 的 API Key 无效或已过期（401），请重新填写。`
-        : '代理拒绝了请求（401），检查代理上的密钥或访问口令。';
+      return `共享 Agent 拒绝了请求（401），请稍后再试。${detail}`;
     case 403:
-      return `当前密钥没有访问该模型的权限（403）${detail}`;
+      return `当前模型没有访问权限（403）${detail}`;
     case 404:
-      return `模型「${settings.model}」不存在或你的账号不可用（404），可以换成 ${
+      return `模型「${settings.model}」不存在或当前账号不可用（404），可以换成 ${
         providerOf(settings.provider).models.slice(0, 2).join(' / ') || '服务商支持的模型'
       }。`;
     case 429:
-      return `${provider} 触发限流或额度不足（429），稍后再试或检查服务商后台用量。`;
+      return `${provider} 触发限流或额度不足（429），稍后再试。`;
     default:
       return `请求失败（${status}）${detail}`;
   }
 }
-
