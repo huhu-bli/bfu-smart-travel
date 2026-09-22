@@ -4,20 +4,12 @@ import { TRIPS } from '../data/trips';
 import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
   DEFAULT_AGENT_SETTINGS,
-  PROVIDERS,
-  SITE_DIRECT_FALLBACK,
   describePlanOption,
   formatPlanSummary,
-  probeConnection,
-  providerOf,
   runAgentTurn,
   type AgentHistory,
-  type AgentProviderId,
-  type AgentSettings,
-  type ProbeResult,
 } from '../lib/agent';
 import { routeScene, sceneLabel, type Scene } from '../lib/sceneRouter';
-import { useLocalStorage } from '../lib/storage';
 import type { PlanOptions, RoutePlan } from '../types';
 
 interface Props {
@@ -60,8 +52,6 @@ const QUICK_PROMPTS = [
 /** 聊天记录存在本地，刷新页面还能接着聊；只保留最近 30 条显示消息。 */
 const CHAT_STORAGE_KEY = 'bfu-smart-travel:chat';
 const KEEP_TURNS = 30;
-/** 代理一旦判定不通，这么多毫秒内不再重试，避免每次提问都先等超时。 */
-const PROXY_RETRY_AFTER_MS = 10 * 60 * 1000;
 const DEFAULT_PANEL_SIZE: PanelSize = { width: 396, height: null };
 const PANEL_SIZE_STORAGE_KEY = 'bfu-smart-travel:agent-panel-size';
 const MIN_PANEL_WIDTH = 320;
@@ -114,21 +104,14 @@ export default function AgentPanel({
   onOpenMap,
   onOpenTrips,
 }: Props) {
-  const [settings, setSettings] = useLocalStorage<AgentSettings>('agent', DEFAULT_AGENT_SETTINGS);
-  const configured =
-    settings.mode === 'direct' ? settings.apiKey.trim().length > 0 : settings.proxyUrl.trim().length > 0;
-  // 没配置过就直接展开设置，省得用户找不到入口。
-  const [settingsOpen, setSettingsOpen] = useState(!configured);
+  const configured = Boolean(DEFAULT_AGENT_SETTINGS.proxyUrl);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [probing, setProbing] = useState(false);
-  const [probe, setProbe] = useState<ProbeResult | null>(null);
   const historyRef = useRef<AgentHistory>([]);
   const historiesRef = useRef<Partial<Record<Scene, AgentHistory>>>({});
   const activeSceneRef = useRef<Scene>('unknown');
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const migrated = useRef(false);
   const localMemoryBySceneRef = useRef<Partial<Record<Scene, LocalMemory>>>({});
   const chatRestored = useRef(false);
   const panelRef = useRef<HTMLElement | null>(null);
@@ -140,8 +123,6 @@ export default function AgentPanel({
   } | null>(null);
   const [panelSize, setPanelSize] = useState<PanelSize>(readPanelSize);
   const [isResizing, setIsResizing] = useState(false);
-  /** 代理被判不通的截止时间戳；在此时刻前直接走直连，不再白等超时。 */
-  const proxyDownUntilRef = useRef(0);
 
   // 记住用户调整后的尺寸；拖拽过程中延迟写入，避免每个指针事件都访问 localStorage。
   useEffect(() => {
@@ -228,32 +209,14 @@ export default function AgentPanel({
     );
   };
 
-  // 迁移旧版本：公开站点有 Worker 时，旧的直连或失效配置自动切换到站点代理。
+  // 清理旧版本保存的接口配置，避免浏览器继续保留已经废弃的密钥或地址。
   useEffect(() => {
-    if (migrated.current) return;
-    migrated.current = true;
-    const siteDefault = DEFAULT_AGENT_SETTINGS;
-    if (
-      siteDefault.proxyUrl &&
-      (settings.mode !== 'proxy' ||
-        settings.proxyUrl !== siteDefault.proxyUrl ||
-        settings.proxyToken !== siteDefault.proxyToken ||
-        settings.provider !== siteDefault.provider)
-    ) {
-      setSettings(siteDefault);
-      return;
+    try {
+      window.localStorage.removeItem('agent');
+    } catch {
+      // 忽略隐私模式或禁用存储时的读取失败
     }
-    if (settings.provider === 'qwen' && settings.protocol === 'chat') return;
-    setSettings((prev) => ({
-      ...DEFAULT_AGENT_SETTINGS,
-      ...prev,
-      provider: 'qwen',
-      protocol: 'chat',
-      baseUrl: DEFAULT_AGENT_SETTINGS.baseUrl,
-      model: DEFAULT_AGENT_SETTINGS.model,
-      apiKey: '',
-    }));
-  }, [settings, setSettings]);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -275,7 +238,7 @@ export default function AgentPanel({
         activeScene?: Scene;
         turns?: ChatTurn[];
       };
-      if (!saved || saved.protocol !== settings.protocol) return;
+      if (!saved || saved.protocol !== DEFAULT_AGENT_SETTINGS.protocol) return;
       if (Array.isArray(saved.turns) && saved.turns.length) {
         historiesRef.current = saved.histories ?? {};
         activeSceneRef.current = saved.activeScene ?? 'unknown';
@@ -285,7 +248,7 @@ export default function AgentPanel({
     } catch {
       // 解析失败就当没有历史
     }
-  }, [settings.protocol]);
+  }, [DEFAULT_AGENT_SETTINGS.protocol]);
 
   // 保存对话
   useEffect(() => {
@@ -298,7 +261,7 @@ export default function AgentPanel({
       window.localStorage.setItem(
         CHAT_STORAGE_KEY,
         JSON.stringify({
-          protocol: settings.protocol,
+          protocol: DEFAULT_AGENT_SETTINGS.protocol,
           history: historyRef.current,
           histories: historiesRef.current,
           activeScene: activeSceneRef.current,
@@ -308,67 +271,17 @@ export default function AgentPanel({
     } catch {
       // 超出配额就放弃保存，不影响使用
     }
-  }, [turns, settings.protocol]);
+  }, [turns, DEFAULT_AGENT_SETTINGS.protocol]);
 
-  useEffect(() => {
-    if (!configured) setSettingsOpen(true);
-  }, [configured]);
-
-  /**
-   * 代理不通时（workers.dev 在国内会时断时续）先重试一次，再失败就改用站点内置密钥直连，
-   * 都失败才回退到内置助手。
-   */
-  const runWithFallback = async (question: string) => {
-    const attempt = (activeSettings: AgentSettings) =>
-      runAgentTurn({
-        history: historyRef.current,
-        userText: question,
-        settings: activeSettings,
-        scene: activeSceneRef.current,
-        currentPlan,
-        currentPlanOptions,
-      });
-    const isNetworkFailure = (error: unknown) =>
-      error instanceof Error && error.message.includes('网络请求失败');
-    const canFallbackToDirect =
-      settings.mode === 'proxy' && Boolean(SITE_DIRECT_FALLBACK && SITE_DIRECT_FALLBACK.apiKey);
-    // 反向兜底：直连走不通（少数网络会挡 dashscope）时，改走站点代理
-    const canFallbackToProxy = settings.mode === 'direct' && Boolean(DEFAULT_AGENT_SETTINGS.proxyUrl);
-    const proxySettings: AgentSettings = {
-      ...settings,
-      mode: 'proxy',
-      proxyUrl: DEFAULT_AGENT_SETTINGS.proxyUrl,
-      proxyToken: DEFAULT_AGENT_SETTINGS.proxyToken,
-    };
-
-    // 代理刚被判定不通：直接走直连，不再白等一次超时
-    if (canFallbackToDirect && Date.now() < proxyDownUntilRef.current) {
-      const result = await attempt(SITE_DIRECT_FALLBACK as AgentSettings);
-      return { ...result, trace: ['代理刚才连不通，这次直接走直连', ...result.trace] };
-    }
-
-    try {
-      const result = await attempt(settings);
-      proxyDownUntilRef.current = 0; // 代理恢复，下次继续优先用它
-      return result;
-    } catch (error) {
-      if (!isNetworkFailure(error)) throw error;
-      // 代理走不通就直接换直连（国内连百炼稳定），不再对着坏路重试。
-      if (canFallbackToDirect) {
-        proxyDownUntilRef.current = Date.now() + PROXY_RETRY_AFTER_MS;
-        const result = await attempt(SITE_DIRECT_FALLBACK as AgentSettings);
-        return {
-          ...result,
-          trace: ['代理不通，已自动改用直连（10 分钟内不再重试代理）', ...result.trace],
-        };
-      }
-      if (canFallbackToProxy) {
-        const result = await attempt(proxySettings);
-        return { ...result, trace: ['直连不通，已自动改用站点代理', ...result.trace] };
-      }
-      throw error;
-    }
-  };
+  const runWithFallback = async (question: string) =>
+    runAgentTurn({
+      history: historyRef.current,
+      userText: question,
+      settings: DEFAULT_AGENT_SETTINGS,
+      scene: activeSceneRef.current,
+      currentPlan,
+      currentPlanOptions,
+    });
 
   const send = async (text: string) => {
     const question = text.trim();
@@ -467,70 +380,6 @@ export default function AgentPanel({
     }
   };
 
-  /** 切换服务商：地址、模型、协议一起换，并重置上下文（两套协议的历史不通用）。 */
-  const switchProvider = (id: AgentProviderId) => {
-    if (id === settings.provider) return;
-    const preset = providerOf(id);
-    const hadKey = settings.apiKey.trim().length > 0;
-    setSettings((prev) => ({
-      ...prev,
-      provider: id,
-      protocol: preset.protocol,
-      baseUrl: preset.baseUrl,
-      model: preset.model || prev.model,
-      // 各家密钥不通用，切换时清掉，避免把 A 家的密钥发给 B 家。
-      apiKey: '',
-    }));
-    setProbe(null);
-    if (turns.length || historyRef.current.length) {
-      historyRef.current = [];
-      historiesRef.current = {};
-      localMemoryBySceneRef.current = {};
-      activeSceneRef.current = 'unknown';
-      setTurns((prev) => [
-        ...prev,
-        {
-          id: nextId(),
-          role: 'assistant',
-          text: `已切换到 ${preset.label}，对话上下文已重置。${hadKey ? '原来的密钥不属于这家服务商，已清空，请重新填写。' : ''}`,
-        },
-      ]);
-    } else if (hadKey) {
-      historyRef.current = [];
-    }
-  };
-
-  const runProbe = async () => {
-    setProbing(true);
-    setProbe(null);
-    try {
-      const result = await probeConnection(settings);
-      setProbe(result);
-      // 手动测通了就把"代理不可用"的标记清掉，下次提问重新优先走代理
-      if (result.ok) proxyDownUntilRef.current = 0;
-    } catch (error) {
-      setProbe({
-        ok: false,
-        latencyMs: 0,
-        message: error instanceof Error ? error.message : '测试失败。',
-      });
-    } finally {
-      setProbing(false);
-    }
-  };
-
-  /** 一键回到初始配置：换服务商、密钥填错、想把上下文清干净时用。 */
-  const resetSettings = () => {
-    setSettings(DEFAULT_AGENT_SETTINGS);
-    historyRef.current = [];
-    historiesRef.current = {};
-    localMemoryBySceneRef.current = {};
-    activeSceneRef.current = 'unknown';
-    setTurns([]);
-    setProbe(null);
-    setSettingsOpen(true);
-  };
-
   return (
     <>
       {open ? null : (
@@ -561,15 +410,9 @@ export default function AgentPanel({
           <header className="agent-head">
             <div className="agent-title">
               <strong>AI 行程助手</strong>
-              <small>
-                {providerOf(settings.provider).label} · {settings.mode === 'direct' ? '直连' : '代理'} ·{' '}
-                {settings.model}
-              </small>
+              <small>通义千问 · Cloudflare Worker · qwen3.8-flash</small>
             </div>
             <div className="agent-head-actions">
-              <button type="button" className="icon-btn" onClick={() => setSettingsOpen((prev) => !prev)} title="设置">
-                ⚙
-              </button>
               <button type="button" className="icon-btn" onClick={reset} title="清空对话">
                 ⟲
               </button>
@@ -579,138 +422,14 @@ export default function AgentPanel({
             </div>
           </header>
 
-          {settingsOpen ? (
-            <div className="agent-settings">
-              <div className="agent-field">
-                <span>服务商</span>
-                <div className="provider-row">
-                  {PROVIDERS.map((provider) => (
-                    <button
-                      key={provider.id}
-                      type="button"
-                      className={settings.provider === provider.id ? 'mode-btn is-active' : 'mode-btn'}
-                      onClick={() => switchProvider(provider.id)}
-                    >
-                      {provider.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="agent-mode">
-                <button
-                  type="button"
-                  className={settings.mode === 'direct' ? 'mode-btn is-active' : 'mode-btn'}
-                  onClick={() => setSettings((prev) => ({ ...prev, mode: 'direct' }))}
-                >
-                  直连（自用）
-                </button>
-                <button
-                  type="button"
-                  className={settings.mode === 'proxy' ? 'mode-btn is-active' : 'mode-btn'}
-                  onClick={() => setSettings((prev) => ({ ...prev, mode: 'proxy' }))}
-                >
-                  代理（可公开）
-                </button>
-              </div>
-
-              {settings.mode === 'direct' ? (
-                <>
-                  <label className="agent-field">
-                    <span>{providerOf(settings.provider).label} API Key</span>
-                    <input
-                      type="password"
-                      value={settings.apiKey}
-                      placeholder={providerOf(settings.provider).keyHint}
-                      autoComplete="off"
-                      onChange={(event) => setSettings((prev) => ({ ...prev, apiKey: event.target.value }))}
-                    />
-                  </label>
-                  <label className="agent-field">
-                    <span>API 地址（切换服务商时自动填好，可手改）</span>
-                    <input
-                      type="url"
-                      value={settings.baseUrl}
-                      placeholder={providerOf(settings.provider).baseUrl || 'https://your-endpoint/v1'}
-                      autoComplete="off"
-                      onChange={(event) => setSettings((prev) => ({ ...prev, baseUrl: event.target.value }))}
-                    />
-                  </label>
-                </>
-              ) : (
-                <>
-                  <label className="agent-field">
-                    <span>代理地址</span>
-                    <input
-                      type="url"
-                      value={settings.proxyUrl}
-                      placeholder="https://your-worker.workers.dev/"
-                      autoComplete="off"
-                      onChange={(event) => setSettings((prev) => ({ ...prev, proxyUrl: event.target.value }))}
-                    />
-                  </label>
-                  <label className="agent-field">
-                    <span>访问口令（Worker 的 APP_TOKEN，可留空）</span>
-                    <input
-                      type="password"
-                      value={settings.proxyToken}
-                      placeholder="可选"
-                      autoComplete="off"
-                      onChange={(event) => setSettings((prev) => ({ ...prev, proxyToken: event.target.value }))}
-                    />
-                  </label>
-                </>
-              )}
-
-              <label className="agent-field">
-                <span>模型</span>
-                <input
-                  type="text"
-                  value={settings.model}
-                  list="agent-model-hints"
-                  onChange={(event) => setSettings((prev) => ({ ...prev, model: event.target.value }))}
-                />
-                <datalist id="agent-model-hints">
-                  {providerOf(settings.provider).models.map((model) => (
-                    <option key={model} value={model} />
-                  ))}
-                </datalist>
-              </label>
-
-              <p className="agent-note">{providerOf(settings.provider).note}</p>
-
-              <p className="agent-note">
-                {settings.mode === 'direct'
-                  ? '密钥只保存在这台设备的浏览器里，不会上传到本项目的服务器（本项目也没有服务器）。但浏览器直连会暴露给使用者，公开分享请改用代理模式。'
-                  : '代理模式下密钥保存在你的 Serverless 环境变量里，浏览器只请求代理地址。部署方法见仓库 README 的「AI 行程助手」章节。'}
-              </p>
-
-              <div className="agent-probe">
-                <button type="button" className="ghost-btn" onClick={() => void runProbe()} disabled={probing}>
-                  {probing ? '测试中…' : '测试连接'}
-                </button>
-                <button type="button" className="ghost-btn" onClick={resetSettings}>
-                  清空配置
-                </button>
-                {probe ? (
-                  <span className={probe.ok ? 'probe-result is-ok' : 'probe-result is-bad'}>
-                    {probe.ok ? '✅ ' : '❌ '}
-                    {probe.message}
-                  </span>
-                ) : null}
-              </div>
-              {probe?.detail ? <p className="agent-note">技术细节：{probe.detail}</p> : null}
-            </div>
-          ) : null}
-
           <div className="agent-body" ref={scrollRef}>
             {turns.length === 0 ? (
               <div className="agent-welcome">
                 <p>
                   我是北林行程助手，可以帮你排校园路线、讲点位、推校外一日游。
                   {configured
-                    ? ' 追问也可以，比如「改成 2 小时」。'
-                    : ' 当前用内置助手作答，不需要密钥；排完路线后接着说「改成 2 小时」「换成南门」也能接着调。'}
+                    ? ' 通过千问 Agent 规划路线，追问「改成 2 小时」也能接着调整。'
+                    : ' 当前使用内置助手；排完路线后接着说「改成 2 小时」「换成南门」也能继续调整。'}
                 </p>
                 <div className="agent-quick">
                   {QUICK_PROMPTS.map((prompt) => (
@@ -826,7 +545,7 @@ export default function AgentPanel({
             <textarea
               value={input}
               rows={2}
-              placeholder={configured ? '说说你想怎么逛…（Enter 发送，Shift+Enter 换行）' : '直接问就行，未配置密钥时由内置助手作答'}
+              placeholder="说说你想怎么逛…（Enter 发送，Shift+Enter 换行）"
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
