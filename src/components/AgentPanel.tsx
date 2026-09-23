@@ -148,19 +148,31 @@ export default function AgentPanel({
   // 对话框打开时锁住页面滚动，避免手机上滚动聊天内容把底层页面一起带动。
   useEffect(() => {
     if (!open) return;
+    const scrollY = window.scrollY;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousWidth = document.body.style.width;
     const previousOverflow = document.body.style.overflow;
     const previousPaddingRight = document.body.style.paddingRight;
     const previousOverscroll = document.documentElement.style.overscrollBehavior;
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
 
+    // 仅锁 body 会在部分手机浏览器的触摸回弹中失效，固定 body 可以彻底阻止底层页面跟随滚动。
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overscrollBehavior = 'none';
     if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
 
     return () => {
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.width = previousWidth;
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPaddingRight;
       document.documentElement.style.overscrollBehavior = previousOverscroll;
+      window.scrollTo(0, scrollY);
     };
   }, [open]);
 
@@ -305,7 +317,7 @@ export default function AgentPanel({
     // 没配置密钥时用内置助手作答，保证任何访客都能直接用。
     if (!configured) {
       try {
-        const local = answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
+        const local = await answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
         localMemoryBySceneRef.current[local.memory.scene] = local.memory;
         setTurns((prev) => [
           ...prev,
@@ -352,7 +364,7 @@ export default function AgentPanel({
       const reason = error instanceof Error ? error.message : '请求失败';
       if (isNetworkFailure(error)) {
         // 只有 Worker 网络不可达时才使用本地助手；认证、权限和额度错误必须明确展示。
-        const fallback = answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
+        const fallback = await answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
         localMemoryBySceneRef.current[fallback.memory.scene] = fallback.memory;
         setTurns((prev) => [
           ...prev,
