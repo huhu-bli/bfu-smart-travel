@@ -26,9 +26,9 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          # 公开站点统一通过 Cloudflare Worker 调用通义千问。
-          # Worker 地址不是密钥，固定写入构建配置，避免漏配仓库变量导致前端退回直连。
-          VITE_AGENT_PROXY_URL: https://bfu-smart-travel-agent.bfu-smart-travel-huang2026.workers.dev
+          # 公开站点统一通过阿里云函数计算调用通义千问。
+          # 函数地址不是密钥，固定写入构建配置，避免漏配仓库变量导致前端无法连接。
+          VITE_AGENT_PROXY_URL: https://bfu-smael-agent-nulxntqrcv.cn-hangzhou.fcapp.run
           # 访问口令只从 GitHub Actions Secret/Variable 注入，不进入仓库。
           VITE_AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN || vars.AGENT_PROXY_TOKEN }}
       - uses: actions/configure-pages@v5
