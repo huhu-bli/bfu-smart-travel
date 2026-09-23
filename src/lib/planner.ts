@@ -7,6 +7,8 @@ const METERS_PER_UNIT = 1.1;
 const BASE_SPEED = 78;
 /** 单条路线最多安排的点位数量。 */
 const MAX_STOPS = 8;
+/** 必游主线之外，最多展示的可选候选站点。 */
+const MAX_OPTIONAL_STOPS = 4;
 
 export function walkMeters(a: Spot, b: Spot): number {
   return Math.round(Math.hypot(a.x - b.x, a.y - b.y) * METERS_PER_UNIT);
@@ -63,6 +65,18 @@ function buildReason(spot: Spot, interests: InterestId[]): string {
   if (spot.mustSee) parts.push('北林必看');
   parts.push(spot.short);
   return parts.join(' · ');
+}
+
+function buildRemainingAdvice(remainingMinutes: number, optionalCount: number): string {
+  if (remainingMinutes <= 0) return '当前预算基本用完，按必游主线游览即可。';
+  if (remainingMinutes < 20) return '还剩少量机动时间，适合在当前站点拍照、休息或慢走。';
+  if (remainingMinutes < 60) {
+    return optionalCount ? `还剩约 ${remainingMinutes} 分钟，可从可选站点中择 1 个，或留作拍照和休息。` : `还剩约 ${remainingMinutes} 分钟，建议留作拍照、休息和排队机动。`;
+  }
+  if (remainingMinutes < 120) {
+    return optionalCount ? `还剩约 ${remainingMinutes} 分钟，可从可选站点中择 1–2 个，记得保留机动时间。` : `还剩约 ${remainingMinutes} 分钟，可慢走、休息或补充附近点位。`;
+  }
+  return optionalCount ? `还剩约 ${remainingMinutes} 分钟，必游主线后可按体力再选 2–3 个可选站点，也可以安排午餐或长时间休息。` : `还剩约 ${remainingMinutes} 分钟，建议安排午餐、休息或自由拍照，不必继续赶路。`;
 }
 
 function nearestCurrent(current: Spot, candidates: Spot[]): Spot | null {
@@ -151,9 +165,50 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
         reason: `离${start.name}最近的看点 · ${fallback.short}`,
       });
       elapsed = walk + dwell;
+      used.add(fallback.id);
+      current = fallback;
     }
   }
 
+  // 继续用同一套评分寻找可选站点，但不把它们计入必游主线的总时长。
+  const optionalStops: RouteStop[] = [];
+  let optionalElapsed = elapsed;
+  let optionalCurrent = current;
+  while (optionalStops.length < MAX_OPTIONAL_STOPS && minutes - optionalElapsed > 5) {
+    const remaining = minutes - optionalElapsed;
+    const scored = pool
+      .filter((spot) => !used.has(spot.id))
+      .map((spot) => {
+        const meters = walkMeters(optionalCurrent, spot);
+        const walk = walkMinutes(meters, pace.speed);
+        const dwell = dwellMinutes(spot, pace.dwell);
+        const relevance = spot.interests.filter((id) => wanted.includes(id)).length;
+        const score =
+          relevance * 3 + (included.has(spot.id) ? 100 : 0) + (spot.mustSee ? 1.4 : 0) - walk * 0.22 - spot.visit * 0.012;
+        return { spot, meters, walk, dwell, relevance, score };
+      })
+      .filter((item) => (item.relevance > 0 || item.spot.mustSee) && item.walk + item.dwell <= remaining);
+
+    if (!scored.length) break;
+    scored.sort((a, b) => b.score - a.score);
+    const pick = scored[0];
+    const arrive = optionalElapsed + pick.walk;
+    const leave = arrive + pick.dwell;
+    optionalStops.push({
+      spot: pick.spot,
+      arrive,
+      leave,
+      walkMinutes: pick.walk,
+      walkMeters: pick.meters,
+      reason: `可选延伸 · ${buildReason(pick.spot, wanted)}`,
+    });
+    used.add(pick.spot.id);
+    optionalCurrent = pick.spot;
+    optionalElapsed = leave;
+  }
+
+  const remainingMinutes = Math.max(0, Math.round(minutes - elapsed));
+  const remainingAdvice = buildRemainingAdvice(remainingMinutes, optionalStops.length);
   const totalMeters = stops.reduce((sum, stop) => sum + stop.walkMeters, 0);
   const matchedInterests = wanted.filter((id) =>
     stops.some((stop) => stop.spot.interests.includes(id)),
@@ -164,6 +219,9 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
     subtitle: `${pace.label}步速 · 含停留约 ${formatDuration(elapsed)} · 步行约 ${totalMeters} 米`,
     origin: start,
     stops,
+    optionalStops,
+    remainingMinutes,
+    remainingAdvice,
     totalMinutes: elapsed,
     totalMeters,
     matchedInterests,
@@ -184,6 +242,14 @@ export function routeToText(plan: RoutePlan, startName: string): string {
     );
     lines.push(`   ${stop.walkMinutes} 分钟 / ${stop.walkMeters} 米 · ${stop.reason}`);
   });
+  if (plan.optionalStops.length) {
+    lines.push('', '可选站点');
+    plan.optionalStops.forEach((stop, index) => {
+      lines.push(`${index + 1}. ${stop.spot.name}（${formatClock(stop.arrive)}-${formatClock(stop.leave)}）`);
+      lines.push(`   ${stop.walkMinutes} 分钟 / ${stop.walkMeters} 米 · ${stop.reason}`);
+    });
+  }
+  lines.push('', `剩余时间建议（约 ${plan.remainingMinutes} 分钟）：${plan.remainingAdvice}`);
   lines.push('', '地图与时间为示意估算，出行前请以学校最新公告为准。');
   return lines.join('\n');
 }
