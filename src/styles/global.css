@@ -1067,7 +1067,7 @@ a {
   list-style: none;
 }
 
-.optional-list button {
+.optional-spot-button {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1080,7 +1080,7 @@ a {
   text-align: left;
 }
 
-.optional-list button:hover {
+.optional-spot-button:hover {
   border-color: var(--brand);
   background: var(--brand-soft);
 }
@@ -1094,6 +1094,33 @@ a {
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
+}
+
+.optional-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.optional-spot-button {
+  flex: 1;
+  min-width: 0;
+}
+
+.optional-add-btn {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border: 1px solid #b8d9c2;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.optional-add-btn:hover {
+  border-color: var(--brand);
+  background: #d9efdf;
 }
 
 .route-section-empty,
