@@ -43,14 +43,14 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
 
   const addOptionalStop = (spotId: string) => {
     const selected = Array.from(new Set([...plan.stops.map((stop) => stop.spot.id), spotId]));
-    onEditRoute(selected, excludedSpotIds);
+    onEditRoute(selected, excludedSpotIds.filter((id) => id !== spotId));
     setEditing(false);
   };
 
   const applyEditing = () => {
     const selected = new Set(selectedSpotIds);
     const excluded = routeCandidates.filter((spot) => !selected.has(spot.id)).map((spot) => spot.id);
-    onEditRoute(selectedSpotIds, Array.from(new Set([...excludedSpotIds, ...excluded])));
+    onEditRoute(selectedSpotIds, excluded);
     setEditing(false);
   };
 
