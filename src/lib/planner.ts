@@ -5,8 +5,10 @@ import type { InterestId, PlanOptions, RoutePlan, RouteStop, Spot } from '../typ
 const METERS_PER_UNIT = 1.1;
 /** 标准步速，单位：米/分钟。 */
 const BASE_SPEED = 78;
-/** 单条路线最多安排的点位数量。 */
+/** 默认路线最多安排的必游点位数量，避免短路线信息过载。 */
 const MAX_STOPS = 8;
+/** 用户明确加入点位时允许适度扩展主线，最多 12 站。 */
+const MAX_EXPLICIT_STOPS = 12;
 /** 必游主线之外，最多展示的可选候选站点。 */
 const MAX_OPTIONAL_STOPS = 4;
 
@@ -106,12 +108,13 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
     spots.find((spot) => GATE_IDS.includes(spot.id)) ??
     spots[0];
   const pool = spots.filter((spot) => !GATE_IDS.includes(spot.id) && !excluded.has(spot.id));
+  const maxStops = Math.min(MAX_EXPLICIT_STOPS, Math.max(MAX_STOPS, included.size));
   const used = new Set<string>();
   const stops: RouteStop[] = [];
   let current = start;
   let elapsed = 0;
 
-  while (stops.length < MAX_STOPS) {
+  while (stops.length < maxStops) {
     const remaining = minutes - elapsed;
     if (remaining <= 5) break;
 
