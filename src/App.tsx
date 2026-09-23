@@ -181,6 +181,7 @@ export default function App() {
                 onSelectSpot={setActiveSpotId}
                 onOpenMap={() => setTab('map')}
                 onEditRoute={applyRouteEdits}
+                excludedSpotIds={excludedSpotIds}
               />
             </div>
           ) : null}
