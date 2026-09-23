@@ -11,9 +11,10 @@ interface Props {
   onSelectSpot: (id: string) => void;
   onOpenMap: () => void;
   onEditRoute: (includedSpotIds: string[], excludedSpotIds: string[]) => void;
+  excludedSpotIds: string[];
 }
 
-export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpenMap, onEditRoute }: Props) {
+export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpenMap, onEditRoute, excludedSpotIds }: Props) {
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
@@ -42,16 +43,14 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
 
   const addOptionalStop = (spotId: string) => {
     const selected = Array.from(new Set([...plan.stops.map((stop) => stop.spot.id), spotId]));
-    const selectedSet = new Set(selected);
-    const excluded = routeCandidates.filter((spot) => !selectedSet.has(spot.id)).map((spot) => spot.id);
-    onEditRoute(selected, excluded);
+    onEditRoute(selected, excludedSpotIds);
     setEditing(false);
   };
 
   const applyEditing = () => {
     const selected = new Set(selectedSpotIds);
     const excluded = routeCandidates.filter((spot) => !selected.has(spot.id)).map((spot) => spot.id);
-    onEditRoute(selectedSpotIds, excluded);
+    onEditRoute(selectedSpotIds, Array.from(new Set([...excludedSpotIds, ...excluded])));
     setEditing(false);
   };
 
