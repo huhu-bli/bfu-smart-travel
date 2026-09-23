@@ -305,7 +305,11 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
     title: string;
     totalMinutes: number;
     totalMeters: number;
-    stops: { order: number; name: string; arrive: string; leave: string; walkMeters: number; reason: string }[];
+    mustSeeStops?: { order: number; name: string; arrive: string; leave: string; walkMeters: number; reason: string }[];
+    stops?: { order: number; name: string; arrive: string; leave: string; walkMeters: number; reason: string }[];
+    optionalStops?: { order: number; name: string; arrive: string; leave: string; walkMeters: number; reason: string }[];
+    remainingMinutes?: number;
+    remainingAdvice?: string;
   }>(
     runTool(
       'build_route',
@@ -337,7 +341,7 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
     };
   }
 
-  const stops = result.stops ?? [];
+  const stops = result.mustSeeStops ?? result.stops ?? [];
   if (!stops.length) {
     return {
       text: '没排出路线上来，试着说得更具体一点，比如「1 小时从东门进，想看点花和拍照」。',
@@ -350,9 +354,15 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
   }
 
   const routeLine = stops.map((stop) => `${stop.order}. ${stop.name}（${stop.arrive}）`).join(' → ');
+  const optionalLine = result.optionalStops?.length
+    ? `\n\n可选站点：${result.optionalStops.map((stop) => `${stop.name}（${stop.arrive}）`).join('、')}`
+    : '';
+  const remainingLine = result.remainingAdvice
+    ? `\n剩余时间建议（约 ${result.remainingMinutes ?? 0} 分钟）：${result.remainingAdvice}`
+    : '';
   const interestNote = interests.length ? '按你提到的兴趣' : '按默认的园林 + 人文 + 摄影';
   return {
-    text: `${interestNote}，从${gateName}进、${formatDuration(planMinutes)}的预算，给你排了「${result.title}」：\n\n${routeLine}\n\n全程约 ${Math.round(result.totalMinutes)} 分钟、步行 ${result.totalMeters} 米。想换时长或兴趣，直接说「2 小时」或者「多一点拍照」就行。`,
+    text: `${interestNote}，从${gateName}进、${formatDuration(planMinutes)}的预算，给你排了「${result.title}」：\n\n${routeLine}${optionalLine}\n\n必游主线约 ${Math.round(result.totalMinutes)} 分钟、步行 ${result.totalMeters} 米。${remainingLine}\n\n想换时长或兴趣，直接说「2 小时」或者「多一点拍照」就行。`,
     plan: context.plan,
     planOptions: context.planOptions,
     spotIds: [],
