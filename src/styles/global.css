@@ -1009,6 +1009,101 @@ a {
   padding: 4px 9px;
 }
 
+ .route-timeline {
+  min-width: 0;
+}
+
+.route-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+
+.route-section-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.route-section-head strong {
+  color: var(--brand-dark);
+  font-size: 14px;
+}
+
+.route-section-head > span {
+  color: var(--muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.route-section-kicker {
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.route-section--optional,
+.route-section--advice {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfdfb;
+}
+
+.route-section--advice {
+  background: var(--gold-soft);
+  border-color: #f1dfaa;
+}
+
+.optional-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.optional-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+}
+
+.optional-list button:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.optional-list span {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.optional-list small {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.route-section-empty,
+.route-section--advice p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
 .route-map {
   position: sticky;
   top: 86px;
@@ -2515,6 +2610,32 @@ a {
   color: var(--muted);
   font-size: 11.5px;
   white-space: nowrap;
+}
+
+.agent-card-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f7fbf7;
+  border: 1px solid var(--line);
+}
+
+.agent-card-subsection strong {
+  color: var(--brand-dark);
+  font-size: 12px;
+}
+
+.agent-card-subsection span {
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.agent-card-subsection--advice {
+  background: var(--gold-soft);
+  border-color: #f1dfaa;
 }
 
 .agent-card-actions {
