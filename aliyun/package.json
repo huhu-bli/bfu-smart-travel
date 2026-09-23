@@ -1,0 +1,8 @@
+{
+  "name": "bfu-smart-travel-aliyun-proxy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  }
+}
