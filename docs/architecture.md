@@ -115,6 +115,7 @@ worker/
 | `campus-route` | 规划或调整校园路线 | `list_spots`、`build_route` |
 | `spot-detail` | 讲解校园点位 | `list_spots`、`get_spot_detail` |
 | `outside-trip` | 推荐学校周边和校外线路 | `suggest_trip` |
+| `weather` | 查询指定地点的天气和出行条件 | `get_weather` |
 | `system-help` | 说明使用方法和连接设置 | 无 |
 | `unknown` | 场景不明确，先询问用户 | 无 |
 
@@ -143,12 +144,15 @@ worker/
 
 工具把模型的自然语言需求转换为确定性的程序操作：
 
+天气工具是工具层中的网络工具：它根据地点名称调用公开天气接口，再把结构化天气结果返回给模型；天气数据不写入提示词或校园静态数据。
+
 | 工具 | 主要实现 | 作用 |
 | --- | --- | --- |
 | `list_spots` | `toolExecutor.ts` | 查询校园点位 |
 | `build_route` | `toolExecutor.ts` + `planner.ts` | 生成校园路线 |
 | `get_spot_detail` | `toolExecutor.ts` | 获取点位详细信息 |
 | `suggest_trip` | `toolExecutor.ts` | 查询校外线路 |
+| `get_weather` | `weather.ts` + `toolExecutor.ts` | 查询 Open-Meteo 天气预报 |
 
 模型负责理解和选择工具，工具负责读取数据和执行计算。重要的距离、时间和点位信息不应由模型自行编造。
 
@@ -261,6 +265,8 @@ Worker 负责：
 - 限制模型白名单
 - 添加 CORS 和基础限流保护
 
+天气查询不需要千问 API Key，也不经过 Worker；前端工具层只请求 Open-Meteo 的地理编码和预报接口。天气接口不可用时，工具会返回明确错误，模型不得自行编造天气。
+
 前端的 `VITE_*` 配置属于公开配置，不能当作秘密保存。真正的千问 API Key 只能通过 Wrangler Secret 写入 Worker：
 
 ```bash
@@ -326,6 +332,7 @@ npx wrangler deploy
 - 校园和校外数据仍是静态 TypeScript 文件。
 - 当前项目没有自动化测试脚本。
 - 真实 AI 是否可用取决于服务商、模型、网络和 Worker 配置。
+- 天气工具依赖 Open-Meteo 的公开网络接口，地点解析和预报请求失败时不能提供实时天气。
 
 本次重构已将原来集中在 `src/lib/agent.ts` 中的配置、网络请求、协议适配、历史裁剪、工具循环和运行调度拆分到 `src/agent/`。`src/lib/agent.ts` 目前只作为兼容入口，后续不应把这些职责重新写回该文件。
 
