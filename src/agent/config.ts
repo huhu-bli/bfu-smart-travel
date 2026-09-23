@@ -14,7 +14,8 @@ const QWEN_PROVIDER: AgentProvider = {
 export const PROVIDERS: AgentProvider[] = [QWEN_PROVIDER];
 export const MAX_ROUNDS = 6;
 export const REQUEST_TIMEOUT_MS = 60_000;
-export const PROXY_TIMEOUT_MS = 20_000;
+// 手机网络和 Worker 冷启动时可能需要更长时间，避免前端过早触发 AbortError。
+export const PROXY_TIMEOUT_MS = 60_000;
 
 /** 发给模型的历史最多保留最近 10 轮。 */
 export const MAX_HISTORY_GROUPS = 10;
