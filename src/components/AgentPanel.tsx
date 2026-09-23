@@ -79,6 +79,15 @@ function clampPanelSize(width: number, height: number): PanelSize {
   };
 }
 
+function isNetworkFailure(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.includes('浏览器无法连接 Worker') ||
+      error.message.includes('网络请求失败') ||
+      error.name === 'AbortError')
+  );
+}
+
 function readPanelSize(): PanelSize {
   if (typeof window === 'undefined') return DEFAULT_PANEL_SIZE;
   try {
@@ -340,28 +349,44 @@ export default function AgentPanel({
         },
       ]);
     } catch (error) {
-      // AI 调不通时不让用户对着报错干瞪眼：退回内置助手，并把原因写在下面一行。
       const reason = error instanceof Error ? error.message : '请求失败';
-      const fallback = answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
-      localMemoryBySceneRef.current[fallback.memory.scene] = fallback.memory;
-      setTurns((prev) => [
-        ...prev,
-        {
-          id: nextId(),
-          role: 'assistant',
-          text: fallback.text,
-          plan: fallback.plan,
-          planOptions: fallback.planOptions,
-          spotIds: fallback.spotIds,
-          tripIds: fallback.tripIds,
-          trace: [
-            `场景：${sceneLabel(fallback.memory.scene)}`,
-            `AI 暂时不可用（${reason}），已用内置助手作答`,
-            ...fallback.trace,
-          ],
-          offline: true,
-        },
-      ]);
+      if (isNetworkFailure(error)) {
+        // 只有 Worker 网络不可达时才使用本地助手；认证、权限和额度错误必须明确展示。
+        const fallback = answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
+        localMemoryBySceneRef.current[fallback.memory.scene] = fallback.memory;
+        setTurns((prev) => [
+          ...prev,
+          {
+            id: nextId(),
+            role: 'assistant',
+            text: fallback.text,
+            plan: fallback.plan,
+            planOptions: fallback.planOptions,
+            spotIds: fallback.spotIds,
+            tripIds: fallback.tripIds,
+            trace: [
+              `场景：${sceneLabel(fallback.memory.scene)}`,
+              `千问 Agent 网络暂时不可用（${reason}），已用内置助手作答`,
+              ...fallback.trace,
+            ],
+            offline: true,
+          },
+        ]);
+      } else {
+        setTurns((prev) => [
+          ...prev,
+          {
+            id: nextId(),
+            role: 'assistant',
+            text: `千问 Agent 暂时不可用：${reason}\n\n请检查 Worker 的 QWEN_API_KEY 后重试。此次没有切换到内置助手。`,
+            trace: [
+              `场景：${sceneLabel(scene)}`,
+              '千问 Agent 请求失败，未切换到内置助手',
+            ],
+            isError: true,
+          },
+        ]);
+      }
     } finally {
       setBusy(false);
     }
