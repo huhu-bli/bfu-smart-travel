@@ -103,8 +103,12 @@ export default {
       return errorResponse('不支持的接口路径，只允许 /chat/completions。', 404);
     }
 
-    if (!env.QWEN_API_KEY) {
+    var apiKey = typeof env.QWEN_API_KEY === 'string' ? env.QWEN_API_KEY.trim() : '';
+    if (!apiKey) {
       return errorResponse('服务端没有配置 QWEN_API_KEY。', 500);
+    }
+    if (apiKey.indexOf('sk-sp-') === 0) {
+      return errorResponse('当前 Worker 使用通用百炼接口，请使用普通 sk- API Key，不要使用 sk-sp- 专用 Key。', 500);
     }
 
     if (env.APP_TOKEN && request.headers.get('x-app-token') !== env.APP_TOKEN) {
@@ -149,14 +153,19 @@ export default {
       stream: false,
     });
 
-    var upstream = await fetch(DEFAULT_UPSTREAM + CHAT_PATH, {
-      method: 'POST',
-      headers: {
-        authorization: 'Bearer ' + env.QWEN_API_KEY,
-        'content-type': 'application/json',
-      },
-      body: body,
-    });
+    var upstream;
+    try {
+      upstream = await fetch(DEFAULT_UPSTREAM + CHAT_PATH, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer ' + apiKey,
+          'content-type': 'application/json',
+        },
+        body: body,
+      });
+    } catch (err) {
+      return errorResponse('千问上游网络请求失败，请稍后再试。', 502);
+    }
 
     var text = await upstream.text();
     return new Response(text, {
