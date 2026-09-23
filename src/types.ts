@@ -76,7 +76,14 @@ export interface RoutePlan {
   title: string;
   subtitle: string;
   origin: Spot;
+  /** 必游主线，地图和默认导航只展示这一组站点。 */
   stops: RouteStop[];
+  /** 在剩余预算内可按体力和兴趣择一加入的候选站点。 */
+  optionalStops: RouteStop[];
+  /** 必游主线完成后尚未安排的分钟数。 */
+  remainingMinutes: number;
+  /** 根据剩余分钟数生成的执行建议。 */
+  remainingAdvice: string;
   totalMinutes: number;
   totalMeters: number;
   matchedInterests: InterestId[];
