@@ -91,7 +91,7 @@ export async function runTool(
     const plan = buildRoute(SPOTS, options);
     context.plan = plan;
     context.planOptions = options;
-    context.trace.push(`build_route(${plan.stops.length} 站 / ${Math.round(plan.totalMinutes)} 分钟)`);
+    context.trace.push(`build_route(${plan.stops.length} 必游 / ${plan.optionalStops.length} 可选 / ${Math.round(plan.totalMinutes)} 分钟)`);
 
     return JSON.stringify({
       title: plan.title,
@@ -99,15 +99,28 @@ export async function runTool(
       origin: plan.origin.name,
       totalMinutes: Math.round(plan.totalMinutes),
       totalMeters: plan.totalMeters,
-      stops: plan.stops.map((stop, index) => ({
+      mustSeeStops: plan.stops.map((stop, index) => ({
         order: index + 1,
         name: stop.spot.name,
         spotId: stop.spot.id,
         arrive: formatClock(stop.arrive),
         leave: formatClock(stop.leave),
         walkMinutes: stop.walkMinutes,
+        walkMeters: stop.walkMeters,
         reason: stop.reason,
       })),
+      optionalStops: plan.optionalStops.map((stop, index) => ({
+        order: index + 1,
+        name: stop.spot.name,
+        spotId: stop.spot.id,
+        arrive: formatClock(stop.arrive),
+        leave: formatClock(stop.leave),
+        walkMinutes: stop.walkMinutes,
+        walkMeters: stop.walkMeters,
+        reason: stop.reason,
+      })),
+      remainingMinutes: plan.remainingMinutes,
+      remainingAdvice: plan.remainingAdvice,
       note: '时间与距离为示意估算，出行前请确认开放情况。',
     });
   }
