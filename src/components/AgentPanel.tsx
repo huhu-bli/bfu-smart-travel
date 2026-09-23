@@ -489,6 +489,16 @@ export default function AgentPanel({
                         </li>
                       ))}
                     </ol>
+                    {turn.plan.optionalStops.length ? (
+                      <div className="agent-card-subsection">
+                        <strong>可选站点</strong>
+                        <span>{turn.plan.optionalStops.map((stop) => `${stop.spot.name}（${Math.round(stop.leave - stop.arrive)} 分钟）`).join('、')}</span>
+                      </div>
+                    ) : null}
+                    <div className="agent-card-subsection agent-card-subsection--advice">
+                      <strong>剩余时间建议 · 约 {turn.plan.remainingMinutes} 分钟</strong>
+                      <span>{turn.plan.remainingAdvice}</span>
+                    </div>
                     <div className="agent-card-actions">
                       <button
                         type="button"
