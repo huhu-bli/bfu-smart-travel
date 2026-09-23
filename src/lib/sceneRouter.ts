@@ -1,7 +1,7 @@
 /** 对话场景。场景决定当前请求可以看到哪些提示词、工具和上下文。 */
-export type Scene = 'campus-route' | 'spot-detail' | 'outside-trip' | 'system-help' | 'unknown';
+export type Scene = 'campus-route' | 'spot-detail' | 'outside-trip' | 'weather' | 'system-help' | 'unknown';
 
-export type SceneToolName = 'list_spots' | 'build_route' | 'get_spot_detail' | 'suggest_trip';
+export type SceneToolName = 'list_spots' | 'build_route' | 'get_spot_detail' | 'suggest_trip' | 'get_weather';
 
 export interface SceneConfig {
   label: string;
@@ -11,7 +11,7 @@ export interface SceneConfig {
 export const SCENE_CONFIG: Record<Exclude<Scene, 'unknown'>, SceneConfig> = {
   'campus-route': {
     label: '校园路线',
-    tools: ['list_spots', 'build_route'],
+    tools: ['list_spots', 'build_route', 'get_weather'],
   },
   'spot-detail': {
     label: '点位讲解',
@@ -19,7 +19,11 @@ export const SCENE_CONFIG: Record<Exclude<Scene, 'unknown'>, SceneConfig> = {
   },
   'outside-trip': {
     label: '校外旅行',
-    tools: ['suggest_trip'],
+    tools: ['suggest_trip', 'get_weather'],
+  },
+  weather: {
+    label: '天气查询',
+    tools: ['get_weather'],
   },
   'system-help': {
     label: '使用帮助',
@@ -32,6 +36,7 @@ const OUTSIDE = /(校外|学校外|周边|出去玩|一日游|半天玩|半天�
 const EXPLICIT_OUTSIDE = /(校外|学校外|周边|出去玩|一日游|半天玩|半天游|周末去哪|去哪玩|出学校)/;
 const CAMPUS_SCOPE = /(校园|校内|学校里|北林校园|东门|南门|北门|西门|小南门|东南门|西南门)/;
 const ROUTE = /(路线|规划|怎么逛|游览|出发|经过|安排|分钟|小时|门岗|东门|南门|北门|西门|想看|兴趣)/;
+const WEATHER = /(天气|下雨|降雨|雨伞|温度|气温|体感|风力|风速|湿度|紫外线|穿什么|防晒|适合出行|适合游览|适合逛|会不会下雨|晴不晴)/;
 const DETAIL = /(值得|怎么样|好不好|是什么|介绍|讲讲|说说|开放|几点|好玩|详情|详细|看看)/;
 const FOLLOW_UP = /(换|改成|调整|再安排|继续|第二站|第一站|上一条|刚才|它|这个|该点)/;
 
@@ -43,6 +48,10 @@ export function routeScene(text: string, currentScene: Scene = 'unknown'): Scene
   // 「校园内的公园/绿地」属于校园场景；明确说周边、校外或出学校时才优先判为校外。
   if (EXPLICIT_OUTSIDE.test(value) || (OUTSIDE.test(value) && !CAMPUS_SCOPE.test(value))) {
     return 'outside-trip';
+  }
+  if (WEATHER.test(value)) {
+    if (currentScene === 'campus-route' || currentScene === 'outside-trip') return currentScene;
+    return 'weather';
   }
   if (ROUTE.test(value)) return 'campus-route';
   if (DETAIL.test(value)) return 'spot-detail';
