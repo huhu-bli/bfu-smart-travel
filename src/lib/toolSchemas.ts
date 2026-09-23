@@ -29,6 +29,28 @@ export const TOOL_SCHEMAS = [
   },
   {
     type: 'function',
+    name: 'get_weather',
+    description:
+      '查询指定地点今天或未来几天的天气。用户询问天气、温度、降雨、是否适合出行、带不带伞或穿什么时调用。地点不明确时传空字符串，默认查询北京林业大学。',
+    strict: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        location: {
+          type: 'string',
+          description: '地点名称，例如北京林业大学、北京、香山或颐和园；校园问题可传空字符串。',
+        },
+        date: {
+          type: 'string',
+          description: '查询日期，传 today、tomorrow、day_after_tomorrow、今天、明天、后天或 YYYY-MM-DD。',
+        },
+      },
+      required: ['location', 'date'],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: 'function',
     name: 'build_route',
     description:
       '按兴趣、可用时长、步速和出发门岗生成一条校园游览路线，返回有序站点、到达/离开时间、步行距离与推荐理由。用户提出「规划路线 / 多长时间怎么逛」时调用。不要自己编造点位和时间。',
