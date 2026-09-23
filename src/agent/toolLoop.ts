@@ -60,7 +60,7 @@ export async function runResponsesLoop(
       input.push({
         type: 'function_call_output',
         call_id: call.callId,
-        output: runTool(call.name, call.arguments, context),
+        output: await runTool(call.name, call.arguments, context),
       });
     }
   }
@@ -104,7 +104,7 @@ export async function runChatLoop(
       messages.push({
         role: 'tool',
         tool_call_id: call.callId,
-        content: runTool(call.name, call.arguments, context),
+        content: await runTool(call.name, call.arguments, context),
       });
     }
   }
