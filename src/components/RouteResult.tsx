@@ -145,7 +145,15 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
       </div>
 
       <div className="route-body">
-        <ol className="stop-list">
+        <div className="route-timeline">
+          <div className="route-section-head">
+            <div>
+              <span className="route-section-kicker">PRIMARY ROUTE</span>
+              <strong>必游站点</strong>
+            </div>
+            <span>{plan.stops.length} 个站点</span>
+          </div>
+          <ol className="stop-list">
           <li className="stop-item stop-item--origin">
             <span className="stop-index">起</span>
             <div className="stop-main">
@@ -181,7 +189,43 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
               </div>
             </li>
           ))}
-        </ol>
+          </ol>
+
+          <section className="route-section route-section--optional">
+            <div className="route-section-head">
+              <div>
+                <span className="route-section-kicker">OPTIONAL</span>
+                <strong>可选站点</strong>
+              </div>
+              <span>{plan.optionalStops.length} 个备选</span>
+            </div>
+            {plan.optionalStops.length ? (
+              <ul className="optional-list">
+                {plan.optionalStops.map((stop) => (
+                  <li key={stop.spot.id}>
+                    <button type="button" onClick={() => onSelectSpot(stop.spot.id)}>
+                      <span>{stop.spot.emoji} {stop.spot.name}</span>
+                      <small>{Math.round(stop.leave - stop.arrive)} 分钟 · 步行 {stop.walkMeters} 米</small>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="route-section-empty">当前预算没有找到合适的延伸站点，建议保留机动时间。</p>
+            )}
+          </section>
+
+          <section className="route-section route-section--advice">
+            <div className="route-section-head">
+              <div>
+                <span className="route-section-kicker">FLEX TIME</span>
+                <strong>剩余时间建议</strong>
+              </div>
+              <span>约 {plan.remainingMinutes} 分钟</span>
+            </div>
+            <p>{plan.remainingAdvice}</p>
+          </section>
+        </div>
 
         <div className="route-map">
           <CampusMap spots={plan.stops.map((stop) => stop.spot).concat(plan.origin)} plan={plan} activeId={null} onSelect={onSelectSpot} compact />
