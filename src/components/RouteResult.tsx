@@ -3,6 +3,8 @@ import { formatClock, formatDuration, routeToText } from '../lib/planner';
 import type { RoutePlan, Spot } from '../types';
 import CampusMap from './CampusMap';
 
+const MAX_EDITABLE_STOPS = 12;
+
 interface Props {
   plan: RoutePlan;
   availableSpots: Spot[];
@@ -28,13 +30,21 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
   const toggleSpot = (spotId: string) => {
     setSelectedSpotIds((previous) => {
       if (previous.includes(spotId)) return previous.filter((id) => id !== spotId);
-      if (previous.length >= 8) return previous;
+      if (previous.length >= MAX_EDITABLE_STOPS) return previous;
       return [...previous, spotId];
     });
   };
 
   const cancelEditing = () => {
     setSelectedSpotIds(plan.stops.map((stop) => stop.spot.id));
+    setEditing(false);
+  };
+
+  const addOptionalStop = (spotId: string) => {
+    const selected = Array.from(new Set([...plan.stops.map((stop) => stop.spot.id), spotId]));
+    const selectedSet = new Set(selected);
+    const excluded = routeCandidates.filter((spot) => !selectedSet.has(spot.id)).map((spot) => spot.id);
+    onEditRoute(selected, excluded);
     setEditing(false);
   };
 
@@ -89,14 +99,14 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
           <div className="route-editor-head">
             <div>
               <strong>选择要去的站点</strong>
-              <p>取消勾选即可删除，勾选其他点位即可加入。</p>
+              <p>勾选表示保留或加入，取消勾选即可删除；最多安排 12 个主线站点。</p>
             </div>
-            <span>{selectedSpotIds.length} / 8 个站点</span>
+            <span>{selectedSpotIds.length} / {MAX_EDITABLE_STOPS} 个站点</span>
           </div>
           <div className="route-editor-grid">
             {routeCandidates.map((spot) => {
               const checked = selectedSpotIds.includes(spot.id);
-              const disabled = !checked && selectedSpotIds.length >= 8;
+              const disabled = !checked && selectedSpotIds.length >= MAX_EDITABLE_STOPS;
               return (
                 <label key={spot.id} className={checked ? 'route-editor-option is-selected' : 'route-editor-option'}>
                   <input
@@ -203,10 +213,15 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
               <ul className="optional-list">
                 {plan.optionalStops.map((stop) => (
                   <li key={stop.spot.id}>
-                    <button type="button" onClick={() => onSelectSpot(stop.spot.id)}>
-                      <span>{stop.spot.emoji} {stop.spot.name}</span>
-                      <small>{Math.round(stop.leave - stop.arrive)} 分钟 · 步行 {stop.walkMeters} 米</small>
-                    </button>
+                    <div className="optional-row">
+                      <button type="button" className="optional-spot-button" onClick={() => onSelectSpot(stop.spot.id)}>
+                        <span>{stop.spot.emoji} {stop.spot.name}</span>
+                        <small>{Math.round(stop.leave - stop.arrive)} 分钟 · 步行 {stop.walkMeters} 米</small>
+                      </button>
+                      <button type="button" className="optional-add-btn" onClick={() => addOptionalStop(stop.spot.id)}>
+                        加入主线
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
