@@ -3,6 +3,7 @@ import { SPOTS, SPOT_MAP } from '../data/spots';
 import { TRIPS } from '../data/trips';
 import type { InterestId, PaceId, PlanOptions } from '../types';
 import { buildRoute, formatClock } from './planner';
+import { fetchWeather } from './weather';
 import { INTEREST_IDS } from './toolSchemas';
 import type { AgentToolContext } from '../agent/types';
 
@@ -31,11 +32,11 @@ function resolveSpotId(raw: unknown): string | null {
   return byName ? byName.id : null;
 }
 
-export function runTool(
+export async function runTool(
   name: string,
   rawArguments: string,
   context: AgentToolContext,
-): string {
+): Promise<string> {
   let args: Record<string, unknown> = {};
   try {
     args = rawArguments ? (JSON.parse(rawArguments) as Record<string, unknown>) : {};
@@ -175,6 +176,20 @@ export function runTool(
         tips: trip.tips,
       })),
     });
+  }
+
+  if (name === 'get_weather') {
+    const location = typeof args.location === 'string' ? args.location.trim() : '';
+    const date = typeof args.date === 'string' ? args.date.trim() : 'today';
+    try {
+      const weather = await fetchWeather(location, date);
+      context.trace.push(`get_weather(${String(weather.location)} ${String(weather.date)})`);
+      return JSON.stringify(weather);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '天气服务暂时不可用。';
+      context.trace.push('get_weather(失败)');
+      return JSON.stringify({ error: message });
+    }
   }
 
   context.trace.push(`${name}(未知工具)`);
