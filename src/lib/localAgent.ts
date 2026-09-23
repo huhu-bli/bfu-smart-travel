@@ -193,7 +193,7 @@ function mergeInterests(
 /**
  * 对外入口：支持追问。例如先问「1 小时怎么逛」，再说「改成 2 小时」「换成南门」「不想看花了」。
  */
-export function answerLocally(rawText: string, previous?: LocalMemory | null): LocalAnswer {
+export async function answerLocally(rawText: string, previous?: LocalMemory | null): Promise<LocalAnswer> {
   const text = rawText.trim();
   const following = Boolean(previous) && !RESET.test(text);
   const base = following && previous ? previous : null;
@@ -213,14 +213,14 @@ export function answerLocally(rawText: string, previous?: LocalMemory | null): L
     selectedSpotId: parsedSpot ?? base?.selectedSpotId,
   };
 
-  const answer = answerCore(rawText, memory);
+  const answer = await answerCore(rawText, memory);
   return {
     ...answer,
     memory: { ...memory, selectedSpotId: answer.spotIds[0] ?? memory.selectedSpotId },
   };
 }
 
-function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'memory'> {
+async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<LocalAnswer, 'memory'>> {
   const text = rawText.trim();
   const context = emptyContext();
   const explicitMinutes = parseMinutes(text);
@@ -264,7 +264,7 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
     const duration = /(一天|整天|全天)/.test(text) ? 'full' : 'half';
     const theme = parseTripTheme(text);
     const result = safeParse<{ trips: { name: string; theme: string; duration: string; budget: string; transport: string; summary: string }[] }>(
-      runTool('suggest_trip', JSON.stringify({ duration, theme, budget_max: 0 }), context),
+      await runTool('suggest_trip', JSON.stringify({ duration, theme, budget_max: 0 }), context),
     );
     const trips = result.trips ?? [];
     const lines = trips.map(
@@ -286,7 +286,7 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
   const wantsDetail = /(值得|怎么样|好不好|是什么|介绍|讲讲|说说|开放|几点|好玩|看看)/.test(text);
   if (memory.scene === 'spot-detail' && spotId && (wantsDetail || !explicitMinutes)) {
     const detail = safeParse<{ name: string; description: string; highlights: string[]; bestTime: string; visitMinutes: number; tips: string }>(
-      runTool('get_spot_detail', JSON.stringify({ spot_id: spotId }), context),
+      await runTool('get_spot_detail', JSON.stringify({ spot_id: spotId }), context),
     );
     const tip = detail.tips ? `\n\n小贴士：${detail.tips}` : '';
     return {
@@ -311,7 +311,7 @@ function answerCore(rawText: string, memory: LocalMemory): Omit<LocalAnswer, 'me
     remainingMinutes?: number;
     remainingAdvice?: string;
   }>(
-    runTool(
+    await runTool(
       'build_route',
       JSON.stringify({
         interests,
