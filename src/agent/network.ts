@@ -23,7 +23,7 @@ export async function requestModel(
     });
   } catch (error) {
     throw new Error(
-      `共享 Agent 请求失败：浏览器无法连接 Worker。${errorDetail(error)}`,
+      `共享 Agent 请求失败：浏览器无法连接代理服务。${errorDetail(error)}`,
     );
   } finally {
     globalThis.clearTimeout(timer);
@@ -34,7 +34,7 @@ export async function requestModel(
   return payload ?? {};
 }
 
-/** 检查共享 Worker 是否可达，不向上游模型发送测试请求。 */
+/** 检查共享代理服务是否可达，不向上游模型发送测试请求。 */
 export async function probeConnection(settings: AgentSettings): Promise<ProbeResult> {
   const started = Date.now();
   const url = settings.proxyUrl.trim().replace(/\/+$/, '');
