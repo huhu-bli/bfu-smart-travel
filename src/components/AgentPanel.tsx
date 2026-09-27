@@ -82,7 +82,7 @@ function clampPanelSize(width: number, height: number): PanelSize {
 function isNetworkFailure(error: unknown): boolean {
   return (
     error instanceof Error &&
-    (error.message.includes('浏览器无法连接 Worker') ||
+    (error.message.includes('浏览器无法连接代理服务') ||
       error.message.includes('网络请求失败') ||
       error.name === 'AbortError')
   );
@@ -390,7 +390,7 @@ export default function AgentPanel({
           {
             id: nextId(),
             role: 'assistant',
-            text: `千问 Agent 暂时不可用：${reason}\n\n请检查 Worker 的 QWEN_API_KEY 后重试。此次没有切换到内置助手。`,
+            text: `千问 Agent 暂时不可用：${reason}\n\n请检查 Vercel 的 QWEN_API_KEY 和 APP_TOKEN 后重试。此次没有切换到内置助手。`,
             trace: [
               `场景：${sceneLabel(scene)}`,
               '千问 Agent 请求失败，未切换到内置助手',
@@ -447,7 +447,7 @@ export default function AgentPanel({
           <header className="agent-head">
             <div className="agent-title">
               <strong>AI 行程助手</strong>
-              <small>通义千问 · Cloudflare Worker · qwen3.8-flash</small>
+              <small>通义千问 · Vercel Serverless · qwen3.8-flash</small>
             </div>
             <div className="agent-head-actions">
               <button type="button" className="icon-btn" onClick={reset} title="清空对话">
