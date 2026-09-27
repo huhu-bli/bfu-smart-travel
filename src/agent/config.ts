@@ -7,14 +7,14 @@ const QWEN_PROVIDER: AgentProvider = {
   baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   model: 'qwen3.8-flash',
   models: ['qwen3.8-flash', 'qwen3.7-plus', 'qwen3.8-max', 'qwen-plus'],
-  keyHint: '由 Worker 安全保存',
-  note: '公开站点统一通过 Cloudflare Worker 调用，千问 API Key 不进入浏览器。',
+  keyHint: '由 Vercel 服务端安全保存',
+  note: '公开站点统一通过 Vercel Serverless Function 调用，千问 API Key 不进入浏览器。',
 };
 
 export const PROVIDERS: AgentProvider[] = [QWEN_PROVIDER];
 export const MAX_ROUNDS = 6;
 export const REQUEST_TIMEOUT_MS = 60_000;
-// 手机网络和 Worker 冷启动时可能需要更长时间，避免前端过早触发 AbortError。
+// 服务端代理冷启动时可能需要更长时间，避免前端过早触发 AbortError。
 export const PROXY_TIMEOUT_MS = 60_000;
 
 /** 发给模型的历史最多保留最近 10 轮。 */
