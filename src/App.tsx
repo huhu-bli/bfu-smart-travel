@@ -3,6 +3,7 @@ import AgentPanel from './components/AgentPanel';
 import CampusMap from './components/CampusMap';
 import Checklist from './components/Checklist';
 import Footer from './components/Footer';
+import HaidianMap from './components/HaidianMap';
 import Header, { type TabId } from './components/Header';
 import Planner from './components/Planner';
 import RouteResult from './components/RouteResult';
@@ -30,6 +31,7 @@ export default function App() {
   const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [mapScope, setMapScope] = useState<'campus' | 'haidian'>('campus');
   const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
   const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
 
@@ -120,7 +122,7 @@ export default function App() {
       <main className="app-main">
         <section className="hero-card">
           <div className="hero-copy">
-            <span className="hero-pill">北京林业大学 · 校园智能导览</span>
+            <span className="hero-pill">北京林业大学校园导览 · 海淀教育地图</span>
             <h1>
               把北林逛明白，
               <br />
@@ -187,34 +189,62 @@ export default function App() {
           ) : null}
 
           {tab === 'map' ? (
-            <div className="map-layout">
-              <CampusMap spots={SPOTS} plan={plan} activeId={activeSpotId} onSelect={setActiveSpotId} />
-              <aside className="map-side">
-                <h2>{plan.title}</h2>
-                <p className="route-sub">{plan.subtitle}</p>
-                <ol className="side-stops">
-                  <li>
-                    <span className="stop-index stop-index--sm">起</span>
-                    {plan.origin.name}
-                  </li>
-                  {plan.stops.map((stop, index) => (
-                    <li key={stop.spot.id}>
-                      <button type="button" onClick={() => setActiveSpotId(stop.spot.id)}>
-                        <span className="stop-index stop-index--sm">{index + 1}</span>
-                        {stop.spot.name}
+            <div className="map-explorer">
+              <div className="map-scope-switch" role="group" aria-label="地图范围">
+                <button
+                  type="button"
+                  className={mapScope === 'campus' ? 'is-active' : ''}
+                  onClick={() => setMapScope('campus')}
+                >
+                  北林校园路线
+                </button>
+                <button
+                  type="button"
+                  className={mapScope === 'haidian' ? 'is-active' : ''}
+                  onClick={() => setMapScope('haidian')}
+                >
+                  海淀学校总览
+                </button>
+              </div>
+
+              {mapScope === 'campus' ? (
+                <div className="map-layout">
+                  <CampusMap
+                    spots={SPOTS}
+                    plan={plan}
+                    activeId={activeSpotId}
+                    onSelect={setActiveSpotId}
+                  />
+                  <aside className="map-side">
+                    <h2>{plan.title}</h2>
+                    <p className="route-sub">{plan.subtitle}</p>
+                    <ol className="side-stops">
+                      <li>
+                        <span className="stop-index stop-index--sm">起</span>
+                        {plan.origin.name}
+                      </li>
+                      {plan.stops.map((stop, index) => (
+                        <li key={stop.spot.id}>
+                          <button type="button" onClick={() => setActiveSpotId(stop.spot.id)}>
+                            <span className="stop-index stop-index--sm">{index + 1}</span>
+                            {stop.spot.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ol>
+                    <div className="side-foot">
+                      <p>
+                        预计 {formatDuration(plan.totalMinutes)} · 步行约 {plan.totalMeters} 米
+                      </p>
+                      <button type="button" className="ghost-btn" onClick={() => setTab('planner')}>
+                        回到规划器
                       </button>
-                    </li>
-                  ))}
-                </ol>
-                <div className="side-foot">
-                  <p>
-                    预计 {formatDuration(plan.totalMinutes)} · 步行约 {plan.totalMeters} 米
-                  </p>
-                  <button type="button" className="ghost-btn" onClick={() => setTab('planner')}>
-                    回到规划器
-                  </button>
+                    </div>
+                  </aside>
                 </div>
-              </aside>
+              ) : (
+                <HaidianMap />
+              )}
             </div>
           ) : null}
 

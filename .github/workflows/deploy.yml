@@ -31,6 +31,10 @@ jobs:
           VITE_AGENT_PROXY_URL: ${{ vars.AGENT_PROXY_URL }}
           # 访问口令只从 GitHub Actions Secret/Variable 注入，不进入仓库。
           VITE_AGENT_PROXY_TOKEN: ${{ secrets.AGENT_PROXY_TOKEN || vars.AGENT_PROXY_TOKEN }}
+          # 海淀学校地图使用高德 JS API。Key 可公开使用，但必须在高德控制台配置域名白名单；
+          # 安全密钥继续由 Actions Secret 注入，不提交到仓库。
+          VITE_AMAP_KEY: ${{ vars.AMAP_JS_KEY }}
+          VITE_AMAP_SECURITY_CODE: ${{ secrets.AMAP_SECURITY_CODE }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

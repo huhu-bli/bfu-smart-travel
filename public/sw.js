@@ -3,7 +3,7 @@
  * 只处理同源 GET 请求，绝不缓存代理请求（那会把 AI 回答也存下来）。
  */
 // 每次发布 Agent 关键修复时递增版本，确保手机端不会继续使用旧脚本。
-const CACHE = 'bfu-travel-v2';
+const CACHE = 'bfu-travel-v3';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

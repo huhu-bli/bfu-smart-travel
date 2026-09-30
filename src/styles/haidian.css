@@ -1,0 +1,404 @@
+.map-explorer {
+  display: grid;
+  gap: 14px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.map-scope-switch {
+  display: inline-flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: var(--shadow-sm);
+}
+
+.map-scope-switch button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: var(--ink-soft);
+  background: transparent;
+  font-weight: 650;
+}
+
+.map-scope-switch button.is-active {
+  color: #fff;
+  background: var(--brand);
+  box-shadow: 0 5px 14px rgba(31, 122, 77, 0.2);
+}
+
+.haidian-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+  min-height: 650px;
+}
+
+.haidian-map-main,
+.haidian-school-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.haidian-map-main {
+  min-width: 0;
+  padding: 20px;
+}
+
+.haidian-map-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.haidian-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+.haidian-map-heading h2 {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 32px);
+}
+
+.haidian-map-heading p {
+  margin: 7px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.haidian-count {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.haidian-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.haidian-category-list {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.haidian-category-list::-webkit-scrollbar {
+  display: none;
+}
+
+.haidian-category-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 11px;
+  color: var(--ink-soft);
+  background: #fff;
+  font-size: 12px;
+}
+
+.haidian-category-list button.is-active {
+  color: var(--brand-dark);
+  border-color: #a9d0b7;
+  background: var(--brand-soft);
+}
+
+.haidian-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 210px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: #fff;
+}
+
+.haidian-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 13px;
+}
+
+.haidian-map-canvas-wrap {
+  position: relative;
+  min-height: 500px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #e9f0e9;
+}
+
+.haidian-map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.haidian-map-status {
+  position: absolute;
+  z-index: 2;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 8px;
+  width: min(86%, 420px);
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--brand-dark);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.haidian-map-status--error {
+  color: #653f18;
+  background: rgba(255, 250, 237, 0.96);
+}
+
+.haidian-map-status span,
+.haidian-map-status small {
+  line-height: 1.55;
+}
+
+.haidian-map-note {
+  margin: 10px 2px 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.haidian-school-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.haidian-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.haidian-panel-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.haidian-panel-head span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.haidian-panel-head button {
+  border: 0;
+  color: var(--brand);
+  background: transparent;
+  font-size: 12px;
+}
+
+.haidian-school-list {
+  flex: 1;
+  max-height: 650px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.haidian-school-list > button {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+  text-align: left;
+  background: #fff;
+}
+
+.haidian-school-list > button:hover,
+.haidian-school-list > button.is-active {
+  background: var(--brand-soft);
+}
+
+.haidian-school-list > button > span:nth-child(2) {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.haidian-school-list strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.haidian-school-list small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.haidian-school-list i {
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: #f1f5f2;
+  font-size: 10px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.school-category-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.school-category-dot--middle {
+  background: #3f78c5;
+}
+
+.school-category-dot--primary {
+  background: #e0a92b;
+}
+
+.school-category-dot--vocational {
+  background: #9a62c7;
+}
+
+.haidian-empty {
+  padding: 36px 22px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.haidian-info {
+  display: grid;
+  gap: 4px;
+  max-width: 260px;
+  padding: 2px;
+}
+
+.haidian-info strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.haidian-info span {
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 10px;
+}
+
+.haidian-info p {
+  margin: 2px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .haidian-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .haidian-school-panel {
+    max-height: 420px;
+  }
+
+  .haidian-school-list {
+    max-height: 340px;
+  }
+}
+
+@media (max-width: 640px) {
+  .map-scope-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .map-scope-switch button {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .haidian-map-main {
+    padding: 14px;
+  }
+
+  .haidian-map-heading {
+    align-items: flex-end;
+  }
+
+  .haidian-map-heading p {
+    font-size: 12px;
+  }
+
+  .haidian-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .haidian-search {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .haidian-map-canvas-wrap {
+    min-height: 430px;
+  }
+}
