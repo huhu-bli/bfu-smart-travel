@@ -122,7 +122,7 @@ export default function App() {
       <main className="app-main">
         <section className="hero-card">
           <div className="hero-copy">
-            <span className="hero-pill">北京林业大学校园导览 · 海淀教育地图</span>
+            <span className="hero-pill">北京林业大学校园导览 · 海淀综合旅行地图</span>
             <h1>
               把北林逛明白，
               <br />
@@ -203,7 +203,7 @@ export default function App() {
                   className={mapScope === 'haidian' ? 'is-active' : ''}
                   onClick={() => setMapScope('haidian')}
                 >
-                  海淀学校总览
+                  海淀综合地图
                 </button>
               </div>
 
