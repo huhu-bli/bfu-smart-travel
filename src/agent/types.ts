@@ -1,5 +1,6 @@
 import type { PlanOptions, RoutePlan } from '../types';
 import type { Scene } from '../lib/sceneRouter';
+import type { TravelTarget } from '../lib/travelTarget';
 
 /** 公开站点统一通过受保护的 Worker 访问模型。 */
 export type AgentMode = 'proxy';
@@ -52,6 +53,7 @@ export interface ToolCall {
 }
 
 export interface AgentToolContext {
+  target: TravelTarget;
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;
   spotIds: string[];
@@ -61,6 +63,7 @@ export interface AgentToolContext {
 
 export interface AgentTurnResult {
   scene: Scene;
+  target: TravelTarget;
   text: string;
   history: AgentHistory;
   /** 是否因为过长而省略了较早的对话。 */

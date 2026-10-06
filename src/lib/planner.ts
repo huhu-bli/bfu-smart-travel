@@ -1,4 +1,4 @@
-import { GATE_IDS, INTEREST_MAP } from '../data/interests';
+import { INTEREST_MAP } from '../data/interests';
 import type { InterestId, PlanOptions, RoutePlan, RouteStop, Spot } from '../types';
 
 /** 示意图坐标到米的大致换算比例（示意值）。 */
@@ -105,9 +105,9 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
   // 起点兜底：找不到指定门岗时，退到任意一个门岗，再退到第一个点位。
   const start =
     spots.find((spot) => spot.id === startId) ??
-    spots.find((spot) => GATE_IDS.includes(spot.id)) ??
+    spots.find((spot) => spot.kind === '入口') ??
     spots[0];
-  const pool = spots.filter((spot) => !GATE_IDS.includes(spot.id) && !excluded.has(spot.id));
+  const pool = spots.filter((spot) => spot.kind !== '入口' && !excluded.has(spot.id));
   const maxStops = Math.min(MAX_EXPLICIT_STOPS, Math.max(MAX_STOPS, included.size));
   const used = new Set<string>();
   const stops: RouteStop[] = [];

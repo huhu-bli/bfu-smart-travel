@@ -2642,6 +2642,13 @@ a {
   white-space: nowrap;
 }
 
+.agent-card-stops .agent-card-stop-name {
+  margin-left: 0;
+  color: var(--ink);
+  font-size: 12.5px;
+  white-space: normal;
+}
+
 .agent-card-subsection {
   display: flex;
   flex-direction: column;

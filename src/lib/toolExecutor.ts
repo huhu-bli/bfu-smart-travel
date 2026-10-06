@@ -1,5 +1,6 @@
-import { GATE_IDS, PACES } from '../data/interests';
-import { SPOTS, SPOT_MAP } from '../data/spots';
+import { PACES } from '../data/interests';
+import { campusById, type CampusDefinition } from '../data/campuses';
+import type { Spot } from '../types';
 import { TRIPS } from '../data/trips';
 import type { InterestId, PaceId, PlanOptions } from '../types';
 import { buildRoute, formatClock } from './planner';
@@ -19,17 +20,41 @@ function asStringArray(value: unknown, allowed: readonly string[]): string[] {
   );
 }
 
-function resolveSpotId(raw: unknown): string | null {
+function resolveSpotId(raw: unknown, spots: Spot[]): string | null {
   if (typeof raw !== 'string') return null;
   const value = raw.trim();
-  if (SPOT_MAP[value]) return value;
+  if (spots.some((spot) => spot.id === value)) return value;
   const lowered = value.toLowerCase();
-  const byId = SPOTS.find((spot) => spot.id.toLowerCase() === lowered);
+  const byId = spots.find((spot) => spot.id.toLowerCase() === lowered);
   if (byId) return byId.id;
-  const byName = SPOTS.find(
+  const byName = spots.find(
     (spot) => spot.name === value || spot.name.includes(value) || value.includes(spot.name),
   );
   return byName ? byName.id : null;
+}
+
+function campusForTool(
+  args: Record<string, unknown>,
+  context: AgentToolContext,
+): { campus: CampusDefinition | null; error?: string } {
+  if (context.target.kind !== 'campus') {
+    return { campus: null, error: '当前目标是海淀区综合旅行，请先明确要进入哪所学校，再调用校园工具。' };
+  }
+  const targetCampus = campusById(context.target.campusId);
+  if (!targetCampus) {
+    return { campus: null, error: `没有找到目标校园「${context.target.label}」的配置。` };
+  }
+  if (!targetCampus.spots?.length) {
+    return {
+      campus: targetCampus,
+      error: `暂未收录${targetCampus.name}的校内详细点位，不能生成内部路线，更不能用其他学校路线替代。`,
+    };
+  }
+  const requested = typeof args.campus_id === 'string' ? args.campus_id : '';
+  if (requested && requested !== targetCampus.id) {
+    context.trace.push(`campus_guard(${requested} → ${targetCampus.id})`);
+  }
+  return { campus: targetCampus };
 }
 
 export async function runTool(
@@ -45,9 +70,16 @@ export async function runTool(
   }
 
   if (name === 'list_spots') {
+    const resolved = campusForTool(args, context);
+    if (!resolved.campus || resolved.error) {
+      context.trace.push('list_spots(目标不支持)');
+      return JSON.stringify({ error: resolved.error });
+    }
+    const campus = resolved.campus;
+    const spots = campus.spots ?? [];
     const interests = asStringArray(args.interests, INTEREST_IDS);
     const keyword = typeof args.keyword === 'string' ? args.keyword.trim() : '';
-    const matched = SPOTS.filter((spot) => {
+    const matched = spots.filter((spot) => {
       if (spot.kind === '入口') return false;
       const hitInterest = interests.length === 0 || spot.interests.some((id) => interests.includes(id));
       const hitKeyword =
@@ -57,8 +89,10 @@ export async function runTool(
         spot.highlights.some((highlight) => highlight.includes(keyword));
       return hitInterest && hitKeyword;
     });
-    context.trace.push(`list_spots(${matched.length} 个点位)`);
+    context.trace.push(`list_spots(${campus.shortName} / ${matched.length} 个点位)`);
     return JSON.stringify({
+      campusId: campus.id,
+      campusName: campus.name,
       count: matched.length,
       spots: matched.slice(0, 12).map((spot) => ({
         id: spot.id,
@@ -72,6 +106,13 @@ export async function runTool(
   }
 
   if (name === 'build_route') {
+    const resolved = campusForTool(args, context);
+    if (!resolved.campus || resolved.error) {
+      context.trace.push('build_route(目标不支持)');
+      return JSON.stringify({ error: resolved.error });
+    }
+    const campus = resolved.campus;
+    const spots = campus.spots ?? [];
     const interests = asStringArray(args.interests, INTEREST_IDS) as InterestId[];
     const rawMinutes = typeof args.minutes === 'number' ? args.minutes : Number(args.minutes);
     const minutes = Number.isFinite(rawMinutes) ? Math.min(480, Math.max(15, Math.round(rawMinutes))) : 60;
@@ -79,22 +120,33 @@ export async function runTool(
       ? args.pace
       : 'normal') as PaceId;
     const pace = PACES.find((item) => item.id === paceId) ?? PACES[1];
-    const startId =
-      typeof args.start_gate === 'string' && GATE_IDS.includes(args.start_gate)
-        ? args.start_gate
-        : 'east-gate';
-    const validSpotIds = SPOTS.filter((spot) => spot.kind !== '入口').map((spot) => spot.id);
+    const gateIds = spots.filter((spot) => spot.kind === '入口').map((spot) => spot.id);
+    const requestedGate = typeof args.start_gate === 'string' ? args.start_gate : '';
+    const startId = gateIds.includes(requestedGate) ? requestedGate : campus.defaultGateId;
+    const validSpotIds = spots.filter((spot) => spot.kind !== '入口').map((spot) => spot.id);
     const includeSpotIds = asStringArray(args.include_spot_ids, validSpotIds);
     const excludeSpotIds = asStringArray(args.exclude_spot_ids, validSpotIds);
 
-    const options: PlanOptions = { interests, minutes, pace, startId, includeSpotIds, excludeSpotIds };
-    const plan = buildRoute(SPOTS, options);
+    const options: PlanOptions = { campusId: campus.id, interests, minutes, pace, startId, includeSpotIds, excludeSpotIds };
+    const plan = buildRoute(spots, options);
+    if (campus.id !== 'bfu') {
+      plan.title = `${campus.shortName}漫步 · 校园精华线`;
+      plan.subtitle = plan.subtitle.replace('北林', campus.shortName);
+      plan.stops.forEach((stop) => {
+        stop.reason = stop.reason.replace('北林必看', `${campus.shortName}必看`);
+      });
+      plan.optionalStops.forEach((stop) => {
+        stop.reason = stop.reason.replace('北林必看', `${campus.shortName}必看`);
+      });
+    }
     context.plan = plan;
     context.planOptions = options;
-    context.trace.push(`build_route(${plan.stops.length} 必游 / ${plan.optionalStops.length} 可选 / ${Math.round(plan.totalMinutes)} 分钟)`);
+    context.trace.push(`build_route(${campus.shortName} / ${plan.stops.length} 必游 / ${plan.optionalStops.length} 可选 / ${Math.round(plan.totalMinutes)} 分钟)`);
 
     return JSON.stringify({
       title: plan.title,
+      campusId: campus.id,
+      campusName: campus.name,
       subtitle: plan.subtitle,
       origin: plan.origin.name,
       totalMinutes: Math.round(plan.totalMinutes),
@@ -126,17 +178,24 @@ export async function runTool(
   }
 
   if (name === 'get_spot_detail') {
-    const id = resolveSpotId(args.spot_id);
+    const resolved = campusForTool(args, context);
+    if (!resolved.campus || resolved.error) {
+      context.trace.push('get_spot_detail(目标不支持)');
+      return JSON.stringify({ error: resolved.error });
+    }
+    const campus = resolved.campus;
+    const spots = campus.spots ?? [];
+    const id = resolveSpotId(args.spot_id, spots);
     if (!id) {
       context.trace.push('get_spot_detail(未找到)');
       return JSON.stringify({
         error: '没有找到这个点位，请先调用 list_spots 获取正确的 spot_id。',
-        candidates: SPOTS.filter((spot) => spot.kind !== '入口')
+        candidates: spots.filter((spot) => spot.kind !== '入口')
           .slice(0, 8)
           .map((spot) => ({ id: spot.id, name: spot.name })),
       });
     }
-    const spot = SPOT_MAP[id];
+    const spot = spots.find((item) => item.id === id)!;
     if (!context.spotIds.includes(id)) context.spotIds.push(id);
     context.trace.push(`get_spot_detail(${spot.name})`);
     return JSON.stringify({
@@ -156,7 +215,9 @@ export async function runTool(
     const theme = typeof args.theme === 'string' ? args.theme.trim() : '';
     const budget = typeof args.budget_max === 'number' ? args.budget_max : Number(args.budget_max) || 0;
     const wantsFullDay = duration === 'full';
-    const matched = TRIPS.filter((trip) => {
+    // 奥林匹克森林公园位于朝阳区，保留旧数据但不在海淀产品中参与推荐。
+    const haidianTrips = TRIPS.filter((trip) => trip.id !== 'aosen');
+    const matched = haidianTrips.filter((trip) => {
       const durationHit = wantsFullDay
         ? trip.duration.includes('一天')
         : trip.duration.includes('半天');
@@ -168,7 +229,7 @@ export async function runTool(
         trip.tips.some((tip) => tip.includes(theme));
       return durationHit && themeHit;
     });
-    const shortlisted = (matched.length ? matched : TRIPS).slice(0, 3);
+    const shortlisted = (matched.length ? matched : haidianTrips).slice(0, 3);
     shortlisted.forEach((trip) => {
       if (!context.tripIds.includes(trip.id)) context.tripIds.push(trip.id);
     });
@@ -192,7 +253,8 @@ export async function runTool(
   }
 
   if (name === 'get_weather') {
-    const location = typeof args.location === 'string' ? args.location.trim() : '';
+    const providedLocation = typeof args.location === 'string' ? args.location.trim() : '';
+    const location = providedLocation || context.target.label || '海淀区';
     const date = typeof args.date === 'string' ? args.date.trim() : 'today';
     try {
       const weather = await fetchWeather(location, date);

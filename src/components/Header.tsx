@@ -1,8 +1,8 @@
 const NAV = [
   { id: 'planner', label: '智能路线' },
-  { id: 'map', label: '校园地图' },
-  { id: 'spots', label: '点位图鉴' },
-  { id: 'trips', label: '周边一日游' },
+  { id: 'map', label: '海淀地图' },
+  { id: 'spots', label: '北林图鉴' },
+  { id: 'trips', label: '海淀路线' },
   { id: 'packing', label: '出行清单' },
 ] as const;
 
@@ -39,8 +39,8 @@ export default function Header({ tab, onChange, repoUrl }: Props) {
             </svg>
           </span>
           <span className="brand-text">
-            <strong>北林智能旅行</strong>
-            <small>BFU Smart Travel</small>
+            <strong>海淀智能旅行</strong>
+            <small>Haidian Smart Travel</small>
           </span>
         </button>
 

@@ -1,7 +1,12 @@
-import { DURATIONS, INTERESTS } from '../data/interests';
+import { INTERESTS } from '../data/interests';
 import type { PlanOptions, RoutePlan } from '../types';
 import { formatDuration } from '../lib/planner';
 import { routeScene, type Scene } from '../lib/sceneRouter';
+import {
+  resolveTravelTarget,
+  targetContext,
+  type TravelTarget,
+} from '../lib/travelTarget';
 import { runChatLoop, runResponsesLoop } from './toolLoop';
 import { requestModel } from './network';
 import type {
@@ -36,21 +41,34 @@ export async function runAgentTurn(params: {
   userText: string;
   settings: AgentSettings;
   scene?: Scene;
+  previousTarget?: TravelTarget | null;
   currentPlan?: RoutePlan | null;
   currentPlanOptions?: PlanOptions | null;
 }): Promise<AgentTurnResult> {
   const { history, userText, settings } = params;
-  const scene = routeScene(userText, params.scene ?? 'unknown');
-  const currentPlan = scene === 'campus-route' ? params.currentPlan ?? null : null;
-  const currentPlanOptions = scene === 'campus-route' ? params.currentPlanOptions ?? null : null;
+  const target = resolveTravelTarget(userText, params.previousTarget);
+  const routedScene = routeScene(userText, params.scene ?? 'unknown');
+  const scene = routedScene === 'campus-route' && target.kind === 'district'
+    ? 'outside-trip'
+    : routedScene;
+  const planCampusId = params.currentPlanOptions?.campusId ?? 'bfu';
+  const sameCampus = target.kind === 'campus' && target.campusId === planCampusId;
+  const currentPlan = scene === 'campus-route' && sameCampus ? params.currentPlan ?? null : null;
+  const currentPlanOptions = scene === 'campus-route' && sameCampus
+    ? params.currentPlanOptions ?? null
+    : null;
   const context: AgentToolContext = {
+    target,
     plan: currentPlan,
     planOptions: currentPlanOptions,
     spotIds: [],
     tripIds: [],
     trace: [],
   };
-  const contextHint = formatCurrentPlanContext(currentPlan, currentPlanOptions);
+  const contextHint = [
+    targetContext(target),
+    formatCurrentPlanContext(currentPlan, currentPlanOptions),
+  ].filter(Boolean).join('\n\n');
 
   const outcome =
     settings.protocol === 'chat'
@@ -75,6 +93,7 @@ export async function runAgentTurn(params: {
 
   return {
     scene,
+    target,
     text: outcome.text,
     history: outcome.history,
     trimmed: outcome.trimmed,
@@ -88,18 +107,12 @@ export async function runAgentTurn(params: {
 }
 
 export function describePlanOption(options: PlanOptions): string {
-  const duration = DURATIONS.reduce((closest, item) =>
-    Math.abs(item.minutes - options.minutes) < Math.abs(closest.minutes - options.minutes)
-      ? item
-      : closest,
-  );
   const labels = options.interests.length
     ? options.interests.map((id) => INTERESTS.find((item) => item.id === id)?.label ?? id)
     : ['综合'];
-  return `${duration.label} · ${labels.join('/')} · ${options.pace.label}节奏`;
+  return `${formatDuration(options.minutes)} · ${labels.join('/')} · ${options.pace.label}节奏`;
 }
 
 export function formatPlanSummary(plan: RoutePlan): string {
   return `${plan.title}（${formatDuration(plan.totalMinutes)} / 约 ${plan.totalMeters} 米）`;
 }
-

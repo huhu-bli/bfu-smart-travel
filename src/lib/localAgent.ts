@@ -1,9 +1,13 @@
-import { SPOTS, SPOT_MAP } from '../data/spots';
-import type { InterestId, PlanOptions, RoutePlan } from '../types';
+import { campusById, campusSpotMap } from '../data/campuses';
+import type { InterestId, PlanOptions, RoutePlan, Spot } from '../types';
 import { formatDuration } from './planner';
 import { runTool } from './toolExecutor';
 import type { AgentToolContext } from '../agent/types';
 import { routeScene, type Scene } from './sceneRouter';
+import {
+  resolveTravelTarget,
+  type TravelTarget,
+} from './travelTarget';
 
 /**
  * 内置助手：不联网、不需要任何密钥，用规则解析中文问题后调用与 AI 完全相同的工具。
@@ -23,6 +27,7 @@ export interface LocalAnswer {
 
 export interface LocalMemory {
   scene: Scene;
+  target: TravelTarget;
   minutes: number;
   interests: InterestId[];
   gateId: string;
@@ -130,11 +135,11 @@ export function matchGate(text: string): string | null {
   return null;
 }
 
-function parseSpot(text: string): string | null {
+function parseSpot(text: string, spots: Spot[]): string | null {
   for (const [pattern, id] of SPOT_KEYWORDS) {
-    if (pattern.test(text)) return id;
+    if (pattern.test(text) && spots.some((spot) => spot.id === id)) return id;
   }
-  const byName = SPOTS.find((spot) => spot.kind !== '入口' && text.includes(spot.name));
+  const byName = spots.find((spot) => spot.kind !== '入口' && text.includes(spot.name));
   return byName ? byName.id : null;
 }
 
@@ -146,8 +151,8 @@ function parseTripTheme(text: string): string {
   return '';
 }
 
-function emptyContext(): AgentToolContext {
-  return { plan: null, planOptions: null, spotIds: [], tripIds: [], trace: [] };
+function emptyContext(target: TravelTarget): AgentToolContext {
+  return { target, plan: null, planOptions: null, spotIds: [], tripIds: [], trace: [] };
 }
 
 function safeParse<T>(raw: string): T {
@@ -197,19 +202,30 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
   const text = rawText.trim();
   const following = Boolean(previous) && !RESET.test(text);
   const base = following && previous ? previous : null;
-  const parsedSpot = parseSpot(text);
+  const target = resolveTravelTarget(text, base?.target);
+  const campus = target.kind === 'campus' ? campusById(target.campusId) : null;
+  const spots = campus?.spots ?? [];
+  const parsedSpot = parseSpot(text, spots);
   const routed = routeScene(text, base?.scene ?? 'unknown');
-  const scene: Scene = routed === 'unknown' && parsedSpot ? 'spot-detail' : routed;
+  const targetScene = routed === 'campus-route' && target.kind === 'district'
+    ? 'outside-trip'
+    : routed;
+  const scene: Scene = targetScene === 'unknown' && parsedSpot ? 'spot-detail' : targetScene;
 
   const explicitMinutes = parseMinutes(text);
   const parsedInterests = parseInterests(text);
   const memory: LocalMemory = {
     scene,
+    target,
     minutes: explicitMinutes ?? base?.minutes ?? 60,
     interests: base
       ? mergeInterests(text, parsedInterests, base.interests)
       : parsedInterests,
-    gateId: matchGate(text) ?? base?.gateId ?? 'gate-main',
+    gateId:
+      (campus?.id === 'bfu' ? matchGate(text) : null) ??
+      (base?.target.campusId === target.campusId ? base?.gateId : undefined) ??
+      campus?.defaultGateId ??
+      '',
     selectedSpotId: parsedSpot ?? base?.selectedSpotId,
   };
 
@@ -222,21 +238,24 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
 
 async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<LocalAnswer, 'memory'>> {
   const text = rawText.trim();
-  const context = emptyContext();
+  const context = emptyContext(memory.target);
+  const campus = memory.target.kind === 'campus' ? campusById(memory.target.campusId) : null;
+  const spots = campus?.spots ?? [];
+  const spotMap = campus ? campusSpotMap(campus) : {};
   const explicitMinutes = parseMinutes(text);
   const minutes = explicitMinutes ?? memory.minutes;
   const interests = memory.interests;
-  const gateId = matchGate(text) ?? memory.gateId;
-  const gateName = SPOT_MAP[gateId]?.name ?? '东门（正门）';
-  const spotId = parseSpot(text) ?? memory.selectedSpotId ?? null;
+  const gateId = (campus?.id === 'bfu' ? matchGate(text) : null) ?? memory.gateId;
+  const gateName = spotMap[gateId]?.name ?? campus?.shortName ?? '海淀区';
+  const spotId = parseSpot(text, spots) ?? memory.selectedSpotId ?? null;
 
   if (memory.scene === 'system-help') {
     return {
       text: [
-        '我是北林行程助手，可以：',
-        '· 排校园路线：「我只有 1 小时，从东门进，怎么逛最值」',
+        '我是海淀智能旅行助手，可以：',
+        '· 排已收录校园路线：「我有 3 小时，想逛北京交通大学」',
         '· 讲点位：「银杏大道值得专门去吗」',
-        '· 推校外行程：「周末想出去玩半天，别太贵」',
+        '· 规划海淀行程：「周末在海淀玩半天，别太贵」',
         '',
         '当前使用内置助手，不需要密钥，也不消耗额度。',
       ].join('\n'),
@@ -250,7 +269,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
 
   if (memory.scene === 'unknown') {
     return {
-      text: '你想规划北林校园内的路线，还是了解学校周边的校外线路？也可以直接询问某个校园点位。',
+      text: '你想逛海淀区，还是进入某所高校？可以直接说「3 小时逛北京交通大学」或「半天游颐和园和圆明园」。',
       plan: null,
       planOptions: null,
       spotIds: [],
@@ -272,8 +291,8 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
     );
     return {
       text: lines.length
-        ? `校外的${theme || '半天'}行程，我挑了几条：\n\n${lines.join('\n\n')}\n\n点下面的标签可以在「周边一日游」里看完整时间轴。`
-        : '周边线路我这边暂时没匹配到，可以把「周边一日游」翻一遍。',
+        ? `海淀区的${theme || '半天'}行程，我挑了几条：\n\n${lines.join('\n\n')}\n\n点下面的标签可以在「海淀路线」里看完整时间轴。`
+        : '海淀线路我这边暂时没匹配到，可以打开「海淀路线」查看。',
       plan: null,
       planOptions: null,
       spotIds: [],
@@ -286,7 +305,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
   const wantsDetail = /(值得|怎么样|好不好|是什么|介绍|讲讲|说说|开放|几点|好玩|看看)/.test(text);
   if (memory.scene === 'spot-detail' && spotId && (wantsDetail || !explicitMinutes)) {
     const detail = safeParse<{ name: string; description: string; highlights: string[]; bestTime: string; visitMinutes: number; tips: string }>(
-      await runTool('get_spot_detail', JSON.stringify({ spot_id: spotId }), context),
+      await runTool('get_spot_detail', JSON.stringify({ campus_id: campus?.id, spot_id: spotId }), context),
     );
     const tip = detail.tips ? `\n\n小贴士：${detail.tips}` : '';
     return {
@@ -296,6 +315,28 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
       spotIds: context.spotIds,
       tripIds: [],
       trace: context.trace,
+    };
+  }
+
+  if (memory.target.kind !== 'campus' || !campus) {
+    return {
+      text: '请先说明要进入哪所高校；如果想逛整个海淀区，可以说「半天游颐和园和圆明园」。',
+      plan: null,
+      planOptions: null,
+      spotIds: [],
+      tripIds: [],
+      trace: ['校园路线缺少明确目标'],
+    };
+  }
+
+  if (!campus.spots?.length) {
+    return {
+      text: `目前已在海淀地图中收录${campus.name}的位置，但还没有该校的校内点位数据，因此暂时不能生成内部路线，也不会用其他学校的路线替代。`,
+      plan: null,
+      planOptions: null,
+      spotIds: [],
+      tripIds: [],
+      trace: [`${campus.shortName}校内数据待补充`],
     };
   }
 
@@ -314,6 +355,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
     await runTool(
       'build_route',
       JSON.stringify({
+        campus_id: campus.id,
         interests,
         minutes: planMinutes,
         pace: 'normal',
@@ -326,12 +368,12 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
   if (HELP_KEYWORDS.test(text) && !explicitMinutes && !spotId && interests.length === 0) {
     return {
       text: [
-        '我是北林行程助手，可以：',
-        '· 排校园路线：「我只有 1 小时，从东门进，怎么逛最值」',
+        '我是海淀智能旅行助手，可以：',
+        '· 排已收录校园路线：「我有 3 小时，想逛北京交通大学」',
         '· 讲点位：「银杏大道值得专门去吗」',
-        '· 推校外行程：「周末想出去玩半天，别太贵」',
+        '· 规划海淀行程：「周末在海淀玩半天，别太贵」',
         '',
-        '提示：现在用的是内置助手（不需要密钥、不消耗额度）。想换成能自由对话的 AI，点右上角 ⚙ 填一个密钥就行。',
+        '提示：现在用的是内置助手（不需要密钥、不消耗额度）。',
       ].join('\n'),
       plan: null,
       planOptions: null,
@@ -344,7 +386,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
   const stops = result.mustSeeStops ?? result.stops ?? [];
   if (!stops.length) {
     return {
-      text: '没排出路线上来，试着说得更具体一点，比如「1 小时从东门进，想看点花和拍照」。',
+      text: `暂时没排出${campus.shortName}路线，请补充时长或兴趣，例如「3 小时逛${campus.shortName}，想看历史建筑和拍照」。`,
       plan: null,
       planOptions: null,
       spotIds: [],
@@ -362,7 +404,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
     : '';
   const interestNote = interests.length ? '按你提到的兴趣' : '按默认的园林 + 人文 + 摄影';
   return {
-    text: `${interestNote}，从${gateName}进、${formatDuration(planMinutes)}的预算，给你排了「${result.title}」：\n\n${routeLine}${optionalLine}\n\n必游主线约 ${Math.round(result.totalMinutes)} 分钟、步行 ${result.totalMeters} 米。${remainingLine}\n\n想换时长或兴趣，直接说「2 小时」或者「多一点拍照」就行。`,
+    text: `${interestNote}，从${gateName}进入${campus.shortName}、${formatDuration(planMinutes)}的预算，给你排了「${result.title}」：\n\n${routeLine}${optionalLine}\n\n必游主线约 ${Math.round(result.totalMinutes)} 分钟、步行 ${result.totalMeters} 米。${remainingLine}\n\n想换时长或兴趣，直接说「2 小时」或者「多一点拍照」就行。`,
     plan: context.plan,
     planOptions: context.planOptions,
     spotIds: [],
