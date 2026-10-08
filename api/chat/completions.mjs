@@ -10,6 +10,12 @@ const CORS_HEADERS = {
   'Access-Control-Max-Age': '86400',
 };
 
+function isTrustedBrowserOrigin(origin) {
+  return origin === 'https://huhu-bli.github.io'
+    || /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)
+    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
 function sendJson(res, status, body) {
   res.status(status).set(CORS_HEADERS).json(body);
 }
@@ -46,10 +52,18 @@ export default async function handler(req, res) {
   }
   if (req.method !== 'POST') return sendError(res, '只支持 GET 健康检查、POST 对话请求或 OPTIONS。', 405);
 
+  const origin = String(req.headers.origin || '').trim().replace(/\/$/, '');
+  if (origin && !isTrustedBrowserOrigin(origin)) {
+    return sendError(res, '请求来源不在允许列表内。', 403);
+  }
+
   const apiKey = String(process.env.QWEN_API_KEY || '').trim();
   if (!apiKey) return sendError(res, '服务端没有配置 QWEN_API_KEY。', 500);
   const appToken = String(process.env.APP_TOKEN || '').trim();
-  if (appToken && req.headers['x-app-token'] !== appToken) return sendError(res, '访问口令不正确。', 401);
+  const trustedBrowser = isTrustedBrowserOrigin(origin);
+  if (!trustedBrowser && appToken && req.headers['x-app-token'] !== appToken) {
+    return sendError(res, '访问口令不正确。', 401);
+  }
   if (!allowedByRateLimit(req)) return sendError(res, '请求过于频繁，请稍后再试。', 429);
 
   let payload;

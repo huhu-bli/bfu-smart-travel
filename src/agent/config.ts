@@ -33,7 +33,16 @@ function readSiteEnv(key: string): string {
   return raw.startsWith('%') ? '' : raw.trim();
 }
 
-const SITE_PROXY_URL = readSiteEnv('VITE_AGENT_PROXY_URL');
+function isVercelDeployment(): boolean {
+  return typeof window !== 'undefined' && /\.vercel\.app$/i.test(window.location.hostname);
+}
+
+const configuredProxyUrl = readSiteEnv('VITE_AGENT_PROXY_URL');
+// Vercel 预览/生产环境优先调用当前站点自己的 Serverless Function，避免跨域和旧部署地址问题。
+// GitHub Pages 仍使用稳定的 Vercel 代理地址。
+const SITE_PROXY_URL = isVercelDeployment()
+  ? '/api'
+  : configuredProxyUrl || 'https://bfu-smart-travel.vercel.app/api';
 const SITE_PROXY_TOKEN = readSiteEnv('VITE_AGENT_PROXY_TOKEN');
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
@@ -48,7 +57,7 @@ export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
 export function resolveEndpoint(settings: AgentSettings): string {
   const url = settings.proxyUrl.trim().replace(/\/+$/, '');
   if (!url) throw new Error('共享 Agent 服务暂时未配置。');
-  if (!/^https?:\/\//i.test(url)) {
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
     throw new Error('共享 Agent 地址配置无效。');
   }
   return `${url}/chat/completions`;
