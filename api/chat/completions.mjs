@@ -10,8 +10,14 @@ const CORS_HEADERS = {
   'Access-Control-Max-Age': '86400',
 };
 
+function setHeaders(res, headers) {
+  Object.entries(headers).forEach(([name, value]) => res.setHeader(name, value));
+}
 function sendJson(res, status, body) {
-  res.status(status).set(CORS_HEADERS).json(body);
+  setHeaders(res, CORS_HEADERS);
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(body));
 }
 function sendError(res, message, status = 500) {
   sendJson(res, status, { error: { message } });
@@ -39,8 +45,11 @@ function parseBody(req) {
 }
 
 export default async function handler(req, res) {
-  res.set(CORS_HEADERS);
-  if (req.method === 'OPTIONS') return res.status(204).end();
+  setHeaders(res, CORS_HEADERS);
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    return res.end();
+  }
   if (req.method === 'GET') {
     return sendJson(res, 200, { ok: true, service: 'bfu-smart-travel-qwen-proxy-vercel', endpoint: CHAT_PATH });
   }
@@ -68,5 +77,8 @@ export default async function handler(req, res) {
     return sendError(res, '千问上游网络请求失败，请稍后再试。', 502);
   }
   const text = await upstream.text();
-  return res.status(upstream.status).set({ ...CORS_HEADERS, 'Content-Type': upstream.headers.get('content-type') || 'application/json' }).send(text);
+  setHeaders(res, CORS_HEADERS);
+  res.statusCode = upstream.status;
+  res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json');
+  return res.end(text);
 }
