@@ -26,22 +26,15 @@ export function providerOf(_id: AgentProviderId): AgentProvider {
   return QWEN_PROVIDER;
 }
 
-function readSiteEnv(key: string): string {
-  const bag = (globalThis as { __BFU_ENV__?: Record<string, unknown> }).__BFU_ENV__;
-  const raw = bag?.[key];
-  if (typeof raw !== 'string') return '';
-  return raw.startsWith('%') ? '' : raw.trim();
-}
-
-const SITE_PROXY_URL = readSiteEnv('VITE_AGENT_PROXY_URL');
-const SITE_PROXY_TOKEN = readSiteEnv('VITE_AGENT_PROXY_TOKEN');
+// 代理地址是公开配置，固定在前端；真正的千问 API Key 仅保存在 Vercel 服务端。
+const SITE_PROXY_URL = 'https://bfu-smart-travel.vercel.app/api';
 
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   mode: 'proxy',
   provider: 'qwen',
   protocol: 'chat',
   proxyUrl: SITE_PROXY_URL,
-  proxyToken: SITE_PROXY_TOKEN,
+  proxyToken: '',
   model: QWEN_PROVIDER.model,
 };
 
@@ -51,5 +44,5 @@ export function resolveEndpoint(settings: AgentSettings): string {
   if (!/^https?:\/\//i.test(url)) {
     throw new Error('共享 Agent 地址配置无效。');
   }
-  return `${url}/chat/completions`;
+  return url + '/chat/completions';
 }
