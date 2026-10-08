@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { SPOT_MAP } from '../data/spots';
+import { campusForSpot, spotAcrossCampuses } from '../data/campuses';
 import { TRIPS } from '../data/trips';
 import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
@@ -10,6 +10,11 @@ import {
   type AgentHistory,
 } from '../lib/agent';
 import { routeScene, sceneLabel, type Scene } from '../lib/sceneRouter';
+import {
+  HAIDIAN_TARGET,
+  resolveTravelTarget,
+  type TravelTarget,
+} from '../lib/travelTarget';
 import type { PlanOptions, RoutePlan } from '../types';
 
 interface Props {
@@ -20,7 +25,7 @@ interface Props {
   currentPlanOptions: PlanOptions | null;
   onSelectSpot: (id: string) => void;
   onApplyPlan: (plan: RoutePlan, options: PlanOptions) => void;
-  onOpenMap: () => void;
+  onOpenMap: (scope?: 'campus' | 'haidian') => void;
   onOpenTrips: () => void;
 }
 
@@ -44,16 +49,20 @@ interface PanelSize {
 }
 
 const QUICK_PROMPTS = [
-  '我只有 1 小时，从东门进，怎么逛最值？',
-  '银杏大道现在值得专门去一趟吗？',
-  '周末想在校外玩半天，别太贵，有什么推荐？',
+  '我有 3 小时，想去北京交通大学逛一逛',
+  '我只有 1 小时，从北林正门进，怎么逛最值？',
+  '周末想在海淀玩半天，别太贵，有什么推荐？',
 ];
 
 /** 聊天记录存在本地，刷新页面还能接着聊；只保留最近 30 条显示消息。 */
-const CHAT_STORAGE_KEY = 'bfu-smart-travel:chat';
+const CHAT_STORAGE_KEY = 'haidian-smart-travel:chat:v2';
 const KEEP_TURNS = 30;
 const DEFAULT_PANEL_SIZE: PanelSize = { width: 396, height: null };
-const PANEL_SIZE_STORAGE_KEY = 'bfu-smart-travel:agent-panel-size';
+const PANEL_SIZE_STORAGE_KEY = 'haidian-smart-travel:agent-panel-size';
+
+function conversationKey(scene: Scene, target: TravelTarget): string {
+  return `${scene}:${target.kind === 'campus' ? target.campusId : 'haidian'}`;
+}
 const MIN_PANEL_WIDTH = 320;
 const MAX_PANEL_WIDTH = 720;
 const MIN_PANEL_HEIGHT = 420;
@@ -118,10 +127,12 @@ export default function AgentPanel({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const historyRef = useRef<AgentHistory>([]);
-  const historiesRef = useRef<Partial<Record<Scene, AgentHistory>>>({});
+  const historiesRef = useRef<Record<string, AgentHistory>>({});
   const activeSceneRef = useRef<Scene>('unknown');
+  const activeTargetRef = useRef<TravelTarget>(HAIDIAN_TARGET);
+  const activeConversationKeyRef = useRef(conversationKey('unknown', HAIDIAN_TARGET));
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const localMemoryBySceneRef = useRef<Partial<Record<Scene, LocalMemory>>>({});
+  const localMemoryRef = useRef<Record<string, LocalMemory>>({});
   const chatRestored = useRef(false);
   const panelRef = useRef<HTMLElement | null>(null);
   const resizeRef = useRef<{
@@ -255,15 +266,20 @@ export default function AgentPanel({
       const saved = JSON.parse(raw) as {
         protocol?: string;
         history?: AgentHistory;
-        histories?: Partial<Record<Scene, AgentHistory>>;
+        histories?: Record<string, AgentHistory>;
         activeScene?: Scene;
+        activeTarget?: TravelTarget;
+        activeConversationKey?: string;
         turns?: ChatTurn[];
       };
       if (!saved || saved.protocol !== DEFAULT_AGENT_SETTINGS.protocol) return;
       if (Array.isArray(saved.turns) && saved.turns.length) {
         historiesRef.current = saved.histories ?? {};
         activeSceneRef.current = saved.activeScene ?? 'unknown';
-        historyRef.current = historiesRef.current[activeSceneRef.current] ?? saved.history ?? [];
+        activeTargetRef.current = saved.activeTarget ?? HAIDIAN_TARGET;
+        activeConversationKeyRef.current = saved.activeConversationKey ??
+          conversationKey(activeSceneRef.current, activeTargetRef.current);
+        historyRef.current = historiesRef.current[activeConversationKeyRef.current] ?? saved.history ?? [];
         setTurns(saved.turns);
       }
     } catch {
@@ -286,6 +302,8 @@ export default function AgentPanel({
           history: historyRef.current,
           histories: historiesRef.current,
           activeScene: activeSceneRef.current,
+          activeTarget: activeTargetRef.current,
+          activeConversationKey: activeConversationKeyRef.current,
           turns: turns.slice(-KEEP_TURNS),
         }),
       );
@@ -294,12 +312,13 @@ export default function AgentPanel({
     }
   }, [turns, DEFAULT_AGENT_SETTINGS.protocol]);
 
-  const runWithFallback = async (question: string) =>
+  const runWithFallback = async (question: string, scene: Scene, target: TravelTarget) =>
     runAgentTurn({
       history: historyRef.current,
       userText: question,
       settings: DEFAULT_AGENT_SETTINGS,
-      scene: activeSceneRef.current,
+      scene,
+      previousTarget: target,
       currentPlan,
       currentPlanOptions,
     });
@@ -310,15 +329,26 @@ export default function AgentPanel({
     setInput('');
     setTurns((prev) => [...prev, { id: nextId(), role: 'user', text: question }]);
     setBusy(true);
-    const scene = routeScene(question, activeSceneRef.current);
+    const target = resolveTravelTarget(question, activeTargetRef.current);
+    const routedScene = routeScene(question, activeSceneRef.current);
+    const scene = routedScene === 'campus-route' && target.kind === 'district'
+      ? 'outside-trip'
+      : routedScene;
+    const key = conversationKey(scene, target);
     activeSceneRef.current = scene;
-    historyRef.current = historiesRef.current[scene] ?? [];
+    activeTargetRef.current = target;
+    activeConversationKeyRef.current = key;
+    historyRef.current = historiesRef.current[key] ?? [];
 
     // 没配置密钥时用内置助手作答，保证任何访客都能直接用。
     if (!configured) {
       try {
-        const local = await answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
-        localMemoryBySceneRef.current[local.memory.scene] = local.memory;
+        const local = await answerLocally(question, localMemoryRef.current[key] ?? null);
+        const localKey = conversationKey(local.memory.scene, local.memory.target);
+        localMemoryRef.current[localKey] = local.memory;
+        activeSceneRef.current = local.memory.scene;
+        activeTargetRef.current = local.memory.target;
+        activeConversationKeyRef.current = localKey;
         setTurns((prev) => [
           ...prev,
           {
@@ -340,9 +370,13 @@ export default function AgentPanel({
     }
 
     try {
-      const result = await runWithFallback(question);
+      const result = await runWithFallback(question, scene, target);
+      const resultKey = conversationKey(result.scene, result.target);
       historyRef.current = result.history;
-      historiesRef.current[result.scene] = result.history;
+      historiesRef.current[resultKey] = result.history;
+      activeSceneRef.current = result.scene;
+      activeTargetRef.current = result.target;
+      activeConversationKeyRef.current = resultKey;
       setTurns((prev) => [
         ...prev,
         {
@@ -364,8 +398,12 @@ export default function AgentPanel({
       const reason = error instanceof Error ? error.message : '请求失败';
       if (isNetworkFailure(error)) {
         // 只有 Worker 网络不可达时才使用本地助手；认证、权限和额度错误必须明确展示。
-        const fallback = await answerLocally(question, localMemoryBySceneRef.current[scene] ?? null);
-        localMemoryBySceneRef.current[fallback.memory.scene] = fallback.memory;
+        const fallback = await answerLocally(question, localMemoryRef.current[key] ?? null);
+        const fallbackKey = conversationKey(fallback.memory.scene, fallback.memory.target);
+        localMemoryRef.current[fallbackKey] = fallback.memory;
+        activeSceneRef.current = fallback.memory.scene;
+        activeTargetRef.current = fallback.memory.target;
+        activeConversationKeyRef.current = fallbackKey;
         setTurns((prev) => [
           ...prev,
           {
@@ -407,8 +445,10 @@ export default function AgentPanel({
   const reset = () => {
     historyRef.current = [];
     historiesRef.current = {};
-    localMemoryBySceneRef.current = {};
+    localMemoryRef.current = {};
     activeSceneRef.current = 'unknown';
+    activeTargetRef.current = HAIDIAN_TARGET;
+    activeConversationKeyRef.current = conversationKey('unknown', HAIDIAN_TARGET);
     setTurns([]);
     try {
       window.localStorage.removeItem(CHAT_STORAGE_KEY);
@@ -463,7 +503,7 @@ export default function AgentPanel({
             {turns.length === 0 ? (
               <div className="agent-welcome">
                 <p>
-                  我是北林行程助手，可以帮你排校园路线、讲点位、推校外一日游。
+                  我是海淀智能旅行助手，可以规划海淀景点路线，也能为已收录的高校生成校内路线。
                   {configured
                     ? ' 通过千问 Agent 规划路线，追问「改成 2 小时」也能接着调整。'
                     : ' 当前使用内置助手；排完路线后接着说「改成 2 小时」「换成南门」也能继续调整。'}
@@ -492,9 +532,13 @@ export default function AgentPanel({
                       {turn.plan.stops.map((stop, index) => (
                         <li key={stop.spot.id}>
                           <b>{index + 1}</b>
-                          <button type="button" onClick={() => onSelectSpot(stop.spot.id)}>
-                            {stop.spot.name}
-                          </button>
+                          {turn.planOptions?.campusId === 'bfu' || !turn.planOptions?.campusId ? (
+                            <button type="button" onClick={() => onSelectSpot(stop.spot.id)}>
+                              {stop.spot.name}
+                            </button>
+                          ) : (
+                            <span className="agent-card-stop-name">{stop.spot.name}</span>
+                          )}
                           <span>
                             {Math.round(stop.leave - stop.arrive)} 分钟 · 步行 {stop.walkMeters} 米
                           </span>
@@ -512,25 +556,29 @@ export default function AgentPanel({
                       <span>{turn.plan.remainingAdvice ?? '可根据体力安排拍照、休息或延伸点位。'}</span>
                     </div>
                     <div className="agent-card-actions">
+                      {turn.planOptions.campusId === 'bfu' || !turn.planOptions.campusId ? (
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          onClick={() => {
+                            onApplyPlan(turn.plan!, turn.planOptions!);
+                            onClose();
+                          }}
+                        >
+                          载入北林精细规划器
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="ghost-btn"
                         onClick={() => {
-                          onApplyPlan(turn.plan!, turn.planOptions!);
+                          onOpenMap(turn.planOptions?.campusId === 'bfu' || !turn.planOptions?.campusId ? 'campus' : 'haidian');
                           onClose();
                         }}
                       >
-                        载入规划器
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost-btn"
-                        onClick={() => {
-                          onOpenMap();
-                          onClose();
-                        }}
-                      >
-                        在地图中查看
+                        {turn.planOptions.campusId === 'bfu' || !turn.planOptions.campusId
+                          ? '在北林地图中查看'
+                          : '打开海淀综合地图'}
                       </button>
                     </div>
                   </div>
@@ -538,11 +586,19 @@ export default function AgentPanel({
 
                 {turn.spotIds && turn.spotIds.length ? (
                   <div className="agent-chips">
-                    {turn.spotIds.map((id) => (
-                      <button key={id} type="button" className="agent-chip" onClick={() => onSelectSpot(id)}>
-                        {SPOT_MAP[id]?.emoji} {SPOT_MAP[id]?.name ?? id}
-                      </button>
-                    ))}
+                    {turn.spotIds.map((id) => {
+                      const spot = spotAcrossCampuses(id);
+                      const isBfuSpot = campusForSpot(id)?.id === 'bfu';
+                      return isBfuSpot ? (
+                        <button key={id} type="button" className="agent-chip" onClick={() => onSelectSpot(id)}>
+                          {spot?.emoji} {spot?.name ?? id}
+                        </button>
+                      ) : (
+                        <span key={id} className="agent-chip">
+                          {spot?.emoji} {spot?.name ?? id}
+                        </span>
+                      );
+                    })}
                   </div>
                 ) : null}
 

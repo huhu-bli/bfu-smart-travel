@@ -39,6 +39,7 @@ export default function App() {
     const duration = DURATIONS.find((item) => item.id === durationId) ?? DURATIONS[1];
     const pace = PACES.find((item) => item.id === paceId) ?? PACES[1];
     return {
+      campusId: 'bfu' as const,
       interests: interestIds,
       minutes: duration.minutes,
       pace,
@@ -122,9 +123,9 @@ export default function App() {
       <main className="app-main">
         <section className="hero-card">
           <div className="hero-copy">
-            <span className="hero-pill">北京林业大学校园导览 · 海淀教育地图</span>
+            <span className="hero-pill">海淀景点 · 高校校园 · 博物馆与公园</span>
             <h1>
-              把北林逛明白，
+              把海淀逛明白，
               <br />
               直接告诉我，想怎么逛。
             </h1>
@@ -136,7 +137,7 @@ export default function App() {
                 <span aria-hidden="true">🤖</span>
                 让 Agent 帮我规划
               </button>
-              <span>例如：我只有 1 小时，从东门进，想拍照和看植物</span>
+              <span>例如：我有 3 小时，想去北京交通大学逛一逛</span>
             </div>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -203,7 +204,7 @@ export default function App() {
                   className={mapScope === 'haidian' ? 'is-active' : ''}
                   onClick={() => setMapScope('haidian')}
                 >
-                  海淀学校总览
+                  海淀综合地图
                 </button>
               </div>
 
@@ -272,7 +273,10 @@ export default function App() {
         currentPlanOptions={options}
         onSelectSpot={setActiveSpotId}
         onApplyPlan={applyPlanFromAgent}
-        onOpenMap={() => setTab('map')}
+        onOpenMap={(scope = 'campus') => {
+          setMapScope(scope);
+          setTab('map');
+        }}
         onOpenTrips={() => setTab('trips')}
       />
 

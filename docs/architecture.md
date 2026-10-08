@@ -1,10 +1,10 @@
-# 北林智能旅行 · 系统架构
+# 海淀智能旅行 · 系统架构
 
 本文档描述 `bfu-smart-travel` 当前的代码结构、Agent 调用流程、数据边界和后续扩展规则。
 
 ## 1. 架构定位
 
-本项目是一个以北京林业大学校园游览为核心的单页应用，技术栈为：
+本项目是一个以海淀区综合旅行和多高校精细导览为核心的单页应用。北京林业大学是首个精细地图模块，北京交通大学是第二个独立校园数据插件。技术栈为：
 
 - React：页面组件和交互状态
 - TypeScript：类型约束和业务逻辑
@@ -30,7 +30,8 @@ Agent 目前采用：
 ```mermaid
 flowchart TD
     U[用户] --> UI[React 页面]
-    UI --> R[Scene Router 场景路由]
+    UI --> G[Target Router 目的地路由]
+    G --> R[Scene Router 场景路由]
     R --> A[Agent Runtime]
     A --> P[Prompt Layer 提示词层]
     A --> T[Tool Layer 工具层]
@@ -78,6 +79,10 @@ src/
 ├─ data/                      静态数据层
 │  ├─ spots.ts                 校园点位
 │  ├─ trips.ts                 校外线路
+│  ├─ campuses/                多校园注册表和独立点位数据
+│  │  ├─ index.ts               学校别名、能力和默认入口
+│  │  └─ bjtu.ts                北京交通大学点位数据
+│  ├─ haidianPlaces.ts         海淀综合地图分类点位
 │  ├─ interests.ts             兴趣、时长、步速和门岗
 │  └─ campusGeometry.ts        校园地图几何数据
 ├─ prompts/                   提示词层
@@ -96,6 +101,7 @@ src/
 │  ├─ agent.ts                 兼容入口，重新导出 Agent 核心层
 │  ├─ localAgent.ts            无密钥时的规则助手
 │  ├─ sceneRouter.ts           场景识别和工具白名单
+│  ├─ travelTarget.ts          海淀/高校目的地识别与能力判断
 │  ├─ toolSchemas.ts           工具参数定义
 │  ├─ toolExecutor.ts          工具执行和数据查询
 │  ├─ planner.ts               路线规划算法
@@ -112,9 +118,9 @@ worker/
 
 | 场景 | 作用 | 可用工具 |
 | --- | --- | --- |
-| `campus-route` | 规划或调整校园路线 | `list_spots`、`build_route` |
-| `spot-detail` | 讲解校园点位 | `list_spots`、`get_spot_detail` |
-| `outside-trip` | 推荐学校周边和校外线路 | `suggest_trip` |
+| `campus-route` | 规划或调整目标高校路线 | `list_spots`、`build_route` |
+| `spot-detail` | 讲解目标高校点位 | `list_spots`、`get_spot_detail` |
+| `outside-trip` | 推荐海淀区综合线路 | `suggest_trip` |
 | `weather` | 查询指定地点的天气和出行条件 | `get_weather` |
 | `system-help` | 说明使用方法和连接设置 | 无 |
 | `unknown` | 场景不明确，先询问用户 | 无 |
@@ -158,7 +164,14 @@ worker/
 
 ### 数据层
 
-数据目前以 TypeScript 常量保存，适合当前规模的小型静态校园项目。以后如果需要后台管理、多人共享或频繁更新，再迁移到 API 和数据库。
+数据目前以 TypeScript 常量保存。校园通过 `CampusDefinition` 注册，只有配置了独立 `spots` 的学校才能生成内部路线。工具执行层会再次校验目标学校，即使模型传错 `campus_id`，也不能跨校读取数据。以后如果需要后台管理、多人共享或频繁更新，再把相同接口迁移到 API 和数据库。
+
+当前能力边界：
+
+- 北京林业大学：点位、路线和专用 SVG 地图。
+- 北京交通大学：独立点位和文本路线，地图使用海淀综合地图入口。
+- 其他已登记高校：只提供海淀地图位置；补齐独立点位数据前不生成校内路线。
+- 海淀区：景点发现和综合线路，不调用校园内部工具。
 
 ## 6. Agent 运行路径
 
@@ -238,6 +251,7 @@ Agent 上下文分为两类：
 ```ts
 {
   currentScene: 'campus-route',
+  target: { kind: 'campus', campusId: 'bjtu' },
   minutes: 60,
   interests: ['plant', 'photo'],
   startId: 'gate-main',
@@ -256,7 +270,7 @@ Agent 上下文分为两类：
 }
 ```
 
-校园路线的具体站点不应该无条件带入校外旅行场景，校外预算也不应该污染校园路线上下文。
+对话历史按“场景 + 目的地”隔离。北林路线、北交路线和海淀综合行程分别保存，校园路线的具体站点不会带入另一所学校或海淀综合旅行场景。
 
 ## 9. Cloudflare Worker
 

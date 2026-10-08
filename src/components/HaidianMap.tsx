@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  HAIDIAN_CATEGORY_OPTIONS,
   HAIDIAN_CENTER,
-  SCHOOL_CATEGORY_OPTIONS,
-  SCHOOL_SEARCH_TASKS,
-  schoolCategoryLabel,
-  type SchoolCategory,
-} from '../data/haidianSchools';
+  HAIDIAN_SEARCH_TASKS,
+  haidianCategoryOf,
+  type HaidianPlaceCategory,
+} from '../data/haidianPlaces';
 import {
   loadAMap,
   readAmapRuntimeConfig,
@@ -16,17 +16,17 @@ import {
   type AMapPoi,
 } from '../lib/amapLoader';
 
-interface SchoolPoint {
+interface HaidianPlace {
   id: string;
   name: string;
-  category: SchoolCategory;
+  category: HaidianPlaceCategory;
   address: string;
   type: string;
   lng: number;
   lat: number;
 }
 
-type CategoryFilter = 'all' | SchoolCategory;
+type CategoryFilter = 'all' | HaidianPlaceCategory;
 
 function normaliseAddress(address: string | string[] | undefined): string {
   if (Array.isArray(address)) return address.join('');
@@ -57,17 +57,18 @@ function escapeHtml(value: string): string {
   });
 }
 
-function searchSchools(
+function searchPlaces(
   AMap: AMapNamespace,
   keyword: string,
-  category: SchoolCategory,
+  category: HaidianPlaceCategory,
   pageIndex: number,
-): Promise<SchoolPoint[]> {
+  pageSize: number,
+): Promise<HaidianPlace[]> {
   return new Promise((resolve) => {
     const searcher = new AMap.PlaceSearch({
       city: '北京市',
       citylimit: true,
-      pageSize: 50,
+      pageSize,
       pageIndex,
       extensions: 'base',
     });
@@ -76,7 +77,7 @@ function searchSchools(
         resolve([]);
         return;
       }
-      const schools = (result.poiList?.pois ?? []).flatMap((poi) => {
+      const places = (result.poiList?.pois ?? []).flatMap((poi) => {
         const position = parseLocation(poi.location);
         const name = poi.name?.trim();
         const address = normaliseAddress(poi.address);
@@ -89,24 +90,36 @@ function searchSchools(
             name,
             category,
             address,
-            type: poi.type || schoolCategoryLabel(category),
+            type: poi.type || haidianCategoryOf(category).label,
             lng,
             lat,
           },
         ];
       });
-      resolve(schools);
+      resolve(places);
     });
   });
 }
 
-function dedupeSchools(schools: SchoolPoint[]): SchoolPoint[] {
-  const seen = new Map<string, SchoolPoint>();
-  schools.forEach((school) => {
-    const key = school.id || `${school.name}-${school.lng.toFixed(5)}-${school.lat.toFixed(5)}`;
-    if (!seen.has(key)) seen.set(key, school);
+function dedupePlaces(places: HaidianPlace[]): HaidianPlace[] {
+  const seen = new Map<string, HaidianPlace>();
+  places.forEach((place) => {
+    const coordinateKey = `${place.name}-${place.lng.toFixed(5)}-${place.lat.toFixed(5)}`;
+    const key = place.id || coordinateKey;
+    if (!seen.has(key)) seen.set(key, place);
   });
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+}
+
+function amapPlaceUrl(place: HaidianPlace): string {
+  const params = new URLSearchParams({
+    position: `${place.lng},${place.lat}`,
+    name: place.name,
+    src: 'bfu-smart-travel',
+    coordinate: 'gaode',
+    callnative: '1',
+  });
+  return `https://uri.amap.com/marker?${params.toString()}`;
 }
 
 export default function HaidianMap() {
@@ -115,7 +128,7 @@ export default function HaidianMap() {
   const amapRef = useRef<AMapNamespace | null>(null);
   const markersRef = useRef<AMapMarkerInstance[]>([]);
   const infoWindowRef = useRef<AMapInfoWindowInstance | null>(null);
-  const [schools, setSchools] = useState<SchoolPoint[]>([]);
+  const [places, setPlaces] = useState<HaidianPlace[]>([]);
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -148,21 +161,22 @@ export default function HaidianMap() {
         });
         setMapReady(true);
 
-        const pages = [1, 2];
         const batches = await Promise.all(
-          SCHOOL_SEARCH_TASKS.flatMap((task) =>
-            pages.map((page) => searchSchools(AMap, task.keyword, task.category, page)),
+          HAIDIAN_SEARCH_TASKS.flatMap((task) =>
+            Array.from({ length: task.pages }, (_, index) =>
+              searchPlaces(AMap, task.keyword, task.category, index + 1, task.pageSize),
+            ),
           ),
         );
         if (!active) return;
-        const nextSchools = dedupeSchools(batches.flat());
-        setSchools(nextSchools);
-        if (!nextSchools.length) {
-          setError('地图已打开，但暂时没有检索到海淀学校，请稍后刷新。');
+        const nextPlaces = dedupePlaces(batches.flat());
+        setPlaces(nextPlaces);
+        if (!nextPlaces.length) {
+          setError('地图已打开，但暂时没有检索到海淀旅行点位，请稍后刷新。');
         }
       } catch (reason) {
         if (!active) return;
-        setError(reason instanceof Error ? reason.message : '海淀地图加载失败。');
+        setError(reason instanceof Error ? reason.message : '海淀综合旅行地图加载失败。');
       } finally {
         if (active) setLoading(false);
       }
@@ -179,17 +193,29 @@ export default function HaidianMap() {
     };
   }, []);
 
-  const filteredSchools = useMemo(() => {
+  const filteredPlaces = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase('zh-CN');
-    return schools.filter((school) => {
-      const categoryMatches = category === 'all' || school.category === category;
+    return places.filter((place) => {
+      const categoryMatches = category === 'all' || place.category === category;
       const queryMatches =
         !needle ||
-        school.name.toLocaleLowerCase('zh-CN').includes(needle) ||
-        school.address.toLocaleLowerCase('zh-CN').includes(needle);
+        place.name.toLocaleLowerCase('zh-CN').includes(needle) ||
+        place.address.toLocaleLowerCase('zh-CN').includes(needle) ||
+        place.type.toLocaleLowerCase('zh-CN').includes(needle);
       return categoryMatches && queryMatches;
     });
-  }, [schools, category, query]);
+  }, [places, category, query]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<CategoryFilter, number>([['all', places.length]]);
+    places.forEach((place) => counts.set(place.category, (counts.get(place.category) ?? 0) + 1));
+    return counts;
+  }, [places]);
+
+  const selectedPlace = useMemo(
+    () => places.find((place) => place.id === selectedId) ?? null,
+    [places, selectedId],
+  );
 
   useEffect(() => {
     const AMap = amapRef.current;
@@ -197,24 +223,25 @@ export default function HaidianMap() {
     if (!AMap || !map || !mapReady) return;
 
     if (markersRef.current.length) map.remove(markersRef.current);
-    const markers = filteredSchools.map((school) => {
+    const markers = filteredPlaces.map((place) => {
+      const categoryMeta = haidianCategoryOf(place.category);
       const marker = new AMap.Marker({
-        position: [school.lng, school.lat],
-        title: school.name,
+        position: [place.lng, place.lat],
+        title: place.name,
         label: {
-          content: schoolCategoryLabel(school.category).slice(0, 2),
+          content: `${categoryMeta.emoji} ${categoryMeta.shortLabel}`,
           direction: 'top',
           offset: new AMap.Pixel(0, -4),
         },
       });
       marker.on('click', () => {
-        setSelectedId(school.id);
+        setSelectedId(place.id);
         infoWindowRef.current?.setContent(
-          `<div class="haidian-info"><strong>${escapeHtml(school.name)}</strong><span>${escapeHtml(
-            schoolCategoryLabel(school.category),
-          )}</span><p>${escapeHtml(school.address)}</p></div>`,
+          `<div class="haidian-info"><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(
+            categoryMeta.label,
+          )}</span><p>${escapeHtml(place.address)}</p></div>`,
         );
-        infoWindowRef.current?.open(map, [school.lng, school.lat]);
+        infoWindowRef.current?.open(map, [place.lng, place.lat]);
       });
       return marker;
     });
@@ -223,17 +250,18 @@ export default function HaidianMap() {
       map.add(markers);
       map.setFitView(markers, false, [48, 48, 48, 48]);
     }
-  }, [filteredSchools, mapReady]);
+  }, [filteredPlaces, mapReady]);
 
-  const focusSchool = (school: SchoolPoint) => {
-    setSelectedId(school.id);
-    mapRef.current?.setZoomAndCenter(15, [school.lng, school.lat]);
+  const focusPlace = (place: HaidianPlace) => {
+    const categoryMeta = haidianCategoryOf(place.category);
+    setSelectedId(place.id);
+    mapRef.current?.setZoomAndCenter(15, [place.lng, place.lat]);
     infoWindowRef.current?.setContent(
-      `<div class="haidian-info"><strong>${escapeHtml(school.name)}</strong><span>${escapeHtml(
-        schoolCategoryLabel(school.category),
-      )}</span><p>${escapeHtml(school.address)}</p></div>`,
+      `<div class="haidian-info"><strong>${escapeHtml(place.name)}</strong><span>${escapeHtml(
+        categoryMeta.label,
+      )}</span><p>${escapeHtml(place.address)}</p></div>`,
     );
-    if (mapRef.current) infoWindowRef.current?.open(mapRef.current, [school.lng, school.lat]);
+    if (mapRef.current) infoWindowRef.current?.open(mapRef.current, [place.lng, place.lat]);
   };
 
   return (
@@ -241,41 +269,43 @@ export default function HaidianMap() {
       <div className="haidian-map-main">
         <div className="haidian-map-heading">
           <div>
-            <span className="haidian-kicker">海淀教育地图 · 实时点位</span>
-            <h2 id="haidian-map-title">海淀学校总览</h2>
-            <p>按学校类型筛选并搜索，点击地图标记或右侧列表查看位置。</p>
+            <span className="haidian-kicker">海淀综合旅行地图 · 实时点位</span>
+            <h2 id="haidian-map-title">发现海淀</h2>
+            <p>景点、公园、文博、高校、美食和地铁交通，一张地图集中浏览。</p>
           </div>
-          <span className="haidian-count">{loading ? '检索中…' : `${filteredSchools.length} 个结果`}</span>
+          <span className="haidian-count">{loading ? '检索中…' : `${filteredPlaces.length} 个结果`}</span>
         </div>
 
         <div className="haidian-filter-bar">
-          <div className="haidian-category-list" aria-label="学校类型">
-            {SCHOOL_CATEGORY_OPTIONS.map((option) => (
+          <div className="haidian-category-list" aria-label="旅行点位类型">
+            {HAIDIAN_CATEGORY_OPTIONS.map((option) => (
               <button
                 key={option.id}
                 type="button"
                 className={category === option.id ? 'is-active' : ''}
                 onClick={() => setCategory(option.id)}
+                title={option.description}
               >
                 <span aria-hidden="true">{option.emoji}</span>
                 {option.label}
+                {!loading ? <small>{categoryCounts.get(option.id) ?? 0}</small> : null}
               </button>
             ))}
           </div>
           <label className="haidian-search">
-            <span className="sr-only">搜索学校或地址</span>
+            <span className="sr-only">搜索地点、地址或类型</span>
             <span aria-hidden="true">⌕</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索学校或地址"
+              placeholder="搜索地点或地址"
             />
           </label>
         </div>
 
         <div className="haidian-map-canvas-wrap">
-          <div ref={mapContainerRef} className="haidian-map-canvas" aria-label="海淀区学校地图" />
-          {loading ? <div className="haidian-map-status">正在加载海淀学校点位…</div> : null}
+          <div ref={mapContainerRef} className="haidian-map-canvas" aria-label="海淀区综合旅行地图" />
+          {loading ? <div className="haidian-map-status">正在加载海淀旅行点位…</div> : null}
           {error ? (
             <div className="haidian-map-status haidian-map-status--error">
               <strong>地图暂时不可用</strong>
@@ -286,14 +316,14 @@ export default function HaidianMap() {
         </div>
 
         <p className="haidian-map-note">
-          数据由高德地图运行时检索，结果会随地图服务更新；这是点位总览，不替代教育部门的正式学校名录。
+          数据由高德地图运行时检索并限定在海淀区；点位用于旅行发现，营业状态和开放信息请以场所官方通知为准。
         </p>
       </div>
 
-      <aside className="haidian-school-panel" aria-label="学校列表">
+      <aside className="haidian-place-panel" aria-label="旅行地点列表">
         <div className="haidian-panel-head">
           <div>
-            <strong>学校列表</strong>
+            <strong>地点列表</strong>
             <span>海淀区 · 当前筛选</span>
           </div>
           {query || category !== 'all' ? (
@@ -308,24 +338,38 @@ export default function HaidianMap() {
             </button>
           ) : null}
         </div>
-        <div className="haidian-school-list">
-          {filteredSchools.map((school) => (
+
+        {selectedPlace ? (
+          <div className="haidian-selected-place">
+            <span>{haidianCategoryOf(selectedPlace.category).emoji}</span>
+            <div>
+              <strong>{selectedPlace.name}</strong>
+              <small>{selectedPlace.address}</small>
+            </div>
+            <a href={amapPlaceUrl(selectedPlace)} target="_blank" rel="noreferrer">
+              高德查看
+            </a>
+          </div>
+        ) : null}
+
+        <div className="haidian-place-list">
+          {filteredPlaces.map((place) => (
             <button
-              key={school.id}
+              key={place.id}
               type="button"
-              className={selectedId === school.id ? 'is-active' : ''}
-              onClick={() => focusSchool(school)}
+              className={selectedId === place.id ? 'is-active' : ''}
+              onClick={() => focusPlace(place)}
             >
-              <span className={`school-category-dot school-category-dot--${school.category}`} />
+              <span className={`place-category-dot place-category-dot--${place.category}`} />
               <span>
-                <strong>{school.name}</strong>
-                <small>{school.address}</small>
+                <strong>{place.name}</strong>
+                <small>{place.address}</small>
               </span>
-              <i>{schoolCategoryLabel(school.category)}</i>
+              <i>{haidianCategoryOf(place.category).shortLabel}</i>
             </button>
           ))}
-          {!loading && !filteredSchools.length && !error ? (
-            <div className="haidian-empty">没有符合条件的学校，请换个关键词或分类。</div>
+          {!loading && !filteredPlaces.length && !error ? (
+            <div className="haidian-empty">没有符合条件的地点，请换个关键词或分类。</div>
           ) : null}
         </div>
       </aside>

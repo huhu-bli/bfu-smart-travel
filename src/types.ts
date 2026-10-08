@@ -62,6 +62,8 @@ export interface DurationOption {
 }
 
 export interface PlanOptions {
+  /** 路线所属校园；用于阻止把一个学校的路线载入另一个学校。 */
+  campusId?: import('./data/campuses').CampusId;
   interests: InterestId[];
   minutes: number;
   pace: PaceOption;

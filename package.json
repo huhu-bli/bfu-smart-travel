@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.1.0",
   "type": "module",
-  "description": "北林智能旅行 · 北京林业大学校园智能游览与周边出行助手",
+  "description": "海淀智能旅行 · 海淀景点、高校校园与城市旅行助手",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

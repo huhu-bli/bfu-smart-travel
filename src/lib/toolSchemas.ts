@@ -1,4 +1,5 @@
 import { GATE_IDS, INTERESTS } from '../data/interests';
+import { CAMPUS_IDS } from '../data/campuses';
 
 /** 工具参数中的枚举来自 data 层，不复制到提示词中，避免提示词和数据重复维护。 */
 export const INTEREST_IDS = INTERESTS.map((item) => item.id);
@@ -13,6 +14,11 @@ export const TOOL_SCHEMAS = [
     parameters: {
       type: 'object',
       properties: {
+        campus_id: {
+          type: 'string',
+          enum: CAMPUS_IDS,
+          description: '目标校园 id。必须与用户明确提到的学校一致，不能用其他校园替代。',
+        },
         interests: {
           type: 'array',
           items: { type: 'string', enum: INTEREST_IDS },
@@ -23,7 +29,7 @@ export const TOOL_SCHEMAS = [
           description: '关键词，匹配名称、简介或亮点。传空字符串表示不过滤。',
         },
       },
-      required: ['interests', 'keyword'],
+      required: ['campus_id', 'interests', 'keyword'],
       additionalProperties: false,
     },
   },
@@ -31,7 +37,7 @@ export const TOOL_SCHEMAS = [
     type: 'function',
     name: 'get_weather',
     description:
-      '查询指定地点今天或未来几天的天气。用户询问天气、温度、降雨、是否适合出行、带不带伞或穿什么时调用。地点不明确时传空字符串，默认查询北京林业大学。',
+      '查询指定地点今天或未来几天的天气。用户询问天气、温度、降雨、是否适合出行、带不带伞或穿什么时调用。地点不明确时传空字符串，由当前旅行目标决定。',
     strict: true,
     parameters: {
       type: 'object',
@@ -53,11 +59,16 @@ export const TOOL_SCHEMAS = [
     type: 'function',
     name: 'build_route',
     description:
-      '按兴趣、可用时长、步速和出发门岗生成一条校园游览路线，返回必游站点、可选站点、剩余时间建议、到达/离开时间、步行距离与推荐理由。长时间路线要把可选站点当作可按体力取舍的建议，不要自己编造点位和时间。',
+      '为指定校园按兴趣、可用时长、步速和出发门岗生成游览路线。只能使用该校园的数据；目标校园没有详细数据时会返回不支持，禁止改用北林或其他学校替代。',
     strict: true,
     parameters: {
       type: 'object',
       properties: {
+        campus_id: {
+          type: 'string',
+          enum: CAMPUS_IDS,
+          description: '目标校园 id，必须与用户要求一致。',
+        },
         interests: {
           type: 'array',
           items: { type: 'string', enum: INTEREST_IDS },
@@ -74,8 +85,7 @@ export const TOOL_SCHEMAS = [
         },
         start_gate: {
           type: 'string',
-          enum: GATE_IDS,
-          description: '出发门岗。',
+          description: `出发门岗 id。北林可用：${GATE_IDS.join(' / ')}；其他校园不知道时传空字符串，由数据层选择默认入口。`,
         },
         include_spot_ids: {
           type: 'array',
@@ -88,7 +98,7 @@ export const TOOL_SCHEMAS = [
           description: '用户明确想从当前路线移除的点位 id；没有移除点位时传空数组。',
         },
       },
-      required: ['interests', 'minutes', 'pace', 'start_gate', 'include_spot_ids', 'exclude_spot_ids'],
+      required: ['campus_id', 'interests', 'minutes', 'pace', 'start_gate', 'include_spot_ids', 'exclude_spot_ids'],
       additionalProperties: false,
     },
   },
@@ -101,12 +111,17 @@ export const TOOL_SCHEMAS = [
     parameters: {
       type: 'object',
       properties: {
+        campus_id: {
+          type: 'string',
+          enum: CAMPUS_IDS,
+          description: '点位所属校园 id。',
+        },
         spot_id: {
           type: 'string',
           description: '点位 id，可先调用 list_spots 获取。',
         },
       },
-      required: ['spot_id'],
+      required: ['campus_id', 'spot_id'],
       additionalProperties: false,
     },
   },
@@ -114,7 +129,7 @@ export const TOOL_SCHEMAS = [
     type: 'function',
     name: 'suggest_trip',
     description:
-      '推荐校园周边的校外行程，返回时间轴、预算、交通与提示。用户想「出去玩 / 一日游 / 周末去哪」时调用。',
+      '推荐海淀区半日或一日行程，返回时间轴、预算、交通与提示。用户想在海淀逛景点、公园、文博或校园周边出行时调用。',
     strict: true,
     parameters: {
       type: 'object',
