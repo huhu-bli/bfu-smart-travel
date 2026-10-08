@@ -123,21 +123,21 @@ export default function App() {
       <main className="app-main">
         <section className="hero-card">
           <div className="hero-copy">
-            <span className="hero-pill">海淀景点 · 高校校园 · 博物馆与公园</span>
+            <span className="hero-pill">海淀城市漫游 · 高校 · 公园 · 博物馆</span>
             <h1>
-              把海淀逛明白，
+              一张地图，
               <br />
-              直接告诉我，想怎么逛。
+              逛遍海淀。
             </h1>
             <p>
-              说出你的兴趣、时间和出发位置，Agent 会帮你规划路线、讲解点位，也能继续修改当前行程。
+              告诉 Agent 你想去哪里、逛多久、喜欢什么，它会在高校、公园、博物馆与城市路线之间帮你组织一趟海淀旅行。
             </p>
             <div className="hero-agent-entry">
               <button type="button" className="hero-agent-btn" onClick={() => setAgentOpen(true)}>
                 <span aria-hidden="true">🤖</span>
                 让 Agent 帮我规划
               </button>
-              <span>例如：我有 3 小时，想去北京交通大学逛一逛</span>
+              <span>例如：我有 3 小时，想逛北京交通大学并拍照</span>
             </div>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -160,6 +160,47 @@ export default function App() {
                 <circle cx="140" cy="72" r="3.5" />
               </g>
             </svg>
+          </div>
+        </section>
+
+        <section className="explore-strip" aria-label="海淀探索入口">
+          <div className="explore-intro">
+            <span className="section-kicker">HAIDIAN DISCOVERY</span>
+            <strong>从一所学校，扩展到整片海淀</strong>
+            <p>高校漫游、自然公园、人文场馆，都可以从这里开始。</p>
+          </div>
+          <div className="explore-actions">
+            <button
+              type="button"
+              className="explore-card"
+              onClick={() => {
+                setMapScope('haidian');
+                setTab('map');
+              }}
+            >
+              <span className="explore-icon" aria-hidden="true">🗺️</span>
+              <span>
+                <strong>海淀全域</strong>
+                <small>发现高校、公园与城市目的地</small>
+              </span>
+              <span className="explore-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" className="explore-card" onClick={() => setTab('spots')}>
+              <span className="explore-icon" aria-hidden="true">🌿</span>
+              <span>
+                <strong>校园与景点</strong>
+                <small>查看点位图鉴，收藏想去的地方</small>
+              </span>
+              <span className="explore-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" className="explore-card" onClick={() => setTab('trips')}>
+              <span className="explore-icon" aria-hidden="true">☀️</span>
+              <span>
+                <strong>周末路线</strong>
+                <small>获取半日游与城市漫游灵感</small>
+              </span>
+              <span className="explore-arrow" aria-hidden="true">→</span>
+            </button>
           </div>
         </section>
 
