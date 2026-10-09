@@ -143,7 +143,7 @@ export default function App() {
           <div className="hero-art" aria-hidden="true">
             <svg viewBox="0 0 320 260">
               <circle cx="252" cy="62" r="46" fill="#f4d06f" opacity="0.9" />
-              <path d="M0 236 C 60 210, 120 226, 180 200 C 240 174, 290 190, 320 176 L 320 260 L 0 260 Z" fill="#0f3f2a" opacity="0.35" />
+              <path d="M0 236 C 60 210, 120 226, 180 200 C 240 174, 290 190, 320 176 L 320 260 L 0 260 Z" fill="#163b78" opacity="0.35" />
               <g fill="#ffffff" opacity="0.9">
                 <path d="M96 208 L104 120 L112 208 Z" />
                 <path d="M72 140 L104 96 L136 140 Z" />

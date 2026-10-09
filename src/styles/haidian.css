@@ -132,7 +132,7 @@
 
 .haidian-category-list button.is-active {
   color: var(--brand-dark);
-  border-color: #a9d0b7;
+  border-color: #b7d1ff;
   background: var(--brand-soft);
 }
 
@@ -178,7 +178,7 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: #e9f0e9;
+  background: #edf4ff;
 }
 
 .haidian-map-canvas {

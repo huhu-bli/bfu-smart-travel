@@ -23,15 +23,15 @@ export default function Header({ tab, onChange, repoUrl }: Props) {
             <svg viewBox="0 0 64 64">
               <defs>
                 <linearGradient id="brand-g" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stopColor="#2fa36a" />
-                  <stop offset="1" stopColor="#14563a" />
+                  <stop offset="0" stopColor="#4f8ff7" />
+                  <stop offset="1" stopColor="#163b78" />
                 </linearGradient>
               </defs>
               <rect width="64" height="64" rx="18" fill="url(#brand-g)" />
               <path d="M32 13c9 6 14 13 14 21a14 14 0 0 1-28 0c0-8 5-15 14-21z" fill="#f4d06f" />
               <path
                 d="M32 23v25M32 32l-7-6M32 39l7-6"
-                stroke="#0f3f2a"
+                stroke="#163b78"
                 strokeWidth="3"
                 strokeLinecap="round"
                 fill="none"

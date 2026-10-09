@@ -1,18 +1,18 @@
 :root {
-  --brand: #1f7a4d;
-  --brand-dark: #124a33;
-  --brand-soft: #e9f4ec;
+  --brand: #2563eb;
+  --brand-dark: #163b78;
+  --brand-soft: #eaf2ff;
   --gold: #e0a92b;
   --gold-soft: #fdf4dc;
-  --ink: #16241d;
-  --ink-soft: #46584e;
-  --muted: #7b8d84;
-  --bg: #f2f7f3;
+  --ink: #17243d;
+  --ink-soft: #4c5d78;
+  --muted: #7b8ba5;
+  --bg: #f3f7fd;
   --card: #ffffff;
-  --line: #e1eae3;
+  --line: #e0e8f5;
   --radius: 20px;
-  --shadow-sm: 0 2px 8px rgba(18, 60, 42, 0.06);
-  --shadow: 0 12px 34px rgba(18, 60, 42, 0.09);
+  --shadow-sm: 0 2px 8px rgba(26, 67, 130, 0.07);
+  --shadow: 0 12px 34px rgba(26, 67, 130, 0.1);
   --font: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
     -apple-system, "Segoe UI", sans-serif;
 }
@@ -31,7 +31,7 @@ body {
   font-family: var(--font);
   color: var(--ink);
   background:
-    radial-gradient(1200px 600px at 12% -10%, #e4f2e6 0%, rgba(228, 242, 230, 0) 55%),
+    radial-gradient(1200px 600px at 12% -10%, #e6f0ff 0%, rgba(230, 240, 255, 0) 55%),
     radial-gradient(900px 500px at 100% 0%, #fdf3d8 0%, rgba(253, 243, 216, 0) 45%),
     var(--bg);
   min-height: 100vh;
@@ -198,9 +198,9 @@ a {
 }
 
 .nav-pill.is-active {
-  background: linear-gradient(135deg, var(--brand), #2b9660);
+  background: linear-gradient(135deg, var(--brand), #4f8ff7);
   color: #fff;
-  box-shadow: 0 6px 16px rgba(31, 122, 77, 0.28);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
 }
 
 .gh-link {
@@ -241,8 +241,8 @@ a {
   border-radius: 28px;
   padding: 30px 36px;
   color: #fff;
-  background: linear-gradient(135deg, #0f3f2a 0%, #1f7a4d 52%, #2f9d64 100%);
-  box-shadow: 0 20px 50px rgba(15, 63, 42, 0.28);
+  background: linear-gradient(135deg, #173b70 0%, #2563eb 52%, #4f8ff7 100%);
+  box-shadow: 0 20px 50px rgba(23, 59, 112, 0.28);
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   align-items: center;
@@ -622,7 +622,7 @@ a {
   padding: 14px 18px;
   border: none;
   border-radius: 15px;
-  background: linear-gradient(135deg, var(--brand), #2b9660);
+  background: linear-gradient(135deg, var(--brand), #4f8ff7);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -1840,7 +1840,7 @@ a {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--brand), #4fb87c);
+  background: linear-gradient(90deg, var(--brand), #70a7ff);
   transition: width 0.3s ease;
 }
 
@@ -2241,7 +2241,7 @@ a {
   padding: 13px 20px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--brand-dark), #2b9660);
+  background: linear-gradient(135deg, var(--brand-dark), #3f7fe9);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -2301,7 +2301,7 @@ a {
   justify-content: space-between;
   gap: 10px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, var(--brand-dark), #2b9660);
+  background: linear-gradient(135deg, var(--brand-dark), #3f7fe9);
   color: #fff;
 }
 
@@ -2513,7 +2513,7 @@ a {
 }
 
 .agent-turn--user .agent-bubble {
-  background: linear-gradient(135deg, var(--brand), #2b9660);
+  background: linear-gradient(135deg, var(--brand), #4f8ff7);
   color: #fff;
   border-bottom-right-radius: 6px;
 }
@@ -2760,7 +2760,7 @@ a {
   border: none;
   border-radius: 12px;
   padding: 11px 16px;
-  background: linear-gradient(135deg, var(--brand), #2b9660);
+  background: linear-gradient(135deg, var(--brand), #4f8ff7);
   color: #fff;
   font-size: 13.5px;
   font-weight: 600;

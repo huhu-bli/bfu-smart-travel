@@ -1,7 +1,7 @@
 import type { Spot, SpotKind } from '../types';
 
 const THEMES: Record<SpotKind, [string, string]> = {
-  入口: ['#1f7a4d', '#5bbd8b'],
+  入口: ['#2563eb', '#70a7ff'],
   景观: ['#c98c14', '#f0cf6b'],
   建筑: ['#3b5b7a', '#7ea6c9'],
   场馆: ['#6a4a8f', '#b294d6'],
