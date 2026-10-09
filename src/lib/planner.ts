@@ -48,23 +48,23 @@ const THEMES: { ids: InterestId[]; title: string }[] = [
   { ids: ['sport', 'food'], title: '动静之间 · 运动美食线' },
 ];
 
-function buildTitle(matched: InterestId[], minutes: number): string {
+function buildTitle(matched: InterestId[], minutes: number, campusLabel: string): string {
   for (const theme of THEMES) {
     if (theme.ids.every((id) => matched.includes(id))) return theme.title;
   }
-  if (matched.length === 0) return '北林漫步 · 综合精华线';
+  if (matched.length === 0) return `${campusLabel}漫步 · 综合精华线`;
   const labels = matched.slice(0, 2).map((id) => INTEREST_MAP[id]?.label ?? '校园');
   const prefix = minutes <= 30 ? '课间快闪' : minutes >= 240 ? '深度漫游' : '主题漫步';
-  return `${prefix} · ${labels.join('＋')}线`;
+  return `${campusLabel}${prefix} · ${labels.join('＋')}线`;
 }
 
-function buildReason(spot: Spot, interests: InterestId[]): string {
+function buildReason(spot: Spot, interests: InterestId[], campusLabel: string): string {
   const hits = spot.interests.filter((id) => interests.includes(id));
   const parts: string[] = [];
   if (hits.length) {
     parts.push(`匹配「${hits.map((id) => INTEREST_MAP[id]?.label ?? id).join('、')}」`);
   }
-  if (spot.mustSee) parts.push('北林必看');
+  if (spot.mustSee) parts.push(`${campusLabel}必看`);
   parts.push(spot.short);
   return parts.join(' · ');
 }
@@ -96,6 +96,7 @@ function nearestCurrent(current: Spot, candidates: Spot[]): Spot | null {
 
 export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
   const { interests, minutes, pace, startId } = options;
+  const campusLabel = options.campusLabel ?? '校园';
   const included = new Set(options.includeSpotIds ?? []);
   const excluded = new Set(options.excludeSpotIds ?? []);
   const wanted: InterestId[] = interests.length
@@ -145,7 +146,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
       leave,
       walkMinutes: pick.walk,
       walkMeters: pick.meters,
-      reason: buildReason(pick.spot, wanted),
+      reason: buildReason(pick.spot, wanted, campusLabel),
     });
     used.add(pick.spot.id);
     current = pick.spot;
@@ -203,7 +204,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
       leave,
       walkMinutes: pick.walk,
       walkMeters: pick.meters,
-      reason: `可选延伸 · ${buildReason(pick.spot, wanted)}`,
+      reason: `可选延伸 · ${buildReason(pick.spot, wanted, campusLabel)}`,
     });
     used.add(pick.spot.id);
     optionalCurrent = pick.spot;
@@ -218,7 +219,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
   );
 
   return {
-    title: buildTitle(matchedInterests, minutes),
+    title: buildTitle(matchedInterests, minutes, campusLabel),
     subtitle: `${pace.label}步速 · 含停留约 ${formatDuration(elapsed)} · 步行约 ${totalMeters} 米`,
     origin: start,
     stops,
@@ -234,7 +235,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
 
 export function routeToText(plan: RoutePlan, startName: string): string {
   const lines = [
-    `北林智能旅行 · ${plan.title}`,
+    `海淀智能旅行 · ${plan.title}`,
     plan.subtitle,
     `起点：${startName}`,
     '',

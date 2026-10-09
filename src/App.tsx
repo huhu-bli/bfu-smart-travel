@@ -40,6 +40,7 @@ export default function App() {
     const pace = PACES.find((item) => item.id === paceId) ?? PACES[1];
     return {
       campusId: 'bfu' as const,
+      campusLabel: '北林',
       interests: interestIds,
       minutes: duration.minutes,
       pace,
@@ -197,7 +198,7 @@ export default function App() {
                   className={mapScope === 'campus' ? 'is-active' : ''}
                   onClick={() => setMapScope('campus')}
                 >
-                  北林校园路线
+                  校园精细地图
                 </button>
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 const NAV = [
   { id: 'planner', label: '智能路线' },
   { id: 'map', label: '海淀地图' },
-  { id: 'spots', label: '北林图鉴' },
+  { id: 'spots', label: '景点图鉴' },
   { id: 'trips', label: '海淀路线' },
   { id: 'packing', label: '出行清单' },
 ] as const;

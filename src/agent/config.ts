@@ -43,14 +43,13 @@ const configuredProxyUrl = readSiteEnv('VITE_AGENT_PROXY_URL');
 const SITE_PROXY_URL = isVercelDeployment()
   ? '/api'
   : configuredProxyUrl || 'https://bfu-smart-travel.vercel.app/api';
-const SITE_PROXY_TOKEN = readSiteEnv('VITE_AGENT_PROXY_TOKEN');
-
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   mode: 'proxy',
   provider: 'qwen',
   protocol: 'chat',
   proxyUrl: SITE_PROXY_URL,
-  proxyToken: SITE_PROXY_TOKEN,
+  // APP_TOKEN 只保存在服务端，不能通过 VITE_* 变量注入浏览器。
+  proxyToken: '',
   model: QWEN_PROVIDER.model,
 };
 

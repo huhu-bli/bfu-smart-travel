@@ -18,15 +18,6 @@
     />
   </head>
   <body>
-    <script>
-      // 公开站点只注入 Worker 地址和访问口令，千问 API Key 永不进入网页。
-      window.__BFU_ENV__ = {
-        VITE_AGENT_PROXY_URL: '%VITE_AGENT_PROXY_URL%',
-        VITE_AGENT_PROXY_TOKEN: '%VITE_AGENT_PROXY_TOKEN%',
-        VITE_AMAP_KEY: '%VITE_AMAP_KEY%',
-        VITE_AMAP_SECURITY_CODE: '%VITE_AMAP_SECURITY_CODE%',
-      };
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

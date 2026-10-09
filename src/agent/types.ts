@@ -2,7 +2,7 @@ import type { PlanOptions, RoutePlan } from '../types';
 import type { Scene } from '../lib/sceneRouter';
 import type { TravelTarget } from '../lib/travelTarget';
 
-/** 公开站点统一通过受保护的 Worker 访问模型。 */
+/** 公开站点统一通过受保护的 Vercel 代理访问模型。 */
 export type AgentMode = 'proxy';
 
 /** 当前公开 Agent 只接入通义千问，协议固定为 Chat Completions。 */
@@ -26,7 +26,7 @@ export interface AgentSettings {
   provider: AgentProviderId;
   protocol: AgentProtocol;
   proxyUrl: string;
-  /** 代理模式下的访问口令，对应 Worker 的 APP_TOKEN。 */
+  /** 兼容非浏览器调用；公开浏览器不注入此口令。 */
   proxyToken: string;
   model: string;
 }

@@ -17,7 +17,7 @@ export default function Footer({ repoUrl }: Props) {
             项目源码
           </a>
           <a href="https://www.bjfu.edu.cn/" target="_blank" rel="noreferrer">
-            北京林业大学
+            北京林业大学官网
           </a>
         </div>
       </div>

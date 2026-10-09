@@ -33,6 +33,16 @@ function resolveSpotId(raw: unknown, spots: Spot[]): string | null {
   return byName ? byName.id : null;
 }
 
+/**
+ * 从展示用预算文本中提取保守的最高预算。
+ * 例如“50-120 元”按 120 元计算，避免推荐出可能超出用户上限的线路。
+ */
+function tripBudgetUpperBound(budget: string): number | null {
+  if (/免费/.test(budget)) return 0;
+  const values = (budget.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter(Number.isFinite);
+  return values.length ? Math.max(...values) : null;
+}
+
 function campusForTool(
   args: Record<string, unknown>,
   context: AgentToolContext,
@@ -127,18 +137,17 @@ export async function runTool(
     const includeSpotIds = asStringArray(args.include_spot_ids, validSpotIds);
     const excludeSpotIds = asStringArray(args.exclude_spot_ids, validSpotIds);
 
-    const options: PlanOptions = { campusId: campus.id, interests, minutes, pace, startId, includeSpotIds, excludeSpotIds };
+    const options: PlanOptions = {
+      campusId: campus.id,
+      campusLabel: campus.shortName,
+      interests,
+      minutes,
+      pace,
+      startId,
+      includeSpotIds,
+      excludeSpotIds,
+    };
     const plan = buildRoute(spots, options);
-    if (campus.id !== 'bfu') {
-      plan.title = `${campus.shortName}漫步 · 校园精华线`;
-      plan.subtitle = plan.subtitle.replace('北林', campus.shortName);
-      plan.stops.forEach((stop) => {
-        stop.reason = stop.reason.replace('北林必看', `${campus.shortName}必看`);
-      });
-      plan.optionalStops.forEach((stop) => {
-        stop.reason = stop.reason.replace('北林必看', `${campus.shortName}必看`);
-      });
-    }
     context.plan = plan;
     context.planOptions = options;
     context.trace.push(`build_route(${campus.shortName} / ${plan.stops.length} 必游 / ${plan.optionalStops.length} 可选 / ${Math.round(plan.totalMinutes)} 分钟)`);
@@ -217,7 +226,13 @@ export async function runTool(
     const wantsFullDay = duration === 'full';
     // 奥林匹克森林公园位于朝阳区，保留旧数据但不在海淀产品中参与推荐。
     const haidianTrips = TRIPS.filter((trip) => trip.id !== 'aosen');
-    const matched = haidianTrips.filter((trip) => {
+    const budgetFiltered = budget > 0
+      ? haidianTrips.filter((trip) => {
+          const upperBound = tripBudgetUpperBound(trip.budget);
+          return upperBound !== null && upperBound <= budget;
+        })
+      : haidianTrips;
+    const matched = budgetFiltered.filter((trip) => {
       const durationHit = wantsFullDay
         ? trip.duration.includes('一天')
         : trip.duration.includes('半天');
@@ -229,7 +244,10 @@ export async function runTool(
         trip.tips.some((tip) => tip.includes(theme));
       return durationHit && themeHit;
     });
-    const shortlisted = (matched.length ? matched : haidianTrips).slice(0, 3);
+    const durationFallback = budgetFiltered.filter((trip) =>
+      wantsFullDay ? trip.duration.includes('一天') : trip.duration.includes('半天'),
+    );
+    const shortlisted = (matched.length ? matched : durationFallback).slice(0, 3);
     shortlisted.forEach((trip) => {
       if (!context.tripIds.includes(trip.id)) context.tripIds.push(trip.id);
     });
@@ -237,6 +255,11 @@ export async function runTool(
 
     return JSON.stringify({
       budgetMax: budget,
+      budgetMatched: budget === 0 || shortlisted.length > 0,
+      message:
+        budget > 0 && !shortlisted.length
+          ? `没有找到预算不超过 ${budget} 元且符合时长的线路。`
+          : undefined,
       trips: shortlisted.map((trip) => ({
         id: trip.id,
         name: trip.name,
@@ -254,7 +277,8 @@ export async function runTool(
 
   if (name === 'get_weather') {
     const providedLocation = typeof args.location === 'string' ? args.location.trim() : '';
-    const location = providedLocation || context.target.label || '海淀区';
+    const genericLocation = /^(校园|校内|学校)$/.test(providedLocation);
+    const location = !providedLocation || genericLocation ? context.target.label || '海淀区' : providedLocation;
     const date = typeof args.date === 'string' ? args.date.trim() : 'today';
     try {
       const weather = await fetchWeather(location, date);
