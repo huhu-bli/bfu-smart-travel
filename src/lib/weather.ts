@@ -14,7 +14,14 @@ interface WeatherPayload {
   daily?: Record<string, unknown>;
 }
 
-const CAMPUS_LOCATION: WeatherLocation = {
+const DEFAULT_LOCATION: WeatherLocation = {
+  name: '海淀区',
+  latitude: 39.959,
+  longitude: 116.298,
+  timezone: TIME_ZONE,
+};
+
+const BFU_LOCATION: WeatherLocation = {
   name: '北京林业大学',
   latitude: 40.0023,
   longitude: 116.3507,
@@ -82,11 +89,12 @@ function resolveDate(rawDate: string): string {
 
 function locationLooksLikeCampus(rawLocation: string): boolean {
   const value = rawLocation.trim().toLowerCase();
-  return !value || ['北林', '北京林业大学', '北林校园', '校园', '校内'].some((item) => value.includes(item));
+  return ['北林', '北京林业大学', '北林校园'].some((item) => value.includes(item));
 }
 
 async function resolveLocation(rawLocation: string): Promise<WeatherLocation> {
-  if (locationLooksLikeCampus(rawLocation)) return CAMPUS_LOCATION;
+  if (!rawLocation.trim() || /^(校园|校内|学校)$/.test(rawLocation.trim())) return DEFAULT_LOCATION;
+  if (locationLooksLikeCampus(rawLocation)) return BFU_LOCATION;
   const name = rawLocation.trim();
   const params = new URLSearchParams({ name, count: '1', language: 'zh', format: 'json' });
   const payload = await requestJson<{ results?: Array<Record<string, unknown>> }>(GEOCODING_URL + '?' + params);

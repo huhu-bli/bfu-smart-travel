@@ -64,6 +64,8 @@ export interface DurationOption {
 export interface PlanOptions {
   /** 路线所属校园；用于阻止把一个学校的路线载入另一个学校。 */
   campusId?: import('./data/campuses').CampusId;
+  /** 展示用校园简称，避免规划器把某一所学校写死。 */
+  campusLabel?: string;
   interests: InterestId[];
   minutes: number;
   pace: PaceOption;

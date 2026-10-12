@@ -397,7 +397,7 @@ export default function AgentPanel({
     } catch (error) {
       const reason = error instanceof Error ? error.message : '请求失败';
       if (isNetworkFailure(error)) {
-        // 只有 Worker 网络不可达时才使用本地助手；认证、权限和额度错误必须明确展示。
+        // 只有 Vercel 代理网络不可达时才使用本地助手；认证、权限和额度错误必须明确展示。
         const fallback = await answerLocally(question, localMemoryRef.current[key] ?? null);
         const fallbackKey = conversationKey(fallback.memory.scene, fallback.memory.target);
         localMemoryRef.current[fallbackKey] = fallback.memory;
@@ -565,7 +565,7 @@ export default function AgentPanel({
                             onClose();
                           }}
                         >
-                          载入北林精细规划器
+                          载入校园精细规划器
                         </button>
                       ) : null}
                       <button
@@ -577,7 +577,7 @@ export default function AgentPanel({
                         }}
                       >
                         {turn.planOptions.campusId === 'bfu' || !turn.planOptions.campusId
-                          ? '在北林地图中查看'
+                          ? '在校园地图中查看'
                           : '打开海淀综合地图'}
                       </button>
                     </div>

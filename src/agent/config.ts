@@ -26,14 +26,29 @@ export function providerOf(_id: AgentProviderId): AgentProvider {
   return QWEN_PROVIDER;
 }
 
-// 代理地址是公开配置，固定在前端；真正的千问 API Key 仅保存在 Vercel 服务端。
-const SITE_PROXY_URL = 'https://bfu-smart-travel.vercel.app/api';
+function readSiteEnv(key: string): string {
+  const bag = (globalThis as { __BFU_ENV__?: Record<string, unknown> }).__BFU_ENV__;
+  const raw = bag?.[key];
+  if (typeof raw !== 'string') return '';
+  return raw.startsWith('%') ? '' : raw.trim();
+}
 
+function isVercelDeployment(): boolean {
+  return typeof window !== 'undefined' && /\.vercel\.app$/i.test(window.location.hostname);
+}
+
+const configuredProxyUrl = readSiteEnv('VITE_AGENT_PROXY_URL');
+// Vercel 预览/生产环境优先调用当前站点自己的 Serverless Function，避免跨域和旧部署地址问题。
+// GitHub Pages 仍使用稳定的 Vercel 代理地址。
+const SITE_PROXY_URL = isVercelDeployment()
+  ? '/api'
+  : configuredProxyUrl || 'https://bfu-smart-travel.vercel.app/api';
 export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
   mode: 'proxy',
   provider: 'qwen',
   protocol: 'chat',
   proxyUrl: SITE_PROXY_URL,
+  // APP_TOKEN 只保存在服务端，不能通过 VITE_* 变量注入浏览器。
   proxyToken: '',
   model: QWEN_PROVIDER.model,
 };
@@ -41,7 +56,7 @@ export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
 export function resolveEndpoint(settings: AgentSettings): string {
   const url = settings.proxyUrl.trim().replace(/\/+$/, '');
   if (!url) throw new Error('共享 Agent 服务暂时未配置。');
-  if (!/^https?:\/\//i.test(url)) {
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
     throw new Error('共享 Agent 地址配置无效。');
   }
   return url + '/chat/completions';

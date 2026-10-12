@@ -65,6 +65,20 @@ export async function probeConnection(settings: AgentSettings): Promise<ProbeRes
     if (response.status === 401) {
       return { ok: false, status: 401, latencyMs, message: '共享 Agent 访问口令无效。' };
     }
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+      const message =
+        payload && typeof payload.error === 'object' && payload.error && 'message' in payload.error
+          ? String((payload.error as { message?: unknown }).message ?? '')
+          : `HTTP ${response.status}`;
+      return {
+        ok: false,
+        status: response.status,
+        latencyMs,
+        message: `共享 Agent 服务异常（${response.status}）。`,
+        detail: message,
+      };
+    }
     return {
       ok: true,
       status: response.status,

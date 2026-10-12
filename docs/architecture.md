@@ -9,7 +9,7 @@
 - React：页面组件和交互状态
 - TypeScript：类型约束和业务逻辑
 - Vite：开发服务器和生产构建
-- Cloudflare Worker：统一的 AI 接口代理
+- Vercel Serverless Function：统一的千问接口代理
 - GitHub Pages：静态网站部署
 
 Agent 目前采用：
@@ -38,7 +38,7 @@ flowchart TD
     A --> M[通义千问或内置助手]
     T --> D[本地数据]
     T --> L[路线规划算法]
-    A --> W[Cloudflare Worker]
+    A --> W[Vercel Serverless Function]
     W --> M
 ```
 
@@ -89,7 +89,7 @@ src/
 │  ├─ basePrompt.ts            所有场景共享的规则
 │  └─ scenePrompts.ts          各场景的职责和边界
 ├─ agent/                     Agent 核心层
-│  ├─ config.ts                千问 Worker 默认配置
+│  ├─ config.ts                千问 Vercel 代理默认配置
 │  ├─ types.ts                 Agent设置、历史和工具上下文类型
 │  ├─ runtime.ts               Agent总调度和结果整理
 │  ├─ network.ts               模型请求和连接测试
@@ -184,7 +184,7 @@ sceneRouter
   ↓
 agent.ts
   ↓
-Cloudflare Worker
+Vercel Serverless Function
   ↓
 通义千问 Chat Completions
   ↓
@@ -197,9 +197,9 @@ toolExecutor
 模型生成最终回答
 ```
 
-前端不保存千问 API Key，也不提供服务商、接口地址、模型或访问口令的编辑入口。站点构建时只注入共享 Worker 的公开地址和必要的访问配置。
+前端不保存千问 API Key，也不提供服务商、接口地址、模型或访问口令的编辑入口。站点构建时只注入 Vercel 代理的公开地址。
 
-只有 Worker 网络不可达时，AgentPanel 才会调用 `localAgent.ts`：
+只有 Vercel 代理网络不可达时，AgentPanel 才会调用 `localAgent.ts`：
 
 ```text
 AgentPanel
@@ -213,9 +213,9 @@ localAgent.ts
 返回路线或点位回答
 ```
 
-如果 Worker 返回 401、403、429 或 5xx，页面会直接展示千问错误，不会静默生成一条看似正常的本地路线。这样可以区分“真正的千问回答”和“网络兜底回答”，方便及时修复密钥、权限或额度问题。
+如果代理返回 401、403、429 或 5xx，页面会直接展示千问错误，不会静默生成一条看似正常的本地路线。这样可以区分“真正的千问回答”和“网络兜底回答”，方便及时修复密钥、权限或额度问题。
 
-内置助手和真实 AI 共用工具层，这是一个重要设计：网络异常不会阻断路线规划，且不会消耗千问额度。恢复网络后，新的请求仍会优先走 Worker。
+内置助手和真实 AI 共用工具层，这是一个重要设计：网络异常不会阻断路线规划，且不会消耗千问额度。恢复网络后，新的请求仍会优先走 Vercel 代理。
 
 ## 7. 校园路线算法
 
@@ -272,30 +272,29 @@ Agent 上下文分为两类：
 
 对话历史按“场景 + 目的地”隔离。北林路线、北交路线和海淀综合行程分别保存，校园路线的具体站点不会带入另一所学校或海淀综合旅行场景。
 
-## 9. Cloudflare Worker
+## 9. Vercel Serverless Function
 
-`worker/openai-proxy.js` 是公开站点的统一 AI 服务端代理：
+`api/chat/completions.mjs` 是公开站点的统一 AI 服务端代理：
 
 ```text
-浏览器 → Cloudflare Worker → 通义千问
+浏览器 → Vercel Serverless Function → 通义千问
 ```
 
-Worker 负责：
+服务端函数负责：
 
 - 在服务端保存 `QWEN_API_KEY`
 - 只允许千问 Chat Completions 请求
 - 校验可选的访问口令
 - 限制模型白名单
-- 添加 CORS 和基础限流保护
+- 添加来源校验、CORS、请求校验和基础限流保护
 
-天气查询不需要千问 API Key，也不经过 Worker；前端工具层只请求 Open-Meteo 的地理编码和预报接口。天气接口不可用时，工具会返回明确错误，模型不得自行编造天气。
+天气查询不需要千问 API Key，也不经过 Vercel 代理；前端工具层只请求 Open-Meteo 的地理编码和预报接口。天气接口不可用时，工具会返回明确错误，模型不得自行编造天气。
 
-前端的 `VITE_*` 配置属于公开配置，不能当作秘密保存。真正的千问 API Key 只能通过 Wrangler Secret 写入 Worker：
+前端的 `VITE_*` 配置属于公开配置，不能当作秘密保存。真正的千问 API Key 和访问口令只能写入 Vercel Production 环境变量：
 
 ```bash
-npx wrangler secret put QWEN_API_KEY
-npx wrangler secret put APP_TOKEN
-npx wrangler deploy
+QWEN_API_KEY=服务端密钥
+APP_TOKEN=服务端访问口令
 ```
 
 ## 10. 后续扩展规则
@@ -354,7 +353,7 @@ npx wrangler deploy
 - 路线使用示意坐标和直线距离，不是真实步行导航。
 - 校园和校外数据仍是静态 TypeScript 文件。
 - 当前项目没有自动化测试脚本。
-- 真实 AI 是否可用取决于服务商、模型、网络和 Worker 配置。
+- 真实 AI 是否可用取决于千问模型、网络和 Vercel 环境变量配置。
 - 天气工具依赖 Open-Meteo 的公开网络接口，地点解析和预报请求失败时不能提供实时天气。
 
 本次重构已将原来集中在 `src/lib/agent.ts` 中的配置、网络请求、协议适配、历史裁剪、工具循环和运行调度拆分到 `src/agent/`。`src/lib/agent.ts` 目前只作为兼容入口，后续不应把这些职责重新写回该文件。

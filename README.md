@@ -2,7 +2,7 @@
 
 面向海淀区景点、高校、博物馆、公园与街区的智能旅行助手。当前提供海淀综合地图，并为北京林业大学、北京交通大学提供独立校内路线数据；其他高校按插件方式继续扩展，绝不跨校复用路线。
 
-纯前端单页应用（React + Vite + TypeScript），不需要后端、不需要登录，构建产物可以直接托管在 GitHub Pages 上。
+前端是 React + Vite + TypeScript，静态页面托管在 GitHub Pages；千问请求通过 Vercel Serverless Function 转发，API Key 不进入浏览器。
 
 ## 功能
 
@@ -30,35 +30,19 @@ npm run typecheck # TypeScript 类型检查
 
 右下角的小机器人就是入口。它用「模型 + 工具调用」的方式接到本项目已有的数据和算法上：模型负责理解需求、选参数，路线和点位内容全部由本地函数产出，不会出现模型编造点位或时间的情况。
 
-### 支持的服务商
+### 当前 Agent 配置
 
-| 服务商 | 协议 | 默认模型 | 说明 |
-| --- | --- | --- | --- |
-| **DeepSeek**（默认） | Chat Completions | `deepseek-chat` | 国内可直连。已实测浏览器跨域放行 POST，100ms 级响应 |
-| 通义千问 | Chat Completions | `qwen3.8-flash` | 阿里云百炼，国内直连（实测 POST 30ms 级）。官方页面写明**新用户赠送 1 亿+ tokens**，免费额度以控制台为准 |
-| OpenAI | Responses API | `gpt-6-astra` | 官方文档指出该模型工具调用需走 Responses API；国内网络常无法直连 |
-| 自定义 | Chat Completions | 自填 | 任何 OpenAI 兼容接口，例如通义 `https://dashscope.aliyuncs.com/compatible-mode/v1`、智谱 `https://open.bigmodel.cn/api/paas/v4` |
+项目只保留通义千问 Chat Completions：
 
-两套协议在代码里是分开的适配层：Responses 用 `function_call` / `function_call_output`，Chat Completions 用 `tool_calls` / `role: "tool"`，工具定义只有一份，切换服务商时自动转换。切换服务商会重置对话上下文，因为两套协议的历史格式不通用。
+| 项目 | 当前配置 |
+| --- | --- |
+| 模型 | `qwen3.8-flash` |
+| 前端部署 | GitHub Pages |
+| API 代理 | Vercel Serverless Function |
+| 千问 API Key | 仅保存在 Vercel 环境变量 `QWEN_API_KEY` |
+| 访问口令 | 仅保存在 Vercel 环境变量 `APP_TOKEN`，不注入前端 |
 
-### 两种模式
-
-| 模式 | 密钥位置 | 适用 | 怎么配 |
-| --- | --- | --- | --- |
-| 直连（自用） | 浏览器 `localStorage` | 自己用、本地演示 | 设置里粘贴 API Key |
-| 代理（可公开） | Serverless 环境变量 | 分享给同学、公开部署 | 部署 `worker/`，设置里填代理地址 |
-
-直连零部署，但密钥在使用者的浏览器里；代理需要多部署一个 Cloudflare Worker，密钥永远不出服务端。两种模式在同一个面板里切换。
-
-### 直连模式
-
-1. 到服务商后台建一个密钥（DeepSeek 在 [platform.deepseek.com](https://platform.deepseek.com/api_keys)，建议单独建一个，方便随时吊销）。
-2. 打开应用右下角「AI 行程助手」→ ⚙ → 选 **直连（自用）** → 服务商选 **DeepSeek** 或 **通义千问** → 粘贴密钥。
-3. 点「测试连接」确认能通，然后直接提问，例如「我只有 1 小时，从东门进，怎么逛最值？」
-
-通义千问的密钥在[阿里云百炼控制台](https://bailian.console.aliyun.com/)创建，新用户有 1 亿+ tokens 的免费额度，够这个小助手用很久；注意 `qwen3.8-flash` 这类 flash 档最省钱，`qwen3.8-max` 更聪明但更贵。
-
-密钥只写入当前浏览器的 `localStorage`，本项目没有后端，也没有任何地方会把它传出去。**请不要把密钥写进仓库或截图分享。**
+用户不需要在浏览器中填写 API Key，也不应把 Key 写入仓库、截图或 `localStorage`。
 
 ### 连不上怎么办
 
@@ -66,20 +50,14 @@ npm run typecheck # TypeScript 类型检查
 
 | 提示 | 含义 | 处理 |
 | --- | --- | --- |
-| 连不上 `https://api.openai.com/v1` | 这台设备的网络到不了 OpenAI | 换网络，或改用代理模式；若代理域名也被拦，给 Worker 绑一个自己的域名 |
-| 网络与跨域都正常，但 API Key 无效（401） | 网络没问题，是密钥 | 换一个有效的密钥 |
-| 能连上 OpenAI，但浏览器发不出 POST 请求 | GET 通、POST 被拦（跨域策略或安全软件） | 直连模式无法使用，改用代理模式 |
-| 可用模型里没有 `xxx` | 网络和密钥都正常 | 换成提示里列出的可用模型 |
+| 代理服务不可达 | 当前设备无法访问 Vercel API | 换网络，或检查 Vercel 域名和部署状态 |
+| 服务端没有配置 `QWEN_API_KEY` | Vercel 环境变量缺失 | 在 Vercel Production 环境添加并重新部署 |
+| 共享 Agent 返回 401 | 访问口令或部署版本不一致 | 检查 Vercel `APP_TOKEN`，确认前端指向正确部署 |
+| 返回 429 | 触发限流或额度不足 | 稍后重试并检查百炼用量 |
 
-网络到不了 OpenAI 时，浏览器只会报一个笼统的「网络请求失败」，所以先点测试连接再排查，能省很多时间。
+网络到不了 Vercel 代理时，浏览器可能只会报一个笼统的「网络请求失败」，所以先点测试连接再排查，能省很多时间。
 
-自检会分别测两件事：先用 `GET /v1/models` 判断网络和密钥，再用一把无效密钥试发一次 `POST /v1/responses`（不产生费用）判断浏览器能不能真的发起请求。有些校园网、安全客户端或浏览器插件会放行 GET 却拦掉 POST，这种情况下浏览器直连永远走不通，只能用代理模式。
-
-如果你已经有自己的 OpenAI 兼容中转，可以在「API 地址」里填它的 `/v1` 地址（例如 `https://your-relay.com/v1`），留空就用官方地址。
-
-### 代理模式
-
-见 [`worker/README.md`](worker/README.md)，三步：`wrangler login` → `wrangler secret put OPENAI_API_KEY` → `wrangler deploy`。拿到 `https://xxx.workers.dev` 后填进设置面板即可，建议同时设置 `APP_TOKEN` 访问口令。
+连接测试会检查 Vercel 代理的健康状态；健康不代表千问一定有额度，正式请求仍会显示具体的 401、429 或 5xx 原因。
 
 ### 暴露给模型的工具
 
@@ -92,7 +70,7 @@ npm run typecheck # TypeScript 类型检查
 
 模型返回工具调用后，前端执行本地函数，把结果作为 `function_call_output` 回传，再拿最终回复——就是官方文档里的标准五步循环。工具使用 `strict: true`，并要求 `additionalProperties: false`、所有字段都出现在 `required` 里；同时设了 `parallel_tool_calls: false`，避免一次并发调用多个工具。
 
-模型名在设置里可改，默认 `gpt-6-astra`（官方文档指出该模型的工具调用需走 Responses API），也可以换成 `gpt-5.6` 等账号可用的模型。
+模型白名单由服务端维护，默认使用 `qwen3.8-flash`。
 
 ## 让别人也能用
 
@@ -124,29 +102,14 @@ AI 助手在没有配置密钥时会自动切到**内置助手**：用规则解�
 - 「银杏大道值得专门去一趟吗」
 - 「周末想在校外玩半天，别太贵」
 
-### 想让所有访客都用上 AI：注入站点级代理
+### 让所有访客使用千问 Agent：Vercel 代理
 
-> 本站已经这么做了：代理部署在 Cloudflare Worker（`bfu-smart-travel-agent`），上游是通义百炼的 `qwen3.8-flash`。GitHub 仓库里配置了 `AGENT_PROXY_URL` / `AGENT_PROXY_TOKEN` / `AGENT_PROVIDER` 三个 Actions variables，所以**访客打开网页就能直接聊，不需要填任何密钥**。下面是把这套流程复制到别的站点的方法。
+1. 在 Vercel 导入仓库，根目录保持为仓库根目录。
+2. 在 Vercel Production 环境添加 `QWEN_API_KEY` 和 `APP_TOKEN`。
+3. 在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 添加 `AGENT_PROXY_URL`，值为 Vercel 的 `/api` 地址。
+4. 重新运行 GitHub Pages 工作流。
 
-> **当前本站的取舍**：因为 `*.workers.dev` 在中国大陆基本连不通，本站把 **直连（`AGENT_API_KEY`）设为默认**——密钥本来就随网页公开，少一跳反而更稳更快。代理仍然保留，作为"直连走不通"时的反向兜底；两条路都失败才会退回内置助手。
->
-> 也就是说：`AGENT_API_KEY` 存在时 = 直连优先；只配 `AGENT_PROXY_URL` 时 = 代理优先（密钥不出服务端，适合有自定义域名的场景）。
-
-浏览器直连 API 意味着每个访客都得自己填密钥。要让访客开箱即用，就把密钥放到代理里，再把代理地址注入到构建产物：
-
-1. 部署代理（见 [`worker/README.md`](worker/README.md)）。用 DeepSeek 的话把 `UPSTREAM_BASE` 设为 `https://api.deepseek.com`。
-2. 进入 GitHub 仓库 **Settings → Secrets and variables → Actions**：
-   - **Variables** 新增 `AGENT_PROXY_URL`，值是你的 Worker 地址
-   - **Secrets** 新增 `AGENT_PROXY_TOKEN`，值是你设的 `APP_TOKEN`
-3. 重新跑一次 Actions（或随便推一次提交）。
-
-之后构建时这两个值会被写进页面，**所有访客默认走代理**，什么都不用填；想用自己的密钥，仍然可以在设置面板里覆盖。
-
-⚠️ 公开站点的代理地址和口令都是可见的（这是纯浏览器应用的固有限制），所以上线前请务必：
-
-- 在服务商后台给这把 key **设置用量上限**（比如只充 10 元）
-- 给 Worker 加 Cloudflare **Rate limiting** 规则
-- 定期看用量，异常就立刻换 key
+只有代理地址会进入前端；`QWEN_API_KEY` 和 `APP_TOKEN` 不进入构建产物。
 
 ## 部署到 GitHub Pages
 
@@ -187,7 +150,7 @@ bfu-smart-travel/
 ├─ index.html
 ├─ vite.config.ts
 ├─ tsconfig.json
-└─ worker/                        # 代理模式下使用的 Cloudflare Worker
+└─ api/chat/completions.mjs       # Vercel 千问代理
 ```
 
 ## 路线是怎么算出来的

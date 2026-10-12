@@ -19,10 +19,6 @@
 
 - `AGENT_PROXY_URL`：`https://你的项目名.vercel.app/api`
 
-在 Secrets 中添加：
-
-- `AGENT_PROXY_TOKEN`：与 Vercel 的 `APP_TOKEN` 完全相同
-
 然后重新运行 **Deploy to GitHub Pages** 工作流。
 
 ## 测试
@@ -31,4 +27,4 @@
 
 > 我只有 1 小时，从东门进，怎么逛最值？
 
-如果仍然出现内置助手，检查 Vercel Production 环境变量、访问口令和 GitHub Actions 是否重新运行。
+前端不会注入 `APP_TOKEN`。如果仍然出现内置助手，依次检查 Vercel Production 环境变量、`/api` 健康检查和 GitHub Actions 是否重新运行。

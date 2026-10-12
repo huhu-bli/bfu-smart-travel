@@ -24,6 +24,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run test
+      - run: npm run typecheck
       - run: npm run build
         env:
           # Vercel 代理地址是公开配置；浏览器按来源访问，不注入任何访问口令。

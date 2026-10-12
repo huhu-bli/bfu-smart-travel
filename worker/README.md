@@ -1,6 +1,8 @@
-# 通义千问 AI 行程助手代理（Cloudflare Workers）
+# 通义千问 AI 行程助手代理（旧版 Cloudflare Workers）
 
-前端公开部署时只请求这个 Worker，通义千问 API Key 只保存在 Cloudflare Worker Secret 中，不会进入网页源码，也不会提交到 GitHub。
+> 当前生产环境使用 `api/chat/completions.mjs` 部署到 Vercel。此目录仅保留兼容旧部署，不要同时配置两套公开代理。
+
+该目录是历史 Cloudflare 部署方案。当前公开站点使用 Vercel 的 `api/chat/completions.mjs`，请优先阅读 [`docs/vercel-agent-deployment.md`](../docs/vercel-agent-deployment.md)。
 
 ## 部署
 
@@ -16,13 +18,7 @@ npx wrangler deploy
 
 https://bfu-smart-travel-agent.<你的子域>.workers.dev
 
-在 GitHub 仓库的 Actions Variables 或 Secrets 中配置：
-
-| 名称 | 内容 |
-| --- | --- |
-| AGENT_PROXY_TOKEN | 与 Worker 的 APP_TOKEN 完全一致 |
-
-公开站点的 Worker 地址已经写入 Pages 工作流；访问口令只在构建时注入，不写入仓库文件。
+旧版 Worker 不应再写入 GitHub Pages 工作流，也不要把 `APP_TOKEN` 注入前端构建产物。
 
 ## 接口
 

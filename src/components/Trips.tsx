@@ -9,7 +9,7 @@ export default function Trips() {
       <div className="gallery-head">
         <div>
           <h2>周边一日游</h2>
-          <p>从北林出发不需要长途跋涉的六条线路，含时间轴、预算与出行提示。</p>
+            <p>海淀区内适合半日或一日游的线路，含时间轴、预算与出行提示。</p>
         </div>
       </div>
 
