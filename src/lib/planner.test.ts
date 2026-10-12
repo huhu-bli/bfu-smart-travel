@@ -29,3 +29,20 @@ test('planner honours explicit exclusions', () => {
     });
     assert.equal(plan.stops.some((stop) => stop.spot.id === 'ginkgo-avenue'), false);
 });
+
+test('planner keeps a user-added spot even when it does not match the current interests', () => {
+    const includedSpotId = 'canteen-1';
+    const plan = buildRoute(SPOTS, {
+      campusId: 'bfu',
+      campusLabel: '北林',
+      interests: ['plant'],
+      minutes: 90,
+      pace: PACES[1],
+      startId: 'gate-main',
+      includeSpotIds: [includedSpotId],
+      excludeSpotIds: SPOTS
+        .filter((spot) => spot.kind !== '入口' && spot.id !== includedSpotId)
+        .map((spot) => spot.id),
+    });
+    assert.equal(plan.stops.some((stop) => stop.spot.id === includedSpotId), true);
+});

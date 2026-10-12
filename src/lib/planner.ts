@@ -130,7 +130,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
           relevance * 3 + (included.has(spot.id) ? 100 : 0) + (spot.mustSee ? 1.4 : 0) - walk * 0.22 - spot.visit * 0.012;
         return { spot, meters, walk, dwell, relevance, score };
       })
-      .filter((item) => item.relevance > 0 || item.spot.mustSee);
+      .filter((item) => included.has(item.spot.id) || item.relevance > 0 || item.spot.mustSee);
 
     const candidates = scored.filter((item) => item.walk + item.dwell <= remaining);
     if (!candidates.length) break;
@@ -191,7 +191,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
           relevance * 3 + (included.has(spot.id) ? 100 : 0) + (spot.mustSee ? 1.4 : 0) - walk * 0.22 - spot.visit * 0.012;
         return { spot, meters, walk, dwell, relevance, score };
       })
-      .filter((item) => (item.relevance > 0 || item.spot.mustSee) && item.walk + item.dwell <= remaining);
+      .filter((item) => (included.has(item.spot.id) || item.relevance > 0 || item.spot.mustSee) && item.walk + item.dwell <= remaining);
 
     if (!scored.length) break;
     scored.sort((a, b) => b.score - a.score);
