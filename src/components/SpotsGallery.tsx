@@ -5,14 +5,25 @@ import SpotArt from './SpotArt';
 
 interface Props {
   spots: Spot[];
+  scopeLabel?: string;
   favorites: string[];
+  plannedSpotIds?: string[];
   onToggleFavorite: (id: string) => void;
+  onTogglePlanSpot?: (id: string) => void;
   onSelect: (id: string) => void;
 }
 
 type Filter = 'all' | InterestId | 'fav';
 
-export default function SpotsGallery({ spots, favorites, onToggleFavorite, onSelect }: Props) {
+export default function SpotsGallery({
+  spots,
+  scopeLabel = '校园',
+  favorites,
+  plannedSpotIds = [],
+  onToggleFavorite,
+  onTogglePlanSpot,
+  onSelect,
+}: Props) {
   const [filter, setFilter] = useState<Filter>('all');
   const [keyword, setKeyword] = useState('');
 
@@ -38,7 +49,7 @@ export default function SpotsGallery({ spots, favorites, onToggleFavorite, onSel
     <section className="gallery">
       <div className="gallery-head">
         <div>
-          <h2>校园点位图鉴</h2>
+          <h2>{scopeLabel}点位图鉴</h2>
           <p>共 {spots.length} 个点位，点开卡片可以看到讲解、亮点与最佳观赏时间。</p>
         </div>
         <input
@@ -103,6 +114,15 @@ export default function SpotsGallery({ spots, favorites, onToggleFavorite, onSel
               >
                 {favorites.includes(spot.id) ? '★' : '☆'}
               </button>
+              {spot.kind !== '入口' && onTogglePlanSpot ? (
+                <button
+                  type="button"
+                  className={plannedSpotIds.includes(spot.id) ? 'plan-spot-btn is-on' : 'plan-spot-btn'}
+                  onClick={() => onTogglePlanSpot(spot.id)}
+                >
+                  {plannedSpotIds.includes(spot.id) ? '从计划删除' : '加入计划'}
+                </button>
+              ) : null}
             </article>
           ))}
         </div>

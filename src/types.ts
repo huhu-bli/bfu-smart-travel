@@ -94,6 +94,14 @@ export interface RoutePlan {
   pace: PaceOption;
 }
 
+/** 跨页面共享并持久化的当前路线计划。 */
+export interface GlobalRoutePlan {
+  plan: RoutePlan;
+  options: PlanOptions;
+  source: 'agent' | 'manual';
+  updatedAt: string;
+}
+
 export interface TripStep {
   time: string;
   title: string;

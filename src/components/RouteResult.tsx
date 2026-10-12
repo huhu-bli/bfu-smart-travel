@@ -8,13 +8,22 @@ const MAX_EDITABLE_STOPS = 12;
 interface Props {
   plan: RoutePlan;
   availableSpots: Spot[];
+  showCampusMap?: boolean;
   onSelectSpot: (id: string) => void;
   onOpenMap: () => void;
   onEditRoute: (includedSpotIds: string[], excludedSpotIds: string[]) => void;
   excludedSpotIds: string[];
 }
 
-export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpenMap, onEditRoute, excludedSpotIds }: Props) {
+export default function RouteResult({
+  plan,
+  availableSpots,
+  showCampusMap = true,
+  onSelectSpot,
+  onOpenMap,
+  onEditRoute,
+  excludedSpotIds,
+}: Props) {
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
@@ -241,8 +250,24 @@ export default function RouteResult({ plan, availableSpots, onSelectSpot, onOpen
           </section>
         </div>
 
-        <div className="route-map">
-          <CampusMap spots={plan.stops.map((stop) => stop.spot).concat(plan.origin)} plan={plan} activeId={null} onSelect={onSelectSpot} compact />
+        <div className={showCampusMap ? 'route-map' : 'route-map route-map--summary'}>
+          {showCampusMap ? (
+            <CampusMap spots={plan.stops.map((stop) => stop.spot).concat(plan.origin)} plan={plan} activeId={null} onSelect={onSelectSpot} compact />
+          ) : (
+            <div className="route-map-summary">
+              <span>全局路线计划</span>
+              <strong>{plan.origin.name}</strong>
+              <div>
+                {plan.stops.map((stop, index) => (
+                  <button type="button" key={stop.spot.id} onClick={() => onSelectSpot(stop.spot.id)}>
+                    <b>{index + 1}</b>
+                    {stop.spot.emoji} {stop.spot.name}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="ghost-btn" onClick={onOpenMap}>打开海淀综合地图</button>
+            </div>
+          )}
           <div className="route-map-tips">
             {plan.stops
               .flatMap((stop) => stop.spot.highlights.slice(0, 1))

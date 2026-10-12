@@ -347,6 +347,128 @@ a {
   margin: 0 auto;
 }
 
+/* ---------- global route plan ---------- */
+.global-route-plan {
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px solid rgba(43, 106, 201, 0.2);
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f5f9ff, #fff);
+  box-shadow: 0 10px 28px rgba(22, 59, 120, 0.08);
+}
+
+.global-route-plan__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.global-route-plan__head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.global-route-plan__eyebrow {
+  color: var(--brand);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+.global-route-plan__head strong {
+  color: var(--brand-dark);
+  font-size: 16px;
+}
+
+.global-route-plan__head small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.global-route-plan__stops {
+  display: flex;
+  gap: 7px;
+  margin-top: 13px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.global-route-plan__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 6px 7px 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.global-route-plan__chip b {
+  color: var(--brand);
+  font-size: 11px;
+}
+
+.global-route-plan__chip button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #edf3fc;
+  color: var(--brand-dark);
+  line-height: 1;
+}
+
+.global-route-plan__chip button:hover {
+  background: #fee9e7;
+  color: #b42318;
+}
+
+.global-route-plan__empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.global-route-plan__optional {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.global-route-plan__optional summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.global-route-plan__optional > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.global-route-plan__optional button {
+  padding: 6px 10px;
+  border: 1px dashed rgba(43, 106, 201, 0.4);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-dark);
+  font-size: 11.5px;
+}
+
+.map-scope-switch button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .tab-panel {
   margin-top: 24px;
   animation: fade-up 0.45s ease both;
@@ -1137,6 +1259,59 @@ a {
   align-self: start;
 }
 
+.route-map--summary {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f5f9ff, #fff);
+}
+
+.route-map-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.route-map-summary > span {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.route-map-summary > strong {
+  color: var(--brand-dark);
+  font-size: 15px;
+}
+
+.route-map-summary > div {
+  display: grid;
+  gap: 7px;
+}
+
+.route-map-summary > div button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink-soft);
+  text-align: left;
+}
+
+.route-map-summary > div b {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 11px;
+}
+
 .route-map-tips {
   display: flex;
   flex-wrap: wrap;
@@ -1468,7 +1643,7 @@ a {
 }
 
 .spot-card-body {
-  padding: 14px 15px 16px;
+  padding: 14px 15px 54px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1550,6 +1725,25 @@ a {
 .fav-btn.is-on {
   color: var(--gold);
   background: #fff;
+}
+
+.plan-spot-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 7px 11px;
+  border: 1px solid rgba(43, 106, 201, 0.28);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-dark);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.plan-spot-btn:hover,
+.plan-spot-btn.is-on {
+  border-color: var(--brand);
+  background: var(--brand-soft);
 }
 
 .empty-state {
@@ -2308,6 +2502,20 @@ a {
 
   .hero-copy h1 {
     font-size: 25px;
+  }
+
+  .global-route-plan {
+    padding: 15px;
+    border-radius: 17px;
+  }
+
+  .global-route-plan__head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .global-route-plan__head .primary-btn {
+    width: 100%;
   }
 
   .planner-card,

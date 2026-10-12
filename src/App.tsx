@@ -3,6 +3,7 @@ import AgentPanel from './components/AgentPanel';
 import CampusMap from './components/CampusMap';
 import Checklist from './components/Checklist';
 import Footer from './components/Footer';
+import GlobalRoutePlanBar from './components/GlobalRoutePlanBar';
 import HaidianMap from './components/HaidianMap';
 import Header, { type TabId } from './components/Header';
 import Planner from './components/Planner';
@@ -12,9 +13,10 @@ import SpotsGallery from './components/SpotsGallery';
 import Trips from './components/Trips';
 import { DURATIONS, GATE_IDS, PACES } from './data/interests';
 import { SPOTS, SPOT_MAP } from './data/spots';
+import { campusById, spotAcrossCampuses } from './data/campuses';
 import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
-import type { InterestId, PaceId, PlanOptions, RoutePlan } from './types';
+import type { GlobalRoutePlan, InterestId, PaceId, PlanOptions, RoutePlan, Spot } from './types';
 
 const REPO_URL = 'https://github.com/huhu-bli/bfu-smart-travel';
 
@@ -50,7 +52,25 @@ export default function App() {
     };
   }, [interestIds, durationId, paceId, startId, includedSpotIds, excludedSpotIds]);
 
-  const [plan, setPlan] = useState<RoutePlan>(() => buildRoute(SPOTS, options));
+  const [globalRoute, setGlobalRoute] = useLocalStorage<GlobalRoutePlan>('global-route-plan:v1', {
+    plan: buildRoute(SPOTS, options),
+    options,
+    source: 'manual',
+    updatedAt: new Date().toISOString(),
+  });
+  const plan = globalRoute.plan;
+  const activeOptions = globalRoute.options;
+  const activeCampus = campusById(activeOptions.campusId ?? 'bfu');
+  const activeSpots = useMemo<Spot[]>(() => {
+    if (activeCampus?.spots?.length) return activeCampus.spots;
+    const seen = new Set<string>();
+    return [plan.origin, ...plan.stops.map((stop) => stop.spot), ...plan.optionalStops.map((stop) => stop.spot)]
+      .filter((spot) => {
+        if (seen.has(spot.id)) return false;
+        seen.add(spot.id);
+        return true;
+      });
+  }, [activeCampus, plan]);
   const [dirty, setDirty] = useState(false);
   const firstRender = useRef(true);
   const skipDirty = useRef(false);
@@ -68,7 +88,12 @@ export default function App() {
   }, [options]);
 
   const generate = () => {
-    setPlan(buildRoute(SPOTS, options));
+    setGlobalRoute({
+      plan: buildRoute(SPOTS, options),
+      options,
+      source: 'manual',
+      updatedAt: new Date().toISOString(),
+    });
     setDirty(false);
     window.setTimeout(() => {
       document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -80,22 +105,34 @@ export default function App() {
     setTab('planner');
   };
 
-  /** 由 AI 助手生成的路线：同步回规划器控件，避免出现“参数不一致”的割裂感。 */
-  const applyPlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
+  /** Agent 一旦生成有效路线就写入全局计划；查看按钮只负责把用户带到编辑器。 */
+  const savePlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
+    setGlobalRoute({
+      plan: nextPlan,
+      options: nextOptions,
+      source: 'agent',
+      updatedAt: new Date().toISOString(),
+    });
     skipDirty.current = true;
-    setPlan(nextPlan);
     setDirty(false);
-    setIncludedSpotIds([]);
-    setExcludedSpotIds([]);
+    if (!nextOptions.campusId || nextOptions.campusId === 'bfu') {
+      setIncludedSpotIds(nextOptions.includeSpotIds ?? nextPlan.stops.map((stop) => stop.spot.id));
+      setExcludedSpotIds(nextOptions.excludeSpotIds ?? []);
+    }
     setInterestIds(nextOptions.interests);
     setPaceId(nextOptions.pace.id);
-    setStartId(nextOptions.startId);
+    if (!nextOptions.campusId || nextOptions.campusId === 'bfu') setStartId(nextOptions.startId);
     const closest = DURATIONS.reduce((best, item) =>
       Math.abs(item.minutes - nextOptions.minutes) < Math.abs(best.minutes - nextOptions.minutes)
         ? item
         : best,
     );
     setDurationId(closest.id);
+  };
+
+  const applyPlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
+    savePlanFromAgent(nextPlan, nextOptions);
+    setMapScope(nextOptions.campusId === 'bfu' || !nextOptions.campusId ? 'campus' : 'haidian');
     setTab('planner');
     window.setTimeout(() => {
       document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -104,18 +141,53 @@ export default function App() {
 
   const applyRouteEdits = (nextIncludedIds: string[], nextExcludedIds: string[]) => {
     const nextOptions = {
-      ...options,
+      ...activeOptions,
       includeSpotIds: nextIncludedIds,
       excludeSpotIds: nextExcludedIds,
     };
     skipDirty.current = true;
-    setIncludedSpotIds(nextIncludedIds);
-    setExcludedSpotIds(nextExcludedIds);
-    setPlan(buildRoute(SPOTS, nextOptions));
+    if (!nextOptions.campusId || nextOptions.campusId === 'bfu') {
+      setIncludedSpotIds(nextIncludedIds);
+      setExcludedSpotIds(nextExcludedIds);
+    }
+    setGlobalRoute({
+      plan: buildRoute(activeSpots, nextOptions),
+      options: nextOptions,
+      source: globalRoute.source,
+      updatedAt: new Date().toISOString(),
+    });
     setDirty(false);
   };
 
-  const activeSpot = activeSpotId ? SPOT_MAP[activeSpotId] : null;
+  const setExactPlanStops = (spotIds: string[]) => {
+    const selected = Array.from(new Set(spotIds));
+    const excluded = activeSpots
+      .filter((spot) => spot.id !== plan.origin.id && spot.kind !== '入口' && !selected.includes(spot.id))
+      .map((spot) => spot.id);
+    applyRouteEdits(selected, excluded);
+  };
+
+  const removePlanStop = (spotId: string) => {
+    setExactPlanStops(plan.stops.map((stop) => stop.spot.id).filter((id) => id !== spotId));
+  };
+
+  const addOptionalStop = (spotId: string) => {
+    setExactPlanStops([...plan.stops.map((stop) => stop.spot.id), spotId]);
+  };
+
+  const togglePlanSpot = (spotId: string) => {
+    const current = plan.stops.map((stop) => stop.spot.id);
+    setExactPlanStops(current.includes(spotId) ? current.filter((id) => id !== spotId) : [...current, spotId]);
+  };
+
+  const openPlanMap = () => {
+    setMapScope(activeCampus?.mapMode === 'bfu-svg' ? 'campus' : 'haidian');
+    setTab('map');
+  };
+
+  const activeSpot = activeSpotId
+    ? spotAcrossCampuses(activeSpotId) ?? SPOT_MAP[activeSpotId] ?? activeSpots.find((spot) => spot.id === activeSpotId) ?? null
+    : null;
 
   return (
     <div className="app">
@@ -163,6 +235,13 @@ export default function App() {
             </svg>
           </div>
         </section>
+
+        <GlobalRoutePlanBar
+          route={globalRoute}
+          onOpen={() => setTab('planner')}
+          onRemoveStop={removePlanStop}
+          onAddOptionalStop={addOptionalStop}
+        />
 
         <section className="explore-strip" aria-label="海淀探索入口">
           <div className="explore-intro">
@@ -222,11 +301,12 @@ export default function App() {
               />
               <RouteResult
                 plan={plan}
-                availableSpots={SPOTS}
+                availableSpots={activeSpots}
+                showCampusMap={activeCampus?.mapMode === 'bfu-svg'}
                 onSelectSpot={setActiveSpotId}
-                onOpenMap={() => setTab('map')}
+                onOpenMap={openPlanMap}
                 onEditRoute={applyRouteEdits}
-                excludedSpotIds={excludedSpotIds}
+                excludedSpotIds={activeOptions.excludeSpotIds ?? []}
               />
             </div>
           ) : null}
@@ -238,6 +318,8 @@ export default function App() {
                   type="button"
                   className={mapScope === 'campus' ? 'is-active' : ''}
                   onClick={() => setMapScope('campus')}
+                  disabled={activeCampus?.mapMode !== 'bfu-svg'}
+                  title={activeCampus?.mapMode !== 'bfu-svg' ? '当前路线没有专用校园底图' : undefined}
                 >
                   校园精细地图
                 </button>
@@ -250,10 +332,10 @@ export default function App() {
                 </button>
               </div>
 
-              {mapScope === 'campus' ? (
+              {mapScope === 'campus' && activeCampus?.mapMode === 'bfu-svg' ? (
                 <div className="map-layout">
                   <CampusMap
-                    spots={SPOTS}
+                    spots={activeSpots}
                     plan={plan}
                     activeId={activeSpotId}
                     onSelect={setActiveSpotId}
@@ -293,9 +375,12 @@ export default function App() {
 
           {tab === 'spots' ? (
             <SpotsGallery
-              spots={SPOTS}
+              spots={activeSpots}
+              scopeLabel={activeCampus?.shortName ?? activeOptions.campusLabel ?? '当前路线'}
               favorites={favorites}
+              plannedSpotIds={plan.stops.map((stop) => stop.spot.id)}
               onToggleFavorite={(id) => setFavorites((prev) => toggleInList(prev, id))}
+              onTogglePlanSpot={togglePlanSpot}
               onSelect={setActiveSpotId}
             />
           ) : null}
@@ -312,8 +397,9 @@ export default function App() {
         onOpen={() => setAgentOpen(true)}
         onClose={() => setAgentOpen(false)}
         currentPlan={plan}
-        currentPlanOptions={options}
+        currentPlanOptions={activeOptions}
         onSelectSpot={setActiveSpotId}
+        onPlanGenerated={savePlanFromAgent}
         onApplyPlan={applyPlanFromAgent}
         onOpenMap={(scope = 'campus') => {
           setMapScope(scope);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { campusForSpot, spotAcrossCampuses } from '../data/campuses';
+import { spotAcrossCampuses } from '../data/campuses';
 import { TRIPS } from '../data/trips';
 import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
@@ -24,6 +24,7 @@ interface Props {
   currentPlan: RoutePlan | null;
   currentPlanOptions: PlanOptions | null;
   onSelectSpot: (id: string) => void;
+  onPlanGenerated: (plan: RoutePlan, options: PlanOptions) => void;
   onApplyPlan: (plan: RoutePlan, options: PlanOptions) => void;
   onOpenMap: (scope?: 'campus' | 'haidian') => void;
   onOpenTrips: () => void;
@@ -118,6 +119,7 @@ export default function AgentPanel({
   currentPlan,
   currentPlanOptions,
   onSelectSpot,
+  onPlanGenerated,
   onApplyPlan,
   onOpenMap,
   onOpenTrips,
@@ -349,6 +351,7 @@ export default function AgentPanel({
         activeSceneRef.current = local.memory.scene;
         activeTargetRef.current = local.memory.target;
         activeConversationKeyRef.current = localKey;
+        if (local.plan && local.planOptions) onPlanGenerated(local.plan, local.planOptions);
         setTurns((prev) => [
           ...prev,
           {
@@ -377,6 +380,7 @@ export default function AgentPanel({
       activeSceneRef.current = result.scene;
       activeTargetRef.current = result.target;
       activeConversationKeyRef.current = resultKey;
+      if (result.plan && result.planOptions) onPlanGenerated(result.plan, result.planOptions);
       setTurns((prev) => [
         ...prev,
         {
@@ -404,6 +408,7 @@ export default function AgentPanel({
         activeSceneRef.current = fallback.memory.scene;
         activeTargetRef.current = fallback.memory.target;
         activeConversationKeyRef.current = fallbackKey;
+        if (fallback.plan && fallback.planOptions) onPlanGenerated(fallback.plan, fallback.planOptions);
         setTurns((prev) => [
           ...prev,
           {
@@ -532,13 +537,9 @@ export default function AgentPanel({
                       {turn.plan.stops.map((stop, index) => (
                         <li key={stop.spot.id}>
                           <b>{index + 1}</b>
-                          {turn.planOptions?.campusId === 'bfu' || !turn.planOptions?.campusId ? (
-                            <button type="button" onClick={() => onSelectSpot(stop.spot.id)}>
-                              {stop.spot.name}
-                            </button>
-                          ) : (
-                            <span className="agent-card-stop-name">{stop.spot.name}</span>
-                          )}
+                          <button type="button" onClick={() => onSelectSpot(stop.spot.id)}>
+                            {stop.spot.name}
+                          </button>
                           <span>
                             {Math.round(stop.leave - stop.arrive)} 分钟 · 步行 {stop.walkMeters} 米
                           </span>
@@ -556,18 +557,16 @@ export default function AgentPanel({
                       <span>{turn.plan.remainingAdvice ?? '可根据体力安排拍照、休息或延伸点位。'}</span>
                     </div>
                     <div className="agent-card-actions">
-                      {turn.planOptions.campusId === 'bfu' || !turn.planOptions.campusId ? (
-                        <button
-                          type="button"
-                          className="ghost-btn"
-                          onClick={() => {
-                            onApplyPlan(turn.plan!, turn.planOptions!);
-                            onClose();
-                          }}
-                        >
-                          载入校园精细规划器
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        onClick={() => {
+                          onApplyPlan(turn.plan!, turn.planOptions!);
+                          onClose();
+                        }}
+                      >
+                        已加入计划 · 查看编辑
+                      </button>
                       <button
                         type="button"
                         className="ghost-btn"
@@ -588,14 +587,13 @@ export default function AgentPanel({
                   <div className="agent-chips">
                     {turn.spotIds.map((id) => {
                       const spot = spotAcrossCampuses(id);
-                      const isBfuSpot = campusForSpot(id)?.id === 'bfu';
-                      return isBfuSpot ? (
+                      return spot ? (
                         <button key={id} type="button" className="agent-chip" onClick={() => onSelectSpot(id)}>
-                          {spot?.emoji} {spot?.name ?? id}
+                          {spot.emoji} {spot.name}
                         </button>
                       ) : (
                         <span key={id} className="agent-chip">
-                          {spot?.emoji} {spot?.name ?? id}
+                          {id}
                         </span>
                       );
                     })}
