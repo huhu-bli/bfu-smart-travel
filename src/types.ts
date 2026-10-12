@@ -141,6 +141,8 @@ export interface BeijingPlace {
 
 export type CityTravelMode = 'mixed' | 'transit' | 'walk';
 
+export type CityRouteProvider = 'estimate' | 'amap' | 'hybrid';
+
 export interface BeijingRouteStop {
   place: BeijingPlace;
   arrive: number;
@@ -148,6 +150,10 @@ export interface BeijingRouteStop {
   travelMinutes: number;
   distanceKm: number;
   travelMode: '步行' | '公共交通';
+  /** 本段交通数据来自本地估算还是高德路线服务。 */
+  routeProvider: 'estimate' | 'amap';
+  /** 高德返回的实际道路轨迹；未配置或查询失败时为空。 */
+  routePath?: Array<[number, number]>;
   reason: string;
 }
 
@@ -174,6 +180,10 @@ export interface BeijingRoutePlan {
   remainingAdvice: string;
   totalMinutes: number;
   totalDistanceKm: number;
+  /** 全部实时、部分实时或全部估算。 */
+  routeProvider: CityRouteProvider;
+  /** 给 UI 和 Agent 展示的数据来源说明。 */
+  routeNotice: string;
   matchedInterests: InterestId[];
   pace: PaceOption;
 }

@@ -61,7 +61,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
     <section className="route-card beijing-route-card" id="route-result">
       <div className="route-head">
         <div>
-          <span className="route-tag">北京城市路线</span>
+          <span className="route-tag">北京城市路线 · {plan.routeProvider === 'amap' ? '高德实时' : plan.routeProvider === 'hybrid' ? '高德混合' : '本地估算'}</span>
           <h2>{plan.title}</h2>
           <p className="route-sub">{plan.subtitle}</p>
         </div>
@@ -123,7 +123,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
                 <div className="stop-main">
                   <div className="stop-title"><strong>{stop.place.emoji} {stop.place.name}</strong><span className="stop-time">{formatClock(stop.arrive)}–{formatClock(stop.leave)}</span></div>
                   <p className="stop-reason">{stop.reason}</p>
-                  <div className="stop-meta"><span>{stop.travelMode} {stop.travelMinutes} 分钟 · 约 {stop.distanceKm} 公里</span><span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span><span>{stop.place.district}</span></div>
+                  <div className="stop-meta"><span>{stop.travelMode} {stop.travelMinutes} 分钟 · 约 {stop.distanceKm} 公里</span><span>{stop.routeProvider === 'amap' ? '高德路线' : '本地估算'}</span><span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span><span>{stop.place.district}</span></div>
                 </div>
                 <button type="button" className="route-stop-remove" onClick={() => remove(stop.place.id)} aria-label={`删除${stop.place.name}`}>×</button>
               </li>
@@ -145,7 +145,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
           <div className="route-map-summary"><span>北京全局路线</span><strong>{plan.origin.district}出发</strong><div>{[plan.origin, ...plan.stops.map((stop) => stop.place)].map((place, index) => <span key={place.id}><b>{index + 1}</b>{place.emoji} {place.name}</span>)}</div><button type="button" className="ghost-btn" onClick={onOpenMap}>打开北京综合地图</button></div>
         </div>
       </div>
-      <p className="route-note">路线按兴趣、行政区聚合和点位距离自动排序。交通时间为估算值，请在出发前使用地图导航确认实时换乘。</p>
+      <p className="route-note">{plan.routeNotice ?? '交通时间为本地估算；生成新路线后将自动尝试高德实时路线。'}</p>
     </section>
   );
 }

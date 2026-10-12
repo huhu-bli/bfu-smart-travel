@@ -55,7 +55,7 @@ export default function BeijingMap({ plan = null }: Props) {
   const mapRef = useRef<AMapMapInstance | null>(null);
   const amapRef = useRef<AMapNamespace | null>(null);
   const markersRef = useRef<AMapMarkerInstance[]>([]);
-  const routeLineRef = useRef<AMapPolylineInstance | null>(null);
+  const routeLinesRef = useRef<AMapPolylineInstance[]>([]);
   const infoRef = useRef<AMapInfoWindowInstance | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -111,7 +111,7 @@ export default function BeijingMap({ plan = null }: Props) {
       mapRef.current = null;
       amapRef.current = null;
       markersRef.current = [];
-      routeLineRef.current = null;
+      routeLinesRef.current = [];
     };
   }, []);
 
@@ -120,7 +120,7 @@ export default function BeijingMap({ plan = null }: Props) {
     const map = mapRef.current;
     if (!AMap || !map || !ready) return;
     if (markersRef.current.length) map.remove(markersRef.current);
-    if (routeLineRef.current) map.remove(routeLineRef.current);
+    if (routeLinesRef.current.length) map.remove(routeLinesRef.current);
 
     const orderedRoute = plan ? [plan.origin, ...plan.stops.map((stop) => stop.place)] : [];
     const order = new Map(orderedRoute.map((place, index) => [place.id, index + 1]));
@@ -147,17 +147,20 @@ export default function BeijingMap({ plan = null }: Props) {
     markersRef.current = markers;
     if (markers.length) map.add(markers);
 
-    if (orderedRoute.length > 1) {
-      const routeLine = new AMap.Polyline({
-        path: orderedRoute.map((place) => [place.lng, place.lat]),
-        strokeColor: '#2563eb',
-        strokeWeight: 6,
-        strokeOpacity: 0.82,
-        showDir: true,
+    if (orderedRoute.length > 1 && plan) {
+      const routeLines = plan.stops.map((stop, index) => {
+        const from = index === 0 ? plan.origin : plan.stops[index - 1].place;
+        return new AMap.Polyline({
+          path: stop.routePath?.length ? stop.routePath : [[from.lng, from.lat], [stop.place.lng, stop.place.lat]],
+          strokeColor: stop.routeProvider === 'amap' ? '#2563eb' : '#94a3b8',
+          strokeWeight: 6,
+          strokeOpacity: stop.routeProvider === 'amap' ? 0.88 : 0.72,
+          showDir: true,
+        });
       });
-      routeLineRef.current = routeLine;
-      map.add(routeLine);
-      map.setFitView([...markers.filter((_, index) => routeIds.has(filtered[index].id)), routeLine], false, [72, 72, 72, 72]);
+      routeLinesRef.current = routeLines;
+      map.add(routeLines);
+      map.setFitView([...markers.filter((_, index) => routeIds.has(filtered[index].id)), ...routeLines], false, [72, 72, 72, 72]);
     } else if (markers.length) {
       map.setFitView(markers, false, [56, 56, 56, 56]);
     }
@@ -177,7 +180,7 @@ export default function BeijingMap({ plan = null }: Props) {
           <div>
             <span className="haidian-kicker">BEIJING CITY MAP</span>
             <h2>北京综合旅行地图</h2>
-            <p>覆盖 16 个行政区的代表性景点；蓝色编号为当前计划站点。</p>
+            <p>覆盖 16 个行政区的代表性景点；蓝线为高德道路轨迹，灰线为本地估算。</p>
           </div>
           <span className="haidian-count">{filtered.length} 个点位</span>
         </div>
@@ -209,7 +212,7 @@ export default function BeijingMap({ plan = null }: Props) {
           {!ready && !error ? <div className="haidian-map-status"><span>正在加载北京地图…</span></div> : null}
           {error ? <div className="haidian-map-status haidian-map-status--error"><strong>地图暂时无法加载</strong><span>{error}</span></div> : null}
         </div>
-        <p className="haidian-map-note">路线连线用于展示站点顺序，不代表实际道路；请在出发前使用地图导航确认换乘和实时路况。</p>
+        <p className="haidian-map-note">{plan?.routeNotice ?? '地图使用高德 JS API；生成路线后可查看实际道路轨迹。'}</p>
       </section>
 
       <aside className="haidian-place-panel">

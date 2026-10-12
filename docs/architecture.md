@@ -110,6 +110,8 @@ src/
 │  ├─ toolExecutor.ts          工具执行和数据查询
 │  ├─ planner.ts               路线规划算法
 │  ├─ beijingPlanner.ts        北京城市路线距离、交通与排程算法
+│  ├─ routeProviders/
+│  │  └─ amap.ts               高德步行/公交时间与道路轨迹适配器
 │  └─ storage.ts               localStorage 状态保存
 └─ styles/global.css           全局样式
 
@@ -263,7 +265,7 @@ GlobalRoutePlan（App 全局状态）
 - Agent 生成路线后自动更新全局计划，用户不需要再次复制路线。
 - 顶部计划条在所有主页面显示，可直接删除必游站点或加入可选站点。
 - 路线编辑器支持完整勾选；点位图鉴支持单点加入或移出计划。
-- 校园增删后由 `planner.ts` 重算；北京路线增删后由 `beijingPlanner.ts` 重算。明确加入的点位拥有最高选择权重。
+- 校园增删后由 `planner.ts` 重算；北京路线增删后由 `beijingPlanner.ts` 重算，再由高德 provider 校正交通时间和道路轨迹。明确加入的点位拥有最高选择权重。
 - 各校园路线只使用本校 `spots`，不能把北交点位加入北林路线。
 
 ## 8. 上下文管理

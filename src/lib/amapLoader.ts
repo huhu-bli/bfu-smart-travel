@@ -5,6 +5,41 @@ export interface AMapPoiLocation {
   getLat?: () => number;
 }
 
+export interface AMapLngLatInstance {
+  lng?: number;
+  lat?: number;
+  getLng?: () => number;
+  getLat?: () => number;
+}
+
+export interface AMapWalkRoute {
+  time?: number | string;
+  duration?: number | string;
+  distance?: number | string;
+  steps?: Array<{ path?: AMapLngLatInstance[] }>;
+}
+
+export interface AMapWalkingResult {
+  routes?: AMapWalkRoute[];
+}
+
+export interface AMapTransferPlan {
+  time?: number | string;
+  duration?: number | string;
+  distance?: number | string;
+  walking_distance?: number | string;
+  segments?: Array<{
+    transit_mode?: string;
+    transit?: { path?: AMapLngLatInstance[] };
+  }>;
+}
+
+export interface AMapTransferResult {
+  plans?: AMapTransferPlan[];
+}
+
+export type AMapRouteResult = AMapWalkingResult | AMapTransferResult | string;
+
 export interface AMapPoi {
   id?: string;
   name?: string;
@@ -61,6 +96,21 @@ export interface AMapNamespace {
   Pixel: new (x: number, y: number) => unknown;
   Scale: new () => unknown;
   ToolBar: new (options?: Record<string, unknown>) => unknown;
+  Walking: new (options?: Record<string, unknown>) => {
+    search: (
+      origin: [number, number],
+      destination: [number, number],
+      callback: (status: string, result: AMapRouteResult) => void,
+    ) => void;
+  };
+  Transfer: new (options?: Record<string, unknown>) => {
+    search: (
+      origin: [number, number],
+      destination: [number, number],
+      callback: (status: string, result: AMapRouteResult) => void,
+    ) => void;
+  };
+  TransferPolicy?: { LEAST_TIME?: number };
   PlaceSearch: new (options: {
     city: string;
     citylimit: boolean;
@@ -112,7 +162,7 @@ export function loadAMap(key: string, securityCode: string): Promise<AMapNamespa
     const params = new URLSearchParams({
       v: '2.0',
       key,
-      plugin: 'AMap.PlaceSearch,AMap.Scale,AMap.ToolBar',
+      plugin: 'AMap.PlaceSearch,AMap.Scale,AMap.ToolBar,AMap.Walking,AMap.Transfer',
     });
     script.src = 'https://webapi.amap.com/maps?' + params.toString();
     script.async = true;

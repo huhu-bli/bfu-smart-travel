@@ -16,6 +16,7 @@ import { DURATIONS, GATE_IDS, PACES } from './data/interests';
 import { SPOTS, SPOT_MAP } from './data/spots';
 import { campusById, spotAcrossCampuses } from './data/campuses';
 import { buildBeijingRoute } from './lib/beijingPlanner';
+import { refineBeijingRouteWithAmap } from './lib/routeProviders/amap';
 import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
 import type {
@@ -227,12 +228,23 @@ export default function App() {
       includePlaceIds,
       excludePlaceIds,
     };
+    const estimatedPlan = buildBeijingRoute(nextOptions);
+    const source = globalRoute.source;
     setGlobalRoute({
       kind: 'beijing',
-      plan: buildBeijingRoute(nextOptions),
+      plan: estimatedPlan,
       options: nextOptions,
-      source: globalRoute.source,
+      source,
       updatedAt: new Date().toISOString(),
+    });
+    void refineBeijingRouteWithAmap(estimatedPlan, nextOptions).then((refinedPlan) => {
+      setGlobalRoute({
+        kind: 'beijing',
+        plan: refinedPlan,
+        options: nextOptions,
+        source,
+        updatedAt: new Date().toISOString(),
+      });
     });
   };
 

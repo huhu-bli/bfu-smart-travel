@@ -140,6 +140,7 @@ export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePla
       travelMinutes: pick.transfer.minutes,
       distanceKm: Math.round(pick.transfer.distance * 10) / 10,
       travelMode: pick.transfer.mode,
+      routeProvider: 'estimate',
       reason: reasonFor(pick.item, wanted),
     });
     used.add(pick.item.id);
@@ -170,6 +171,7 @@ export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePla
       travelMinutes: transfer.minutes,
       distanceKm: Math.round(transfer.distance * 10) / 10,
       travelMode: transfer.mode,
+      routeProvider: 'estimate',
       reason: `可选延伸 · ${reasonFor(item, wanted)}`,
     }));
 
@@ -189,6 +191,8 @@ export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePla
     remainingAdvice: remainingAdvice(remainingMinutes, optionalStops.length),
     totalMinutes: elapsed,
     totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
+    routeProvider: 'estimate',
+    routeNotice: '当前使用本地距离模型估算交通时间。',
     matchedInterests,
     pace: options.pace,
   };
@@ -206,7 +210,7 @@ export function beijingRouteToText(plan: BeijingRoutePlan): string {
       (stop, index) =>
         `${index + 2}. ${stop.place.name}（${stop.travelMode}约 ${stop.travelMinutes} 分钟，停留 ${Math.round(stop.leave - stop.arrive)} 分钟）`,
     ),
-    `总计：${formatDuration(plan.totalMinutes)}，点位间估算约 ${plan.totalDistanceKm} 公里`,
+    `总计：${formatDuration(plan.totalMinutes)}，点位间约 ${plan.totalDistanceKm} 公里（${plan.routeProvider === 'amap' ? '高德实时路线' : plan.routeProvider === 'hybrid' ? '高德与本地混合路线' : '本地估算'}）`,
     `剩余时间：${plan.remainingMinutes} 分钟。${plan.remainingAdvice}`,
   ];
   return lines.join('\n');
