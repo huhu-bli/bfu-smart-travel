@@ -59,5 +59,5 @@ export function resolveEndpoint(settings: AgentSettings): string {
   if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
     throw new Error('共享 Agent 地址配置无效。');
   }
-  return `${url}/chat/completions`;
+  return url + '/chat/completions';
 }

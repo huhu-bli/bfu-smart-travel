@@ -68,19 +68,18 @@ export interface AMapNamespace {
 
 let amapPromise: Promise<AMapNamespace> | null = null;
 
-function readSiteEnv(key: string): string {
-  const bag = (globalThis as { __BFU_ENV__?: Record<string, unknown> }).__BFU_ENV__;
-  const runtimeValue = bag?.[key];
-  if (typeof runtimeValue === 'string' && !runtimeValue.startsWith('%')) {
-    return runtimeValue.trim();
-  }
-  return '';
+type AmapEnvKey = 'VITE_AMAP_KEY' | 'VITE_AMAP_SECURITY_CODE';
+
+function readBuildEnv(key: AmapEnvKey): string {
+  const env = (import.meta as ImportMeta & { env?: Record<string, unknown> }).env;
+  const value = env?.[key];
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 export function readAmapRuntimeConfig(): { key: string; securityCode: string } {
   return {
-    key: readSiteEnv('VITE_AMAP_KEY'),
-    securityCode: readSiteEnv('VITE_AMAP_SECURITY_CODE'),
+    key: readBuildEnv('VITE_AMAP_KEY'),
+    securityCode: readBuildEnv('VITE_AMAP_SECURITY_CODE'),
   };
 }
 
@@ -106,7 +105,7 @@ export function loadAMap(key: string, securityCode: string): Promise<AMapNamespa
       key,
       plugin: 'AMap.PlaceSearch,AMap.Scale,AMap.ToolBar',
     });
-    script.src = `https://webapi.amap.com/maps?${params.toString()}`;
+    script.src = 'https://webapi.amap.com/maps?' + params.toString();
     script.async = true;
     script.onload = () => {
       const loaded = (globalThis as { AMap?: AMapNamespace }).AMap;
