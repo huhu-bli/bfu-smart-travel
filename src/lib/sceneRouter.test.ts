@@ -10,6 +10,10 @@ test('sceneRouter routes Haidian day trips to outside-trip', () => {
   assert.equal(routeScene('周末想在海淀玩半天，别太贵'), 'outside-trip');
 });
 
+test('sceneRouter routes Beijing cross-district trips to outside-trip', () => {
+  assert.equal(routeScene('一天想逛故宫、天坛和奥林匹克公园'), 'outside-trip');
+});
+
 test('sceneRouter keeps an in-campus park in campus mode', () => {
   assert.equal(routeScene('我在北林校园里想逛公园并拍照'), 'campus-route');
 });

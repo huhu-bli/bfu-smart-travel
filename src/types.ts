@@ -94,13 +94,108 @@ export interface RoutePlan {
   pace: PaceOption;
 }
 
-/** 跨页面共享并持久化的当前路线计划。 */
-export interface GlobalRoutePlan {
+export type BeijingPlaceCategory =
+  | 'landmark'
+  | 'heritage'
+  | 'museum'
+  | 'park'
+  | 'university'
+  | 'neighborhood';
+
+export type BeijingDistrictId =
+  | 'dongcheng'
+  | 'xicheng'
+  | 'chaoyang'
+  | 'haidian'
+  | 'fengtai'
+  | 'shijingshan'
+  | 'mentougou'
+  | 'fangshan'
+  | 'tongzhou'
+  | 'shunyi'
+  | 'changping'
+  | 'daxing'
+  | 'huairou'
+  | 'pinggu'
+  | 'miyun'
+  | 'yanqing';
+
+export interface BeijingPlace {
+  id: string;
+  name: string;
+  districtId: BeijingDistrictId;
+  district: string;
+  category: BeijingPlaceCategory;
+  emoji: string;
+  lng: number;
+  lat: number;
+  visit: number;
+  interests: InterestId[];
+  short: string;
+  description: string;
+  highlights: string[];
+  bestTime: string;
+  tips?: string;
+  mustSee?: boolean;
+}
+
+export type CityTravelMode = 'mixed' | 'transit' | 'walk';
+
+export interface BeijingRouteStop {
+  place: BeijingPlace;
+  arrive: number;
+  leave: number;
+  travelMinutes: number;
+  distanceKm: number;
+  travelMode: '步行' | '公共交通';
+  reason: string;
+}
+
+export interface BeijingRouteOptions {
+  scope: 'beijing';
+  interests: InterestId[];
+  minutes: number;
+  pace: PaceOption;
+  travelMode: CityTravelMode;
+  districtIds: BeijingDistrictId[];
+  startPlaceId?: string;
+  includePlaceIds?: string[];
+  excludePlaceIds?: string[];
+}
+
+export interface BeijingRoutePlan {
+  kind: 'beijing';
+  title: string;
+  subtitle: string;
+  origin: BeijingPlace;
+  stops: BeijingRouteStop[];
+  optionalStops: BeijingRouteStop[];
+  remainingMinutes: number;
+  remainingAdvice: string;
+  totalMinutes: number;
+  totalDistanceKm: number;
+  matchedInterests: InterestId[];
+  pace: PaceOption;
+}
+
+export interface CampusGlobalRoutePlan {
+  kind: 'campus';
   plan: RoutePlan;
   options: PlanOptions;
   source: 'agent' | 'manual';
   updatedAt: string;
 }
+
+export interface BeijingGlobalRoutePlan {
+  kind: 'beijing';
+  plan: BeijingRoutePlan;
+  options: BeijingRouteOptions;
+  source: 'agent' | 'manual';
+  updatedAt: string;
+}
+
+/** 跨页面共享并持久化的当前路线计划。 */
+export type GlobalRoutePlan = CampusGlobalRoutePlan | BeijingGlobalRoutePlan;
 
 export interface TripStep {
   time: string;

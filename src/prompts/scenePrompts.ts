@@ -21,15 +21,17 @@ const SCENE_PROMPTS: Record<Exclude<Scene, 'unknown'>, string> = {
     '不知道点位 id 时先调用 list_spots，再调用 get_spot_detail。',
   ].join('\n'),
   'outside-trip': [
-    '当前场景：校外旅行。',
-    '只处理海淀区综合旅行线路、时间、预算与交通建议。',
-    '必须调用 suggest_trip；不要调用校园内部路线工具，也不要把海淀景点当作校园点位。',
+    '当前场景：北京城市路线。',
+    '处理北京市 16 个行政区内的单区或跨区旅行路线、时间与交通建议。',
+    '用户要求规划路线时必须调用 build_beijing_route，不能只给静态推荐文字；不确定点位 id 时先调用 list_beijing_places。',
+    '用户要求加入、删除或保留当前路线站点时，根据当前北京路线上下文传 include_place_ids 和 exclude_place_ids。',
+    '不要调用校园内部路线工具，也不要把城市景点当作校园点位。',
     '用户询问行程地点的天气、温度、降雨或是否适合出行时调用 get_weather；需要路线和天气时可以分别调用两个工具。',
   ].join('\n'),
   weather: [
     '当前场景：天气查询。',
     '只处理指定地点今天或未来几天的天气、温度、降雨、风力和出行建议。',
-    '必须调用 get_weather，不要凭常识回答实时或未来天气；地点不明确时默认海淀区。',
+    '必须调用 get_weather，不要凭常识回答实时或未来天气；地点不明确时默认北京市。',
   ].join('\n'),
   'system-help': [
     '当前场景：使用帮助。',
@@ -40,7 +42,7 @@ const SCENE_PROMPTS: Record<Exclude<Scene, 'unknown'>, string> = {
 
 const UNKNOWN_SCENE_PROMPT = [
   '当前场景尚未确定。',
-  '不要调用旅行工具。请先确认用户想游览整个海淀区、进入某所高校、了解具体点位，还是需要使用帮助。',
+  '不要调用旅行工具。请先确认用户想游览北京市、某个行政区、进入某所高校、了解具体点位，还是需要使用帮助。',
 ].join('\n');
 
 export function promptForScene(scene: Scene): string {

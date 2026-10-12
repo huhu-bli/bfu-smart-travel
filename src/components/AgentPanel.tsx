@@ -1,21 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { spotAcrossCampuses } from '../data/campuses';
+import { BEIJING_PLACE_MAP } from '../data/beijingPlaces';
 import { TRIPS } from '../data/trips';
 import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
   DEFAULT_AGENT_SETTINGS,
+  describeBeijingPlanOption,
   describePlanOption,
+  formatBeijingPlanSummary,
   formatPlanSummary,
   runAgentTurn,
   type AgentHistory,
 } from '../lib/agent';
 import { routeScene, sceneLabel, type Scene } from '../lib/sceneRouter';
 import {
-  HAIDIAN_TARGET,
+  BEIJING_TARGET,
   resolveTravelTarget,
   type TravelTarget,
 } from '../lib/travelTarget';
-import type { PlanOptions, RoutePlan } from '../types';
+import type {
+  BeijingRouteOptions,
+  BeijingRoutePlan,
+  PlanOptions,
+  RoutePlan,
+} from '../types';
 
 interface Props {
   open: boolean;
@@ -23,10 +31,14 @@ interface Props {
   onClose: () => void;
   currentPlan: RoutePlan | null;
   currentPlanOptions: PlanOptions | null;
+  currentBeijingPlan: BeijingRoutePlan | null;
+  currentBeijingPlanOptions: BeijingRouteOptions | null;
   onSelectSpot: (id: string) => void;
   onPlanGenerated: (plan: RoutePlan, options: PlanOptions) => void;
   onApplyPlan: (plan: RoutePlan, options: PlanOptions) => void;
-  onOpenMap: (scope?: 'campus' | 'haidian') => void;
+  onBeijingPlanGenerated: (plan: BeijingRoutePlan, options: BeijingRouteOptions) => void;
+  onApplyBeijingPlan: (plan: BeijingRoutePlan, options: BeijingRouteOptions) => void;
+  onOpenMap: (scope?: 'campus' | 'beijing') => void;
   onOpenTrips: () => void;
 }
 
@@ -36,7 +48,10 @@ interface ChatTurn {
   text: string;
   plan?: RoutePlan | null;
   planOptions?: PlanOptions | null;
+  beijingPlan?: BeijingRoutePlan | null;
+  beijingPlanOptions?: BeijingRouteOptions | null;
   spotIds?: string[];
+  placeIds?: string[];
   tripIds?: string[];
   trace?: string[];
   isError?: boolean;
@@ -50,19 +65,19 @@ interface PanelSize {
 }
 
 const QUICK_PROMPTS = [
+  '我有一天，想去故宫、天坛和什刹海，帮我生成路线',
   '我有 3 小时，想去北京交通大学逛一逛',
-  '我只有 1 小时，从北林正门进，怎么逛最值？',
-  '周末想在海淀玩半天，别太贵，有什么推荐？',
+  '周末想在海淀玩半天，喜欢园林和拍照',
 ];
 
 /** 聊天记录存在本地，刷新页面还能接着聊；只保留最近 30 条显示消息。 */
-const CHAT_STORAGE_KEY = 'haidian-smart-travel:chat:v2';
+const CHAT_STORAGE_KEY = 'beijing-smart-travel:chat:v3';
 const KEEP_TURNS = 30;
 const DEFAULT_PANEL_SIZE: PanelSize = { width: 396, height: null };
 const PANEL_SIZE_STORAGE_KEY = 'haidian-smart-travel:agent-panel-size';
 
 function conversationKey(scene: Scene, target: TravelTarget): string {
-  return `${scene}:${target.kind === 'campus' ? target.campusId : 'haidian'}`;
+  return `${scene}:${target.kind === 'campus' ? target.campusId : target.districtIds?.join('-') || 'beijing'}`;
 }
 const MIN_PANEL_WIDTH = 320;
 const MAX_PANEL_WIDTH = 720;
@@ -118,9 +133,13 @@ export default function AgentPanel({
   onClose,
   currentPlan,
   currentPlanOptions,
+  currentBeijingPlan,
+  currentBeijingPlanOptions,
   onSelectSpot,
   onPlanGenerated,
   onApplyPlan,
+  onBeijingPlanGenerated,
+  onApplyBeijingPlan,
   onOpenMap,
   onOpenTrips,
 }: Props) {
@@ -131,8 +150,8 @@ export default function AgentPanel({
   const historyRef = useRef<AgentHistory>([]);
   const historiesRef = useRef<Record<string, AgentHistory>>({});
   const activeSceneRef = useRef<Scene>('unknown');
-  const activeTargetRef = useRef<TravelTarget>(HAIDIAN_TARGET);
-  const activeConversationKeyRef = useRef(conversationKey('unknown', HAIDIAN_TARGET));
+  const activeTargetRef = useRef<TravelTarget>(BEIJING_TARGET);
+  const activeConversationKeyRef = useRef(conversationKey('unknown', BEIJING_TARGET));
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const localMemoryRef = useRef<Record<string, LocalMemory>>({});
   const chatRestored = useRef(false);
@@ -278,7 +297,7 @@ export default function AgentPanel({
       if (Array.isArray(saved.turns) && saved.turns.length) {
         historiesRef.current = saved.histories ?? {};
         activeSceneRef.current = saved.activeScene ?? 'unknown';
-        activeTargetRef.current = saved.activeTarget ?? HAIDIAN_TARGET;
+        activeTargetRef.current = saved.activeTarget ?? BEIJING_TARGET;
         activeConversationKeyRef.current = saved.activeConversationKey ??
           conversationKey(activeSceneRef.current, activeTargetRef.current);
         historyRef.current = historiesRef.current[activeConversationKeyRef.current] ?? saved.history ?? [];
@@ -323,6 +342,8 @@ export default function AgentPanel({
       previousTarget: target,
       currentPlan,
       currentPlanOptions,
+      currentBeijingPlan,
+      currentBeijingPlanOptions,
     });
 
   const send = async (text: string) => {
@@ -333,7 +354,7 @@ export default function AgentPanel({
     setBusy(true);
     const target = resolveTravelTarget(question, activeTargetRef.current);
     const routedScene = routeScene(question, activeSceneRef.current);
-    const scene = routedScene === 'campus-route' && target.kind === 'district'
+    const scene = routedScene === 'campus-route' && target.kind !== 'campus'
       ? 'outside-trip'
       : routedScene;
     const key = conversationKey(scene, target);
@@ -352,6 +373,9 @@ export default function AgentPanel({
         activeTargetRef.current = local.memory.target;
         activeConversationKeyRef.current = localKey;
         if (local.plan && local.planOptions) onPlanGenerated(local.plan, local.planOptions);
+        if (local.beijingPlan && local.beijingPlanOptions) {
+          onBeijingPlanGenerated(local.beijingPlan, local.beijingPlanOptions);
+        }
         setTurns((prev) => [
           ...prev,
           {
@@ -360,7 +384,10 @@ export default function AgentPanel({
             text: local.text,
             plan: local.plan,
             planOptions: local.planOptions,
+            beijingPlan: local.beijingPlan,
+            beijingPlanOptions: local.beijingPlanOptions,
             spotIds: local.spotIds,
+            placeIds: local.placeIds,
             tripIds: local.tripIds,
             trace: [`场景：${sceneLabel(local.memory.scene)}`, ...local.trace],
             offline: true,
@@ -381,6 +408,9 @@ export default function AgentPanel({
       activeTargetRef.current = result.target;
       activeConversationKeyRef.current = resultKey;
       if (result.plan && result.planOptions) onPlanGenerated(result.plan, result.planOptions);
+      if (result.beijingPlan && result.beijingPlanOptions) {
+        onBeijingPlanGenerated(result.beijingPlan, result.beijingPlanOptions);
+      }
       setTurns((prev) => [
         ...prev,
         {
@@ -389,7 +419,10 @@ export default function AgentPanel({
           text: result.text,
           plan: result.plan,
           planOptions: result.planOptions,
+          beijingPlan: result.beijingPlan,
+          beijingPlanOptions: result.beijingPlanOptions,
           spotIds: result.spotIds,
+          placeIds: result.placeIds,
           tripIds: result.tripIds,
           trace: [
             `场景：${sceneLabel(result.scene)}`,
@@ -409,6 +442,9 @@ export default function AgentPanel({
         activeTargetRef.current = fallback.memory.target;
         activeConversationKeyRef.current = fallbackKey;
         if (fallback.plan && fallback.planOptions) onPlanGenerated(fallback.plan, fallback.planOptions);
+        if (fallback.beijingPlan && fallback.beijingPlanOptions) {
+          onBeijingPlanGenerated(fallback.beijingPlan, fallback.beijingPlanOptions);
+        }
         setTurns((prev) => [
           ...prev,
           {
@@ -417,7 +453,10 @@ export default function AgentPanel({
             text: fallback.text,
             plan: fallback.plan,
             planOptions: fallback.planOptions,
+            beijingPlan: fallback.beijingPlan,
+            beijingPlanOptions: fallback.beijingPlanOptions,
             spotIds: fallback.spotIds,
+            placeIds: fallback.placeIds,
             tripIds: fallback.tripIds,
             trace: [
               `场景：${sceneLabel(fallback.memory.scene)}`,
@@ -452,8 +491,8 @@ export default function AgentPanel({
     historiesRef.current = {};
     localMemoryRef.current = {};
     activeSceneRef.current = 'unknown';
-    activeTargetRef.current = HAIDIAN_TARGET;
-    activeConversationKeyRef.current = conversationKey('unknown', HAIDIAN_TARGET);
+    activeTargetRef.current = BEIJING_TARGET;
+    activeConversationKeyRef.current = conversationKey('unknown', BEIJING_TARGET);
     setTurns([]);
     try {
       window.localStorage.removeItem(CHAT_STORAGE_KEY);
@@ -508,7 +547,7 @@ export default function AgentPanel({
             {turns.length === 0 ? (
               <div className="agent-welcome">
                 <p>
-                  我是海淀智能旅行助手，可以规划海淀景点路线，也能为已收录的高校生成校内路线。
+                  我是北京智能旅行助手，可以规划北京 16 区的城市路线，也能为已收录的高校生成校内路线。
                   {configured
                     ? ' 通过千问 Agent 规划路线，追问「改成 2 小时」也能接着调整。'
                     : ' 当前使用内置助手；排完路线后接着说「改成 2 小时」「换成南门」也能继续调整。'}
@@ -571,13 +610,59 @@ export default function AgentPanel({
                         type="button"
                         className="ghost-btn"
                         onClick={() => {
-                          onOpenMap(turn.planOptions?.campusId === 'bfu' || !turn.planOptions?.campusId ? 'campus' : 'haidian');
+                          onOpenMap(turn.planOptions?.campusId === 'bfu' || !turn.planOptions?.campusId ? 'campus' : 'beijing');
                           onClose();
                         }}
                       >
                         {turn.planOptions.campusId === 'bfu' || !turn.planOptions.campusId
                           ? '在校园地图中查看'
-                          : '打开海淀综合地图'}
+                          : '打开北京综合地图'}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {turn.beijingPlan && turn.beijingPlanOptions ? (
+                  <div className="agent-card">
+                    <div className="agent-card-head">
+                      <strong>{formatBeijingPlanSummary(turn.beijingPlan)}</strong>
+                      <span>{describeBeijingPlanOption(turn.beijingPlanOptions)}</span>
+                    </div>
+                    <ol className="agent-card-stops">
+                      {[turn.beijingPlan.origin, ...turn.beijingPlan.stops.map((stop) => stop.place)].map((place, index) => {
+                        const transfer = index === 0 ? null : turn.beijingPlan!.stops[index - 1];
+                        return (
+                          <li key={place.id}>
+                            <b>{index + 1}</b>
+                            <span>{place.name}</span>
+                            <span>{transfer ? `${transfer.travelMode} ${transfer.travelMinutes} 分钟` : place.district}</span>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                    {turn.beijingPlan.optionalStops.length ? (
+                      <div className="agent-card-subsection">
+                        <strong>可选站点</strong>
+                        <span>{turn.beijingPlan.optionalStops.map((stop) => `${stop.place.name}（${stop.place.district}）`).join('、')}</span>
+                      </div>
+                    ) : null}
+                    <div className="agent-card-subsection agent-card-subsection--advice">
+                      <strong>剩余时间建议 · 约 {turn.beijingPlan.remainingMinutes} 分钟</strong>
+                      <span>{turn.beijingPlan.remainingAdvice}</span>
+                    </div>
+                    <div className="agent-card-actions">
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        onClick={() => {
+                          onApplyBeijingPlan(turn.beijingPlan!, turn.beijingPlanOptions!);
+                          onClose();
+                        }}
+                      >
+                        已加入计划 · 查看编辑
+                      </button>
+                      <button type="button" className="ghost-btn" onClick={() => { onOpenMap('beijing'); onClose(); }}>
+                        在北京地图中查看
                       </button>
                     </div>
                   </div>
@@ -609,6 +694,15 @@ export default function AgentPanel({
                           {trip?.emoji} {trip?.name ?? id}
                         </button>
                       );
+                    })}
+                  </div>
+                ) : null}
+
+                {turn.placeIds && turn.placeIds.length ? (
+                  <div className="agent-chips">
+                    {turn.placeIds.slice(0, 8).map((id) => {
+                      const place = BEIJING_PLACE_MAP[id];
+                      return place ? <span key={id} className="agent-chip">{place.emoji} {place.name}</span> : null;
                     })}
                   </div>
                 ) : null}

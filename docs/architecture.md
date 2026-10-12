@@ -1,10 +1,10 @@
-# 海淀智能旅行 · 系统架构
+# 北京智能旅行 · 系统架构
 
 本文档描述 `bfu-smart-travel` 当前的代码结构、Agent 调用流程、数据边界和后续扩展规则。
 
 ## 1. 架构定位
 
-本项目是一个以海淀区综合旅行和多高校精细导览为核心的单页应用。北京林业大学是首个精细地图模块，北京交通大学是第二个独立校园数据插件。技术栈为：
+本项目是一个以北京市 16 区城市路线规划和多高校精细导览为核心的单页应用。城市路线与校园路线拥有独立数据模型和规划算法，但统一进入同一份全局旅行计划。北京林业大学是首个精细地图模块，北京交通大学是第二个独立校园数据插件。
 
 - React：页面组件和交互状态
 - TypeScript：类型约束和业务逻辑
@@ -73,6 +73,8 @@ src/
 │  ├─ Planner.tsx              手动路线规划器
 │  ├─ RouteResult.tsx          路线结果和路线编辑
 │  ├─ CampusMap.tsx            SVG 校园地图
+│  ├─ BeijingMap.tsx           北京 16 区综合地图与计划高亮
+│  ├─ BeijingRouteResult.tsx   北京路线结果与增删编辑
 │  ├─ SpotDetail.tsx           点位详情
 │  ├─ SpotsGallery.tsx         点位图鉴
 │  ├─ Trips.tsx                周边线路
@@ -83,7 +85,8 @@ src/
 │  ├─ campuses/                多校园注册表和独立点位数据
 │  │  ├─ index.ts               学校别名、能力和默认入口
 │  │  └─ bjtu.ts                北京交通大学点位数据
-│  ├─ haidianPlaces.ts         海淀综合地图分类点位
+│  ├─ beijingPlaces.ts         北京 16 区路线基础点位与行政区索引
+│  ├─ haidianPlaces.ts         旧版海淀运行时地图配置（兼容保留）
 │  ├─ interests.ts             兴趣、时长、步速和门岗
 │  └─ campusGeometry.ts        校园地图几何数据
 ├─ prompts/                   提示词层
@@ -106,6 +109,7 @@ src/
 │  ├─ toolSchemas.ts           工具参数定义
 │  ├─ toolExecutor.ts          工具执行和数据查询
 │  ├─ planner.ts               路线规划算法
+│  ├─ beijingPlanner.ts        北京城市路线距离、交通与排程算法
 │  └─ storage.ts               localStorage 状态保存
 └─ styles/global.css           全局样式
 
@@ -121,7 +125,7 @@ worker/
 | --- | --- | --- |
 | `campus-route` | 规划或调整目标高校路线 | `list_spots`、`build_route` |
 | `spot-detail` | 讲解目标高校点位 | `list_spots`、`get_spot_detail` |
-| `outside-trip` | 推荐海淀区综合线路 | `suggest_trip` |
+| `outside-trip` | 生成或调整北京城市路线 | `list_beijing_places`、`build_beijing_route`、`get_beijing_place_detail`、`get_weather` |
 | `weather` | 查询指定地点的天气和出行条件 | `get_weather` |
 | `system-help` | 说明使用方法和连接设置 | 无 |
 | `unknown` | 场景不明确，先询问用户 | 无 |
@@ -159,6 +163,9 @@ worker/
 | `build_route` | `toolExecutor.ts` + `planner.ts` | 生成校园路线 |
 | `get_spot_detail` | `toolExecutor.ts` | 获取点位详细信息 |
 | `suggest_trip` | `toolExecutor.ts` | 查询校外线路 |
+| `list_beijing_places` | `toolExecutor.ts` | 查询北京 16 区结构化点位 |
+| `build_beijing_route` | `toolExecutor.ts` + `beijingPlanner.ts` | 生成可写入全局计划的北京路线 |
+| `get_beijing_place_detail` | `toolExecutor.ts` | 获取北京城市点位详情 |
 | `get_weather` | `weather.ts` + `toolExecutor.ts` | 查询 Open-Meteo 天气预报 |
 
 模型负责理解和选择工具，工具负责读取数据和执行计算。重要的距离、时间和点位信息不应由模型自行编造。
@@ -170,9 +177,9 @@ worker/
 当前能力边界：
 
 - 北京林业大学：点位、路线和专用 SVG 地图。
-- 北京交通大学：独立点位和文本路线，地图使用海淀综合地图入口。
+- 北京交通大学：独立点位和文本路线，地图使用北京综合地图入口。
 - 其他已登记高校：只提供海淀地图位置；补齐独立点位数据前不生成校内路线。
-- 海淀区：景点发现和综合线路，不调用校园内部工具。
+- 北京市 16 区：使用统一城市点位库和城市路线算法，不调用校园内部工具。
 
 ## 6. Agent 运行路径
 
@@ -243,7 +250,7 @@ localAgent.ts
 
 ### 全局路线计划
 
-Agent 或手动规划器生成的有效路线统一保存为 `GlobalRoutePlan`，其中同时记录路线、所属校园、规划参数、来源和更新时间。`App.tsx` 是这份状态的唯一所有者，并通过 `useLocalStorage` 持久化，因此刷新页面或切换“地图、点位图鉴、海淀路线、出行清单”时不会丢失。
+Agent 或手动规划器生成的有效路线统一保存为 `GlobalRoutePlan`。它是一个联合类型：`CampusGlobalRoutePlan` 保存校园路线，`BeijingGlobalRoutePlan` 保存北京城市路线。`App.tsx` 是这份状态的唯一所有者，并通过 `useLocalStorage` 持久化，因此刷新页面或切换页面时不会丢失。
 
 ```text
 Agent / 手动规划器
@@ -256,7 +263,7 @@ GlobalRoutePlan（App 全局状态）
 - Agent 生成路线后自动更新全局计划，用户不需要再次复制路线。
 - 顶部计划条在所有主页面显示，可直接删除必游站点或加入可选站点。
 - 路线编辑器支持完整勾选；点位图鉴支持单点加入或移出计划。
-- 增删后仍由 `planner.ts` 重新估算顺序、时长和距离，明确加入的点位不受当前兴趣过滤影响。
+- 校园增删后由 `planner.ts` 重算；北京路线增删后由 `beijingPlanner.ts` 重算。明确加入的点位拥有最高选择权重。
 - 各校园路线只使用本校 `spots`，不能把北交点位加入北林路线。
 
 ## 8. 上下文管理
@@ -289,7 +296,7 @@ Agent 上下文分为两类：
 }
 ```
 
-对话历史按“场景 + 目的地”隔离。北林路线、北交路线和海淀综合行程分别保存，校园路线的具体站点不会带入另一所学校或海淀综合旅行场景。
+对话历史按“场景 + 目的地”隔离。校园路线、北京全域路线和各行政区路线分别保存，校园内部站点不会污染城市级规划上下文。
 
 ## 9. Vercel Serverless Function
 
@@ -369,7 +376,7 @@ APP_TOKEN=服务端访问口令
 ## 11. 当前架构的已知边界
 
 - 场景识别目前主要依赖关键词规则。
-- 路线使用示意坐标和直线距离，不是真实步行导航。
+- 北京路线使用经纬度球面距离与稳定的交通启发式估算，不等同于实时道路导航；校园路线继续使用示意坐标。
 - 校园和校外数据仍是静态 TypeScript 文件。
 - 当前自动测试覆盖路线时长、显式增删、场景路由、工具预算和高校识别；组件级端到端测试仍需补充。
 - 真实 AI 是否可用取决于千问模型、网络和 Vercel 环境变量配置。

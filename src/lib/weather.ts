@@ -15,9 +15,9 @@ interface WeatherPayload {
 }
 
 const DEFAULT_LOCATION: WeatherLocation = {
-  name: '海淀区',
-  latitude: 39.959,
-  longitude: 116.298,
+  name: '北京市',
+  latitude: 39.9042,
+  longitude: 116.4074,
   timezone: TIME_ZONE,
 };
 

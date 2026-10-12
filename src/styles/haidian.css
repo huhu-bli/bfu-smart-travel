@@ -106,6 +106,25 @@
   margin-bottom: 14px;
 }
 
+.beijing-district-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin: 0 0 14px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.beijing-district-filter select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 30px 8px 10px;
+  color: var(--ink);
+  background: #fff;
+}
+
 .haidian-category-list {
   display: flex;
   gap: 7px;
@@ -271,6 +290,46 @@
   padding: 14px 16px;
   text-align: left;
   background: #fff;
+}
+
+.haidian-place-list > button.haidian-place-item {
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+}
+
+.haidian-place-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.haidian-selection {
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+  border-top: 1px solid var(--line);
+  background: #f8fbff;
+}
+
+.haidian-selection p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.haidian-selection a {
+  width: fit-content;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .haidian-place-list > button:hover,
