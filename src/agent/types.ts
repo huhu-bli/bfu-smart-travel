@@ -1,4 +1,9 @@
-import type { PlanOptions, RoutePlan } from '../types';
+import type {
+  BeijingRouteOptions,
+  BeijingRoutePlan,
+  PlanOptions,
+  RoutePlan,
+} from '../types';
 import type { Scene } from '../lib/sceneRouter';
 import type { TravelTarget } from '../lib/travelTarget';
 
@@ -56,7 +61,10 @@ export interface AgentToolContext {
   target: TravelTarget;
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;
+  beijingPlan: BeijingRoutePlan | null;
+  beijingPlanOptions: BeijingRouteOptions | null;
   spotIds: string[];
+  placeIds: string[];
   tripIds: string[];
   trace: string[];
 }
@@ -70,7 +78,10 @@ export interface AgentTurnResult {
   trimmed: boolean;
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;
+  beijingPlan: BeijingRoutePlan | null;
+  beijingPlanOptions: BeijingRouteOptions | null;
   spotIds: string[];
+  placeIds: string[];
   tripIds: string[];
   trace: string[];
   rounds: number;

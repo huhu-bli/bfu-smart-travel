@@ -15,6 +15,39 @@ export default function GlobalRoutePlanBar({
   onRemoveStop,
   onAddOptionalStop,
 }: Props) {
+  if (route.kind === 'beijing') {
+    const { plan } = route;
+    const primary = [plan.origin, ...plan.stops.map((stop) => stop.place)];
+    return (
+      <section className="global-route-plan" aria-label="我的北京全局路线计划">
+        <div className="global-route-plan__head">
+          <div>
+            <span className="global-route-plan__eyebrow">
+              我的北京路线 · {route.source === 'agent' ? 'Agent 推荐' : '手动调整'}
+            </span>
+            <strong>{plan.title}</strong>
+            <small>{primary.length} 站 · {formatDuration(plan.totalMinutes)} · 点位间约 {plan.totalDistanceKm} 公里</small>
+          </div>
+          <button type="button" className="primary-btn primary-btn--sm" onClick={onOpen}>编辑完整计划</button>
+        </div>
+        <div className="global-route-plan__stops" aria-label="计划内目的地">
+          {primary.map((place, index) => (
+            <span className="global-route-plan__chip" key={place.id}>
+              <b>{index + 1}</b>{place.name}
+              <button type="button" aria-label={`从路线中删除${place.name}`} title={`删除${place.name}`} onClick={() => onRemoveStop(place.id)}>×</button>
+            </span>
+          ))}
+        </div>
+        {plan.optionalStops.length ? (
+          <details className="global-route-plan__optional">
+            <summary>从 {plan.optionalStops.length} 个可选目的地中添加</summary>
+            <div>{plan.optionalStops.map((stop) => <button type="button" key={stop.place.id} onClick={() => onAddOptionalStop(stop.place.id)}>＋ {stop.place.name}</button>)}</div>
+          </details>
+        ) : null}
+      </section>
+    );
+  }
+
   const { plan, options } = route;
   const campus = campusById(options.campusId);
   const campusLabel = campus?.shortName ?? options.campusLabel ?? '海淀';

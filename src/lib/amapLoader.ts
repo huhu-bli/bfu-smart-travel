@@ -24,6 +24,8 @@ export interface AMapMarkerInstance {
   on: (event: string, handler: () => void) => void;
 }
 
+export interface AMapPolylineInstance {}
+
 export interface AMapInfoWindowInstance {
   open: (map: AMapMapInstance, position: [number, number]) => void;
   setContent: (content: string) => void;
@@ -48,6 +50,13 @@ export interface AMapNamespace {
     title?: string;
     label?: { content: string; direction: string; offset?: unknown };
   }) => AMapMarkerInstance;
+  Polyline: new (options: {
+    path: Array<[number, number]>;
+    strokeColor: string;
+    strokeWeight: number;
+    strokeOpacity: number;
+    showDir?: boolean;
+  }) => AMapPolylineInstance;
   InfoWindow: new (options: { content: string; offset?: unknown }) => AMapInfoWindowInstance;
   Pixel: new (x: number, y: number) => unknown;
   Scale: new () => unknown;
@@ -89,7 +98,7 @@ export function loadAMap(key: string, securityCode: string): Promise<AMapNamespa
   if (amapPromise) return amapPromise;
 
   if (!key) {
-    return Promise.reject(new Error('海淀地图尚未配置高德地图 JS API Key。'));
+    return Promise.reject(new Error('北京地图尚未配置高德地图 JS API Key。'));
   }
 
   if (securityCode) {

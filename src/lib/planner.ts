@@ -235,7 +235,7 @@ export function buildRoute(spots: Spot[], options: PlanOptions): RoutePlan {
 
 export function routeToText(plan: RoutePlan, startName: string): string {
   const lines = [
-    `海淀智能旅行 · ${plan.title}`,
+    `北京智能旅行 · ${plan.title}`,
     plan.subtitle,
     `起点：${startName}`,
     '',

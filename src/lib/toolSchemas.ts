@@ -1,5 +1,6 @@
 import { GATE_IDS, INTERESTS } from '../data/interests';
 import { CAMPUS_IDS } from '../data/campuses';
+import { BEIJING_DISTRICT_IDS } from '../data/beijingPlaces';
 
 /** 工具参数中的枚举来自 data 层，不复制到提示词中，避免提示词和数据重复维护。 */
 export const INTEREST_IDS = INTERESTS.map((item) => item.id);
@@ -122,6 +123,100 @@ export const TOOL_SCHEMAS = [
         },
       },
       required: ['campus_id', 'spot_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: 'function',
+    name: 'list_beijing_places',
+    description:
+      '查询北京市城市级旅行点位及其 id。规划北京路线前，用它按行政区、兴趣或关键词找到可用点位；返回结果覆盖北京 16 区的代表性景点、高校、文博、公园和街区。',
+    strict: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        district_ids: {
+          type: 'array',
+          items: { type: 'string', enum: BEIJING_DISTRICT_IDS },
+          description: '限定行政区；传空数组表示北京市全域。',
+        },
+        interests: {
+          type: 'array',
+          items: { type: 'string', enum: INTEREST_IDS },
+          description: '兴趣过滤；传空数组表示不限。',
+        },
+        keyword: {
+          type: 'string',
+          description: '景点名称或主题关键词；传空字符串表示不限。',
+        },
+      },
+      required: ['district_ids', 'interests', 'keyword'],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: 'function',
+    name: 'build_beijing_route',
+    description:
+      '生成北京市城市级可执行路线，并返回结构化必游站点、可选站点、区际交通估算和剩余时间。北京景点或跨区旅行必须使用此工具，不能只返回静态推荐文字。',
+    strict: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        minutes: {
+          type: 'integer',
+          description: '可用总时长（分钟），范围 60–720。',
+        },
+        interests: {
+          type: 'array',
+          items: { type: 'string', enum: INTEREST_IDS },
+          description: '兴趣方向；传空数组使用历史、人文、摄影的综合默认值。',
+        },
+        district_ids: {
+          type: 'array',
+          items: { type: 'string', enum: BEIJING_DISTRICT_IDS },
+          description: '限定行政区；传空数组表示北京市全域。',
+        },
+        pace: {
+          type: 'string',
+          enum: ['easy', 'normal', 'packed'],
+          description: '游览节奏。',
+        },
+        travel_mode: {
+          type: 'string',
+          enum: ['mixed', 'transit', 'walk'],
+          description: 'mixed=近距离步行、远距离公共交通；transit=公共交通优先；walk=全程步行。',
+        },
+        start_place_id: {
+          type: 'string',
+          description: '明确的首站点位 id；没有指定时传空字符串。',
+        },
+        include_place_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '用户明确要求加入或保留的北京点位 id。',
+        },
+        exclude_place_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '用户明确要求删除的北京点位 id。',
+        },
+      },
+      required: ['minutes', 'interests', 'district_ids', 'pace', 'travel_mode', 'start_place_id', 'include_place_ids', 'exclude_place_ids'],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: 'function',
+    name: 'get_beijing_place_detail',
+    description: '获取北京市城市级点位的介绍、行政区、亮点、建议停留时间和提示。',
+    strict: true,
+    parameters: {
+      type: 'object',
+      properties: {
+        place_id: { type: 'string', description: '北京点位 id，可先调用 list_beijing_places 获取。' },
+      },
+      required: ['place_id'],
       additionalProperties: false,
     },
   },

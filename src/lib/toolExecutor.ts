@@ -2,7 +2,20 @@ import { PACES } from '../data/interests';
 import { campusById, type CampusDefinition } from '../data/campuses';
 import type { Spot } from '../types';
 import { TRIPS } from '../data/trips';
-import type { InterestId, PaceId, PlanOptions } from '../types';
+import {
+  BEIJING_DISTRICT_IDS,
+  BEIJING_PLACE_MAP,
+  BEIJING_PLACES,
+} from '../data/beijingPlaces';
+import type {
+  BeijingDistrictId,
+  BeijingRouteOptions,
+  CityTravelMode,
+  InterestId,
+  PaceId,
+  PlanOptions,
+} from '../types';
+import { buildBeijingRoute } from './beijingPlanner';
 import { buildRoute, formatClock } from './planner';
 import { fetchWeather } from './weather';
 import { INTEREST_IDS } from './toolSchemas';
@@ -48,7 +61,7 @@ function campusForTool(
   context: AgentToolContext,
 ): { campus: CampusDefinition | null; error?: string } {
   if (context.target.kind !== 'campus') {
-    return { campus: null, error: '当前目标是海淀区综合旅行，请先明确要进入哪所学校，再调用校园工具。' };
+    return { campus: null, error: '当前目标是北京市城市旅行，请先明确要进入哪所学校，再调用校园工具。' };
   }
   const targetCampus = campusById(context.target.campusId);
   if (!targetCampus) {
@@ -219,6 +232,170 @@ export async function runTool(
     });
   }
 
+  if (name === 'list_beijing_places') {
+    if (context.target.kind === 'campus') {
+      context.trace.push('list_beijing_places(目标为校园)');
+      return JSON.stringify({ error: '当前目标是校园内部，请使用校园点位工具。' });
+    }
+    const requestedDistricts = asStringArray(args.district_ids, BEIJING_DISTRICT_IDS) as BeijingDistrictId[];
+    const districtIds = context.target.districtIds?.length
+      ? context.target.districtIds
+      : requestedDistricts;
+    const interests = asStringArray(args.interests, INTEREST_IDS) as InterestId[];
+    const keyword = typeof args.keyword === 'string' ? args.keyword.trim() : '';
+    const matched = BEIJING_PLACES.filter((place) => {
+      const districtHit = !districtIds.length || districtIds.includes(place.districtId);
+      const interestHit = !interests.length || place.interests.some((id) => interests.includes(id));
+      const keywordHit =
+        !keyword ||
+        place.name.includes(keyword) ||
+        place.district.includes(keyword) ||
+        place.short.includes(keyword) ||
+        place.highlights.some((item) => item.includes(keyword));
+      return districtHit && interestHit && keywordHit;
+    });
+    matched.slice(0, 20).forEach((place) => {
+      if (!context.placeIds.includes(place.id)) context.placeIds.push(place.id);
+    });
+    context.trace.push(`list_beijing_places(${matched.length} 个点位)`);
+    return JSON.stringify({
+      scope: districtIds.length ? context.target.label : '北京市',
+      count: matched.length,
+      places: matched.slice(0, 20).map((place) => ({
+        id: place.id,
+        name: place.name,
+        district: place.district,
+        category: place.category,
+        visitMinutes: place.visit,
+        interests: place.interests,
+        short: place.short,
+      })),
+    });
+  }
+
+  if (name === 'build_beijing_route') {
+    if (context.target.kind === 'campus') {
+      context.trace.push('build_beijing_route(目标为校园)');
+      return JSON.stringify({ error: '当前目标是校园内部，请使用 build_route。' });
+    }
+    const rawMinutes = typeof args.minutes === 'number' ? args.minutes : Number(args.minutes);
+    const minutes = Number.isFinite(rawMinutes)
+      ? Math.min(720, Math.max(60, Math.round(rawMinutes)))
+      : context.beijingPlanOptions?.minutes ?? 240;
+    const interests = asStringArray(args.interests, INTEREST_IDS) as InterestId[];
+    const requestedDistricts = asStringArray(args.district_ids, BEIJING_DISTRICT_IDS) as BeijingDistrictId[];
+    const districtIds = context.target.districtIds?.length
+      ? context.target.districtIds
+      : requestedDistricts;
+    const paceId = (typeof args.pace === 'string' && PACES.some((item) => item.id === args.pace)
+      ? args.pace
+      : 'normal') as PaceId;
+    const pace = PACES.find((item) => item.id === paceId) ?? PACES[1];
+    const travelMode = (['mixed', 'transit', 'walk'].includes(String(args.travel_mode))
+      ? args.travel_mode
+      : 'mixed') as CityTravelMode;
+    const validPlaceIds = BEIJING_PLACES.map((place) => place.id);
+    const includePlaceIds = asStringArray(args.include_place_ids, validPlaceIds);
+    const excludePlaceIds = asStringArray(args.exclude_place_ids, validPlaceIds);
+    const requestedStart = typeof args.start_place_id === 'string' ? args.start_place_id : '';
+    const startPlaceId = validPlaceIds.includes(requestedStart) ? requestedStart : undefined;
+    const options: BeijingRouteOptions = {
+      scope: 'beijing',
+      interests,
+      minutes,
+      pace,
+      travelMode,
+      districtIds,
+      startPlaceId,
+      includePlaceIds,
+      excludePlaceIds,
+    };
+    try {
+      const plan = buildBeijingRoute(options);
+      context.beijingPlan = plan;
+      context.beijingPlanOptions = options;
+      [plan.origin, ...plan.stops.map((stop) => stop.place)].forEach((place) => {
+        if (!context.placeIds.includes(place.id)) context.placeIds.push(place.id);
+      });
+      context.trace.push(
+        `build_beijing_route(${1 + plan.stops.length} 必游 / ${plan.optionalStops.length} 可选 / ${Math.round(plan.totalMinutes)} 分钟)`,
+      );
+      return JSON.stringify({
+        title: plan.title,
+        scope: districtIds.length ? context.target.label : '北京市',
+        totalMinutes: Math.round(plan.totalMinutes),
+        totalDistanceKm: plan.totalDistanceKm,
+        mustSeeStops: [
+          {
+            order: 1,
+            placeId: plan.origin.id,
+            name: plan.origin.name,
+            district: plan.origin.district,
+            arrive: '09:00',
+            leave: formatClock(
+              plan.stops[0]
+                ? plan.stops[0].arrive - plan.stops[0].travelMinutes
+                : plan.totalMinutes,
+            ),
+            travelMode: '起点',
+            travelMinutes: 0,
+          },
+          ...plan.stops.map((stop, index) => ({
+            order: index + 2,
+            placeId: stop.place.id,
+            name: stop.place.name,
+            district: stop.place.district,
+            arrive: formatClock(stop.arrive),
+            leave: formatClock(stop.leave),
+            travelMode: stop.travelMode,
+            travelMinutes: stop.travelMinutes,
+            distanceKm: stop.distanceKm,
+            reason: stop.reason,
+          })),
+        ],
+        optionalStops: plan.optionalStops.map((stop) => ({
+          placeId: stop.place.id,
+          name: stop.place.name,
+          district: stop.place.district,
+          travelMode: stop.travelMode,
+          travelMinutes: stop.travelMinutes,
+          reason: stop.reason,
+        })),
+        remainingMinutes: plan.remainingMinutes,
+        remainingAdvice: plan.remainingAdvice,
+        note: '交通时间为路线算法估算；实时拥堵、公共交通换乘、开放时间和预约要求请以地图导航及官方公告为准。',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '北京路线生成失败。';
+      context.trace.push('build_beijing_route(失败)');
+      return JSON.stringify({ error: message });
+    }
+  }
+
+  if (name === 'get_beijing_place_detail') {
+    const rawId = typeof args.place_id === 'string' ? args.place_id.trim() : '';
+    const place = BEIJING_PLACE_MAP[rawId] ?? BEIJING_PLACES.find(
+      (item) => item.name === rawId || item.name.includes(rawId) || rawId.includes(item.name),
+    );
+    if (!place) {
+      context.trace.push('get_beijing_place_detail(未找到)');
+      return JSON.stringify({ error: '没有找到该北京点位，请先调用 list_beijing_places。' });
+    }
+    if (!context.placeIds.includes(place.id)) context.placeIds.push(place.id);
+    context.trace.push(`get_beijing_place_detail(${place.name})`);
+    return JSON.stringify({
+      id: place.id,
+      name: place.name,
+      district: place.district,
+      category: place.category,
+      description: place.description,
+      highlights: place.highlights,
+      bestTime: place.bestTime,
+      visitMinutes: place.visit,
+      tips: place.tips ?? '',
+    });
+  }
+
   if (name === 'suggest_trip') {
     const duration = args.duration === 'full' ? 'full' : 'half';
     const theme = typeof args.theme === 'string' ? args.theme.trim() : '';
@@ -278,7 +455,7 @@ export async function runTool(
   if (name === 'get_weather') {
     const providedLocation = typeof args.location === 'string' ? args.location.trim() : '';
     const genericLocation = /^(校园|校内|学校)$/.test(providedLocation);
-    const location = !providedLocation || genericLocation ? context.target.label || '海淀区' : providedLocation;
+    const location = !providedLocation || genericLocation ? context.target.label || '北京市' : providedLocation;
     const date = typeof args.date === 'string' ? args.date.trim() : 'today';
     try {
       const weather = await fetchWeather(location, date);

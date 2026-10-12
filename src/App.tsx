@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AgentPanel from './components/AgentPanel';
+import BeijingMap from './components/BeijingMap';
+import BeijingRouteResult from './components/BeijingRouteResult';
 import CampusMap from './components/CampusMap';
 import Checklist from './components/Checklist';
 import Footer from './components/Footer';
 import GlobalRoutePlanBar from './components/GlobalRoutePlanBar';
-import HaidianMap from './components/HaidianMap';
 import Header, { type TabId } from './components/Header';
 import Planner from './components/Planner';
 import RouteResult from './components/RouteResult';
@@ -14,9 +15,20 @@ import Trips from './components/Trips';
 import { DURATIONS, GATE_IDS, PACES } from './data/interests';
 import { SPOTS, SPOT_MAP } from './data/spots';
 import { campusById, spotAcrossCampuses } from './data/campuses';
+import { buildBeijingRoute } from './lib/beijingPlanner';
 import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
-import type { GlobalRoutePlan, InterestId, PaceId, PlanOptions, RoutePlan, Spot } from './types';
+import type {
+  BeijingRouteOptions,
+  BeijingRoutePlan,
+  CampusGlobalRoutePlan,
+  GlobalRoutePlan,
+  InterestId,
+  PaceId,
+  PlanOptions,
+  RoutePlan,
+  Spot,
+} from './types';
 
 const REPO_URL = 'https://github.com/huhu-bli/bfu-smart-travel';
 
@@ -33,7 +45,7 @@ export default function App() {
   const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
-  const [mapScope, setMapScope] = useState<'campus' | 'haidian'>('campus');
+  const [mapScope, setMapScope] = useState<'campus' | 'beijing'>('campus');
   const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
   const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
 
@@ -53,13 +65,31 @@ export default function App() {
   }, [interestIds, durationId, paceId, startId, includedSpotIds, excludedSpotIds]);
 
   const [globalRoute, setGlobalRoute] = useLocalStorage<GlobalRoutePlan>('global-route-plan:v1', {
+    kind: 'campus',
     plan: buildRoute(SPOTS, options),
     options,
     source: 'manual',
     updatedAt: new Date().toISOString(),
   });
-  const plan = globalRoute.plan;
-  const activeOptions = globalRoute.options;
+  useEffect(() => {
+    const savedKind = (globalRoute as GlobalRoutePlan & { kind?: 'campus' | 'beijing' }).kind;
+    if (!savedKind) {
+      setGlobalRoute({ ...globalRoute, kind: 'campus' } as CampusGlobalRoutePlan);
+    }
+  }, [globalRoute, setGlobalRoute]);
+  const fallbackCampusRoute = useMemo<CampusGlobalRoutePlan>(() => ({
+    kind: 'campus',
+    plan: buildRoute(SPOTS, options),
+    options,
+    source: 'manual',
+    updatedAt: new Date().toISOString(),
+  }), [options]);
+  // 兼容升级前 localStorage 中没有 kind 字段的校园计划。
+  const campusRoute = globalRoute.kind === 'beijing'
+    ? fallbackCampusRoute
+    : ({ ...globalRoute, kind: 'campus' } as CampusGlobalRoutePlan);
+  const plan = campusRoute.plan;
+  const activeOptions = campusRoute.options;
   const activeCampus = campusById(activeOptions.campusId ?? 'bfu');
   const activeSpots = useMemo<Spot[]>(() => {
     if (activeCampus?.spots?.length) return activeCampus.spots;
@@ -89,6 +119,7 @@ export default function App() {
 
   const generate = () => {
     setGlobalRoute({
+      kind: 'campus',
       plan: buildRoute(SPOTS, options),
       options,
       source: 'manual',
@@ -108,6 +139,7 @@ export default function App() {
   /** Agent 一旦生成有效路线就写入全局计划；查看按钮只负责把用户带到编辑器。 */
   const savePlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
     setGlobalRoute({
+      kind: 'campus',
       plan: nextPlan,
       options: nextOptions,
       source: 'agent',
@@ -132,7 +164,34 @@ export default function App() {
 
   const applyPlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
     savePlanFromAgent(nextPlan, nextOptions);
-    setMapScope(nextOptions.campusId === 'bfu' || !nextOptions.campusId ? 'campus' : 'haidian');
+    setMapScope(nextOptions.campusId === 'bfu' || !nextOptions.campusId ? 'campus' : 'beijing');
+    setTab('planner');
+    window.setTimeout(() => {
+      document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
+
+  const saveBeijingPlanFromAgent = (
+    nextPlan: BeijingRoutePlan,
+    nextOptions: BeijingRouteOptions,
+  ) => {
+    setGlobalRoute({
+      kind: 'beijing',
+      plan: nextPlan,
+      options: nextOptions,
+      source: 'agent',
+      updatedAt: new Date().toISOString(),
+    });
+    setMapScope('beijing');
+    setDirty(false);
+  };
+
+  const applyBeijingPlanFromAgent = (
+    nextPlan: BeijingRoutePlan,
+    nextOptions: BeijingRouteOptions,
+  ) => {
+    saveBeijingPlanFromAgent(nextPlan, nextOptions);
+    setMapScope('beijing');
     setTab('planner');
     window.setTimeout(() => {
       document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -151,12 +210,30 @@ export default function App() {
       setExcludedSpotIds(nextExcludedIds);
     }
     setGlobalRoute({
+      kind: 'campus',
       plan: buildRoute(activeSpots, nextOptions),
       options: nextOptions,
       source: globalRoute.source,
       updatedAt: new Date().toISOString(),
     });
     setDirty(false);
+  };
+
+  const applyBeijingRouteEdits = (includePlaceIds: string[], excludePlaceIds: string[]) => {
+    if (globalRoute.kind !== 'beijing' || !includePlaceIds.length) return;
+    const nextOptions: BeijingRouteOptions = {
+      ...globalRoute.options,
+      startPlaceId: includePlaceIds[0],
+      includePlaceIds,
+      excludePlaceIds,
+    };
+    setGlobalRoute({
+      kind: 'beijing',
+      plan: buildBeijingRoute(nextOptions),
+      options: nextOptions,
+      source: globalRoute.source,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   const setExactPlanStops = (spotIds: string[]) => {
@@ -168,10 +245,26 @@ export default function App() {
   };
 
   const removePlanStop = (spotId: string) => {
+    if (globalRoute.kind === 'beijing') {
+      const current = [globalRoute.plan.origin.id, ...globalRoute.plan.stops.map((stop) => stop.place.id)];
+      applyBeijingRouteEdits(
+        current.filter((id) => id !== spotId),
+        Array.from(new Set([...(globalRoute.options.excludePlaceIds ?? []), spotId])),
+      );
+      return;
+    }
     setExactPlanStops(plan.stops.map((stop) => stop.spot.id).filter((id) => id !== spotId));
   };
 
   const addOptionalStop = (spotId: string) => {
+    if (globalRoute.kind === 'beijing') {
+      const current = [globalRoute.plan.origin.id, ...globalRoute.plan.stops.map((stop) => stop.place.id)];
+      applyBeijingRouteEdits(
+        [...current, spotId],
+        (globalRoute.options.excludePlaceIds ?? []).filter((id) => id !== spotId),
+      );
+      return;
+    }
     setExactPlanStops([...plan.stops.map((stop) => stop.spot.id), spotId]);
   };
 
@@ -181,7 +274,7 @@ export default function App() {
   };
 
   const openPlanMap = () => {
-    setMapScope(activeCampus?.mapMode === 'bfu-svg' ? 'campus' : 'haidian');
+    setMapScope(globalRoute.kind === 'beijing' || activeCampus?.mapMode !== 'bfu-svg' ? 'beijing' : 'campus');
     setTab('map');
   };
 
@@ -196,21 +289,21 @@ export default function App() {
       <main className="app-main">
         <section className="hero-card">
           <div className="hero-copy">
-            <span className="hero-pill">海淀城市漫游 · 高校 · 公园 · 博物馆</span>
+            <span className="hero-pill">北京全域漫游 · 16 区 · 高校 · 公园 · 文博</span>
             <h1>
               一张地图，
               <br />
-              逛遍海淀。
+              逛遍北京。
             </h1>
             <p>
-              告诉 Agent 你想去哪里、逛多久、喜欢什么，它会在高校、公园、博物馆与城市路线之间帮你组织一趟海淀旅行。
+              告诉 Agent 想去的行政区、景点、时长与兴趣，它会生成可保存、可增删、可在地图查看的北京路线。
             </p>
             <div className="hero-agent-entry">
               <button type="button" className="hero-agent-btn" onClick={() => setAgentOpen(true)}>
                 <span aria-hidden="true">🤖</span>
                 让 Agent 帮我规划
               </button>
-              <span>例如：我有 3 小时，想逛北京交通大学并拍照</span>
+              <span>例如：我有一天，想逛故宫、天坛和什刹海</span>
             </div>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -243,25 +336,25 @@ export default function App() {
           onAddOptionalStop={addOptionalStop}
         />
 
-        <section className="explore-strip" aria-label="海淀探索入口">
+        <section className="explore-strip" aria-label="北京探索入口">
           <div className="explore-intro">
-            <span className="section-kicker">HAIDIAN DISCOVERY</span>
-            <strong>从一所学校，扩展到整片海淀</strong>
-            <p>高校漫游、自然公园、人文场馆，都可以从这里开始。</p>
+            <span className="section-kicker">BEIJING DISCOVERY</span>
+            <strong>从校园精细导览，扩展到北京 16 区</strong>
+            <p>城市地标、历史古迹、公园、高校与远郊路线，都可以统一进入计划。</p>
           </div>
           <div className="explore-actions">
             <button
               type="button"
               className="explore-card"
               onClick={() => {
-                setMapScope('haidian');
+                setMapScope('beijing');
                 setTab('map');
               }}
             >
               <span className="explore-icon" aria-hidden="true">🗺️</span>
               <span>
-                <strong>海淀全域</strong>
-                <small>发现高校、公园与城市目的地</small>
+                <strong>北京全域</strong>
+                <small>浏览 16 区代表性旅行目的地</small>
               </span>
               <span className="explore-arrow" aria-hidden="true">→</span>
             </button>
@@ -276,8 +369,8 @@ export default function App() {
             <button type="button" className="explore-card" onClick={() => setTab('trips')}>
               <span className="explore-icon" aria-hidden="true">☀️</span>
               <span>
-                <strong>周末路线</strong>
-                <small>获取半日游与城市漫游灵感</small>
+                <strong>路线灵感</strong>
+                <small>查看半日游与一日游模板</small>
               </span>
               <span className="explore-arrow" aria-hidden="true">→</span>
             </button>
@@ -286,29 +379,38 @@ export default function App() {
 
         <div className="tab-panel" key={tab}>
           {tab === 'planner' ? (
-            <div className="planner-layout">
-              <Planner
-                interestIds={interestIds}
-                onToggleInterest={(id) => setInterestIds((prev) => toggleInList(prev, id))}
-                durationId={durationId}
-                onDuration={setDurationId}
-                paceId={paceId}
-                onPace={setPaceId}
-                startId={startId}
-                onStart={setStartId}
-                onGenerate={generate}
-                dirty={dirty}
-              />
-              <RouteResult
-                plan={plan}
-                availableSpots={activeSpots}
-                showCampusMap={activeCampus?.mapMode === 'bfu-svg'}
-                onSelectSpot={setActiveSpotId}
+            globalRoute.kind === 'beijing' ? (
+              <BeijingRouteResult
+                plan={globalRoute.plan}
+                options={globalRoute.options}
                 onOpenMap={openPlanMap}
-                onEditRoute={applyRouteEdits}
-                excludedSpotIds={activeOptions.excludeSpotIds ?? []}
+                onEditRoute={applyBeijingRouteEdits}
               />
-            </div>
+            ) : (
+              <div className="planner-layout">
+                <Planner
+                  interestIds={interestIds}
+                  onToggleInterest={(id) => setInterestIds((prev) => toggleInList(prev, id))}
+                  durationId={durationId}
+                  onDuration={setDurationId}
+                  paceId={paceId}
+                  onPace={setPaceId}
+                  startId={startId}
+                  onStart={setStartId}
+                  onGenerate={generate}
+                  dirty={dirty}
+                />
+                <RouteResult
+                  plan={plan}
+                  availableSpots={activeSpots}
+                  showCampusMap={activeCampus?.mapMode === 'bfu-svg'}
+                  onSelectSpot={setActiveSpotId}
+                  onOpenMap={openPlanMap}
+                  onEditRoute={applyRouteEdits}
+                  excludedSpotIds={activeOptions.excludeSpotIds ?? []}
+                />
+              </div>
+            )
           ) : null}
 
           {tab === 'map' ? (
@@ -318,21 +420,21 @@ export default function App() {
                   type="button"
                   className={mapScope === 'campus' ? 'is-active' : ''}
                   onClick={() => setMapScope('campus')}
-                  disabled={activeCampus?.mapMode !== 'bfu-svg'}
-                  title={activeCampus?.mapMode !== 'bfu-svg' ? '当前路线没有专用校园底图' : undefined}
+                  disabled={globalRoute.kind === 'beijing' || activeCampus?.mapMode !== 'bfu-svg'}
+                  title={globalRoute.kind === 'beijing' || activeCampus?.mapMode !== 'bfu-svg' ? '当前路线没有专用校园底图' : undefined}
                 >
                   校园精细地图
                 </button>
                 <button
                   type="button"
-                  className={mapScope === 'haidian' ? 'is-active' : ''}
-                  onClick={() => setMapScope('haidian')}
+                  className={mapScope === 'beijing' ? 'is-active' : ''}
+                  onClick={() => setMapScope('beijing')}
                 >
-                  海淀综合地图
+                  北京综合地图
                 </button>
               </div>
 
-              {mapScope === 'campus' && activeCampus?.mapMode === 'bfu-svg' ? (
+              {mapScope === 'campus' && globalRoute.kind !== 'beijing' && activeCampus?.mapMode === 'bfu-svg' ? (
                 <div className="map-layout">
                   <CampusMap
                     spots={activeSpots}
@@ -368,7 +470,7 @@ export default function App() {
                   </aside>
                 </div>
               ) : (
-                <HaidianMap />
+                <BeijingMap plan={globalRoute.kind === 'beijing' ? globalRoute.plan : null} />
               )}
             </div>
           ) : null}
@@ -398,9 +500,13 @@ export default function App() {
         onClose={() => setAgentOpen(false)}
         currentPlan={plan}
         currentPlanOptions={activeOptions}
+        currentBeijingPlan={globalRoute.kind === 'beijing' ? globalRoute.plan : null}
+        currentBeijingPlanOptions={globalRoute.kind === 'beijing' ? globalRoute.options : null}
         onSelectSpot={setActiveSpotId}
         onPlanGenerated={savePlanFromAgent}
         onApplyPlan={applyPlanFromAgent}
+        onBeijingPlanGenerated={saveBeijingPlanFromAgent}
+        onApplyBeijingPlan={applyBeijingPlanFromAgent}
         onOpenMap={(scope = 'campus') => {
           setMapScope(scope);
           setTab('map');

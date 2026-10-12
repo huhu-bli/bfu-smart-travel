@@ -7,9 +7,9 @@ export default function Footer({ repoUrl }: Props) {
     <footer className="site-footer">
       <div className="footer-inner">
         <div>
-          <strong>海淀智能旅行</strong>
+          <strong>北京智能旅行</strong>
           <p>
-            海淀综合地图与校园地图用于旅行发现和路线参考，点位讲解、停留时长与距离为估算值。入校政策、场馆开放时间与票价请以学校和景区最新公告为准。
+            北京综合地图与校园地图用于旅行发现和路线参考，交通、停留时长与距离为估算值。实时路况、预约、入校政策、开放时间与票价请以地图导航和官方公告为准。
           </p>
         </div>
         <div className="footer-links">

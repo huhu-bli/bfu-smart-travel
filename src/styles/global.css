@@ -1289,7 +1289,8 @@ a {
   gap: 7px;
 }
 
-.route-map-summary > div button {
+.route-map-summary > div button,
+.route-map-summary > div > span {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1299,6 +1300,24 @@ a {
   background: #fff;
   color: var(--ink-soft);
   text-align: left;
+}
+
+.route-stop-remove {
+  align-self: start;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  background: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.route-stop-remove:hover {
+  color: #b42318;
+  border-color: #f4b4ad;
+  background: #fff5f4;
 }
 
 .route-map-summary > div b {

@@ -265,7 +265,7 @@ export default function RouteResult({
                   </button>
                 ))}
               </div>
-              <button type="button" className="ghost-btn" onClick={onOpenMap}>打开海淀综合地图</button>
+              <button type="button" className="ghost-btn" onClick={onOpenMap}>打开北京综合地图</button>
             </div>
           )}
           <div className="route-map-tips">

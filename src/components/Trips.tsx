@@ -9,7 +9,7 @@ export default function Trips() {
       <div className="gallery-head">
         <div>
           <h2>周边一日游</h2>
-            <p>海淀区内适合半日或一日游的线路，含时间轴、预算与出行提示。</p>
+            <p>北京半日或一日游的路线灵感，含时间轴、预算与出行提示；需要可编辑计划时请直接询问 Agent。</p>
         </div>
       </div>
 

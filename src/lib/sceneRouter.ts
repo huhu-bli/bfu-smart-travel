@@ -1,7 +1,15 @@
 /** 对话场景。场景决定当前请求可以看到哪些提示词、工具和上下文。 */
 export type Scene = 'campus-route' | 'spot-detail' | 'outside-trip' | 'weather' | 'system-help' | 'unknown';
 
-export type SceneToolName = 'list_spots' | 'build_route' | 'get_spot_detail' | 'suggest_trip' | 'get_weather';
+export type SceneToolName =
+  | 'list_spots'
+  | 'build_route'
+  | 'get_spot_detail'
+  | 'list_beijing_places'
+  | 'build_beijing_route'
+  | 'get_beijing_place_detail'
+  | 'suggest_trip'
+  | 'get_weather';
 
 export interface SceneConfig {
   label: string;
@@ -18,8 +26,8 @@ export const SCENE_CONFIG: Record<Exclude<Scene, 'unknown'>, SceneConfig> = {
     tools: ['list_spots', 'get_spot_detail'],
   },
   'outside-trip': {
-    label: '海淀旅行',
-    tools: ['suggest_trip', 'get_weather'],
+    label: '北京路线',
+    tools: ['list_beijing_places', 'build_beijing_route', 'get_beijing_place_detail', 'get_weather'],
   },
   weather: {
     label: '天气查询',
@@ -32,9 +40,9 @@ export const SCENE_CONFIG: Record<Exclude<Scene, 'unknown'>, SceneConfig> = {
 };
 
 const HELP = /(你好|您好|hi|hello|在吗|帮助|怎么用|如何使用|能做什么|你是谁|连接失败|api\s*key|密钥|设置)/i;
-const OUTSIDE = /(校外|学校外|周边|出去玩|一日游|半天玩|半天游|周末去哪|去哪玩|公园|颐和园|圆明园|香山|奥森|奥林匹克|五道口|鹫峰|爬山|远一点|出学校|地铁|公交)/;
+const OUTSIDE = /(校外|学校外|周边|出去玩|一日游|半天玩|半天游|周末去哪|去哪玩|公园|故宫|天坛|颐和园|圆明园|香山|奥森|奥林匹克|长城|环球度假区|五道口|鹫峰|爬山|远一点|出学校|地铁|公交)/;
 const EXPLICIT_OUTSIDE = /(校外|学校外|周边|出去玩|一日游|半天玩|半天游|周末去哪|去哪玩|出学校)/;
-const HAIDIAN_SCOPE = /(海淀区|海淀|中关村|五道口|颐和园|圆明园|香山|西山|玉渊潭|国家图书馆|北京植物园)/;
+const BEIJING_SCOPE = /(北京|东城|西城|朝阳|海淀|丰台|石景山|门头沟|房山|通州|顺义|昌平|大兴|怀柔|平谷|密云|延庆|中关村|五道口|故宫|天坛|颐和园|圆明园|香山|西山|玉渊潭|国家植物园|长城|环球度假区|古北水镇)/;
 const CAMPUS_SCOPE = /(校园|校内|学校里|大学|学院|北林|北交|清华|北大|人大|北航|北理工|北师大|北邮|农大|北外|央财|民大|东门|南门|北门|西门|小南门|东南门|西南门)/;
 const ROUTE = /(路线|规划|怎么逛|逛|游览|游玩|出发|经过|安排|分钟|小时|门岗|东门|南门|北门|西门|想看|兴趣)/;
 const WEATHER = /(天气|下雨|降雨|雨伞|温度|气温|体感|风力|风速|湿度|紫外线|穿什么|防晒|适合出行|适合游览|适合逛|会不会下雨|晴不晴)/;
@@ -46,8 +54,8 @@ export function routeScene(text: string, currentScene: Scene = 'unknown'): Scene
   const value = text.trim();
   if (!value) return 'unknown';
   if (HELP.test(value)) return 'system-help';
-  // 明确说海淀区或区内景点时属于综合旅行，不因同时出现“小时”而误判成校园路线。
-  if (HAIDIAN_SCOPE.test(value) && !CAMPUS_SCOPE.test(value)) return 'outside-trip';
+  // 明确说北京行政区或城市景点时属于城市路线，不因同时出现“小时”而误判成校园路线。
+  if (BEIJING_SCOPE.test(value) && !CAMPUS_SCOPE.test(value)) return 'outside-trip';
   // 「校园内的公园/绿地」属于校园场景；明确说周边、校外或出学校时才优先判为校外。
   if (EXPLICIT_OUTSIDE.test(value) || (OUTSIDE.test(value) && !CAMPUS_SCOPE.test(value))) {
     return 'outside-trip';

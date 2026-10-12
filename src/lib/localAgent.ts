@@ -1,5 +1,17 @@
 import { campusById, campusSpotMap } from '../data/campuses';
-import type { InterestId, PlanOptions, RoutePlan, Spot } from '../types';
+import {
+  BEIJING_PLACES,
+  beijingPlacesFromText,
+  districtIdsFromText,
+} from '../data/beijingPlaces';
+import type {
+  BeijingRouteOptions,
+  BeijingRoutePlan,
+  InterestId,
+  PlanOptions,
+  RoutePlan,
+  Spot,
+} from '../types';
 import { formatDuration } from './planner';
 import { runTool } from './toolExecutor';
 import type { AgentToolContext } from '../agent/types';
@@ -18,7 +30,10 @@ export interface LocalAnswer {
   text: string;
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;
+  beijingPlan?: BeijingRoutePlan | null;
+  beijingPlanOptions?: BeijingRouteOptions | null;
   spotIds: string[];
+  placeIds?: string[];
   tripIds: string[];
   trace: string[];
   /** 记住这次的参数，方便接着追问「改成 2 小时」这类问题。 */
@@ -32,6 +47,8 @@ export interface LocalMemory {
   interests: InterestId[];
   gateId: string;
   selectedSpotId?: string;
+  beijingIncludePlaceIds?: string[];
+  beijingExcludePlaceIds?: string[];
 }
 
 const NEGATION = /(不要|不看|不去|不逛|去掉|去掉|别去|不想看|不想去|没有兴趣)/;
@@ -79,7 +96,7 @@ const SPOT_KEYWORDS: [RegExp, string][] = [
 ];
 
 const OUTSIDE_KEYWORDS =
-  /(校外|周边|出去玩|一日游|半天玩|周末去哪|去哪玩|公园|颐和园|圆明园|香山|奥森|奥林匹克|五道口|鹫峰|爬山|远一点|出学校)/;
+  /(北京|校外|周边|出去玩|一日游|半天玩|周末去哪|去哪玩|公园|故宫|天坛|颐和园|圆明园|香山|奥森|奥林匹克|长城|环球度假区|爬山|远一点|出学校)/;
 
 const HELP_KEYWORDS = /(你好|您好|hi|hello|在吗|帮助|怎么用|能做什么|你是谁|介绍一下自己)/i;
 
@@ -103,7 +120,7 @@ function clampMinutes(value: number): number {
 
 export function parseMinutes(text: string): number | null {
   if (/半天/.test(text)) return 240;
-  if (/(一整天|一天|全天)/.test(text)) return 300;
+  if (/(一整天|一天|全天)/.test(text)) return 480;
   if (/半个?小时|半小时/.test(text)) return 30;
   if (/课间|一节课/.test(text)) return 30;
 
@@ -143,16 +160,18 @@ function parseSpot(text: string, spots: Spot[]): string | null {
   return byName ? byName.id : null;
 }
 
-function parseTripTheme(text: string): string {
-  if (/(爬山|登山|红叶|香山|鹫峰)/.test(text)) return '登山';
-  if (/(历史|遗址|圆明园|颐和园|古迹)/.test(text)) return '历史';
-  if (/(美食|吃|小吃|逛街|五道口)/.test(text)) return '美食';
-  if (/(公园|自然|绿|森林|奥森|散步|野餐)/.test(text)) return '自然';
-  return '';
-}
-
 function emptyContext(target: TravelTarget): AgentToolContext {
-  return { target, plan: null, planOptions: null, spotIds: [], tripIds: [], trace: [] };
+  return {
+    target,
+    plan: null,
+    planOptions: null,
+    beijingPlan: null,
+    beijingPlanOptions: null,
+    spotIds: [],
+    placeIds: [],
+    tripIds: [],
+    trace: [],
+  };
 }
 
 function safeParse<T>(raw: string): T {
@@ -207,13 +226,23 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
   const spots = campus?.spots ?? [];
   const parsedSpot = parseSpot(text, spots);
   const routed = routeScene(text, base?.scene ?? 'unknown');
-  const targetScene = routed === 'campus-route' && target.kind === 'district'
+  const targetScene = routed === 'campus-route' && target.kind !== 'campus'
     ? 'outside-trip'
     : routed;
   const scene: Scene = targetScene === 'unknown' && parsedSpot ? 'spot-detail' : targetScene;
 
   const explicitMinutes = parseMinutes(text);
   const parsedInterests = parseInterests(text);
+  const namedBeijingPlaceIds = beijingPlacesFromText(text).map((place) => place.id);
+  const removesBeijingPlace = /(不要|不去|去掉|删除|移除|排除)/.test(text);
+  const previousBeijingIncludes = base?.beijingIncludePlaceIds ?? [];
+  const previousBeijingExcludes = base?.beijingExcludePlaceIds ?? [];
+  const beijingIncludePlaceIds = removesBeijingPlace
+    ? previousBeijingIncludes.filter((id) => !namedBeijingPlaceIds.includes(id))
+    : Array.from(new Set([...previousBeijingIncludes, ...namedBeijingPlaceIds]));
+  const beijingExcludePlaceIds = removesBeijingPlace
+    ? Array.from(new Set([...previousBeijingExcludes, ...namedBeijingPlaceIds]))
+    : previousBeijingExcludes.filter((id) => !namedBeijingPlaceIds.includes(id));
   const memory: LocalMemory = {
     scene,
     target,
@@ -227,6 +256,8 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
       campus?.defaultGateId ??
       '',
     selectedSpotId: parsedSpot ?? base?.selectedSpotId,
+    beijingIncludePlaceIds,
+    beijingExcludePlaceIds,
   };
 
   const answer = await answerCore(rawText, memory);
@@ -246,16 +277,16 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
   const minutes = explicitMinutes ?? memory.minutes;
   const interests = memory.interests;
   const gateId = (campus?.id === 'bfu' ? matchGate(text) : null) ?? memory.gateId;
-  const gateName = spotMap[gateId]?.name ?? campus?.shortName ?? '海淀区';
+  const gateName = spotMap[gateId]?.name ?? campus?.shortName ?? '北京市';
   const spotId = parseSpot(text, spots) ?? memory.selectedSpotId ?? null;
 
   if (memory.scene === 'system-help') {
     return {
       text: [
-        '我是海淀智能旅行助手，可以：',
+        '我是北京智能旅行助手，可以：',
         '· 排已收录校园路线：「我有 3 小时，想逛北京交通大学」',
         '· 讲点位：「银杏大道值得专门去吗」',
-        '· 规划海淀行程：「周末在海淀玩半天，别太贵」',
+        '· 规划北京路线：「一天游故宫、天坛和什刹海」',
         '',
         '当前使用内置助手，不需要密钥，也不消耗额度。',
       ].join('\n'),
@@ -269,7 +300,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
 
   if (memory.scene === 'unknown') {
     return {
-      text: '你想逛海淀区，还是进入某所高校？可以直接说「3 小时逛北京交通大学」或「半天游颐和园和圆明园」。',
+      text: '你想逛北京市区、某个行政区，还是进入某所高校？可以说「一天游故宫和天坛」或「3 小时逛北京交通大学」。',
       plan: null,
       planOptions: null,
       spotIds: [],
@@ -278,25 +309,55 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
     };
   }
 
-  // 1) 校外行程
+  // 1) 北京城市路线
   if (memory.scene === 'outside-trip' || OUTSIDE_KEYWORDS.test(text)) {
-    const duration = /(一天|整天|全天)/.test(text) ? 'full' : 'half';
-    const theme = parseTripTheme(text);
-    const result = safeParse<{ trips: { name: string; theme: string; duration: string; budget: string; transport: string; summary: string }[] }>(
-      await runTool('suggest_trip', JSON.stringify({ duration, theme, budget_max: 0 }), context),
+    const namedPlaces = (memory.beijingIncludePlaceIds ?? [])
+      .map((id) => BEIJING_PLACES.find((place) => place.id === id))
+      .filter((place): place is (typeof BEIJING_PLACES)[number] => Boolean(place));
+    const districts = districtIdsFromText(text).length
+      ? districtIdsFromText(text)
+      : memory.target.districtIds ?? [];
+    const result = safeParse<{
+      title: string;
+      totalMinutes: number;
+      totalDistanceKm: number;
+      mustSeeStops: Array<{ order: number; name: string; district: string; travelMode: string; travelMinutes: number }>;
+      optionalStops: Array<{ name: string; district: string }>;
+      remainingMinutes: number;
+      remainingAdvice: string;
+    }>(
+      await runTool(
+        'build_beijing_route',
+        JSON.stringify({
+          minutes: Math.max(60, minutes),
+          interests,
+          district_ids: districts,
+          pace: 'normal',
+          travel_mode: 'mixed',
+          start_place_id: namedPlaces[0]?.id ?? '',
+          include_place_ids: namedPlaces.map((place) => place.id),
+          exclude_place_ids: memory.beijingExcludePlaceIds ?? [],
+        }),
+        context,
+      ),
     );
-    const trips = result.trips ?? [];
-    const lines = trips.map(
-      (trip) => `· ${trip.name}（${trip.duration}，${trip.budget}）\n  ${trip.summary}`,
-    );
+    const routeLine = (result.mustSeeStops ?? [])
+      .map((stop) => `${stop.order}. ${stop.name}（${stop.district}）`)
+      .join(' → ');
+    const optionalLine = result.optionalStops?.length
+      ? `\n\n可选站点：${result.optionalStops.map((stop) => `${stop.name}（${stop.district}）`).join('、')}`
+      : '';
     return {
-      text: lines.length
-        ? `海淀区的${theme || '半天'}行程，我挑了几条：\n\n${lines.join('\n\n')}\n\n点下面的标签可以在「海淀路线」里看完整时间轴。`
-        : '海淀线路我这边暂时没匹配到，可以打开「海淀路线」查看。',
+      text: routeLine
+        ? `给你生成了「${result.title}」：\n\n${routeLine}${optionalLine}\n\n预计 ${Math.round(result.totalMinutes)} 分钟，点位间约 ${result.totalDistanceKm} 公里。剩余约 ${result.remainingMinutes} 分钟：${result.remainingAdvice}`
+        : '暂时没有生成合适的北京路线，请补充时长、行政区或想去的景点。',
       plan: null,
       planOptions: null,
+      beijingPlan: context.beijingPlan,
+      beijingPlanOptions: context.beijingPlanOptions,
       spotIds: [],
-      tripIds: context.tripIds,
+      placeIds: context.placeIds,
+      tripIds: [],
       trace: context.trace,
     };
   }
@@ -320,7 +381,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
 
   if (memory.target.kind !== 'campus' || !campus) {
     return {
-      text: '请先说明要进入哪所高校；如果想逛整个海淀区，可以说「半天游颐和园和圆明园」。',
+      text: '请先说明要进入哪所高校；如果想逛北京市，可以说「一天游故宫、天坛和什刹海」。',
       plan: null,
       planOptions: null,
       spotIds: [],
@@ -368,10 +429,10 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
   if (HELP_KEYWORDS.test(text) && !explicitMinutes && !spotId && interests.length === 0) {
     return {
       text: [
-        '我是海淀智能旅行助手，可以：',
+        '我是北京智能旅行助手，可以：',
         '· 排已收录校园路线：「我有 3 小时，想逛北京交通大学」',
         '· 讲点位：「银杏大道值得专门去吗」',
-        '· 规划海淀行程：「周末在海淀玩半天，别太贵」',
+        '· 规划北京路线：「一天游故宫、天坛和什刹海」',
         '',
         '提示：现在用的是内置助手（不需要密钥、不消耗额度）。',
       ].join('\n'),
