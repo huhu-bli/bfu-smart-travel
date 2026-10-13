@@ -159,6 +159,32 @@ export function loadAMap(key: string, securityCode: string): Promise<AMapNamespa
 
   const pending = new Promise<AMapNamespace>((resolve, reject) => {
     const script = document.createElement('script');
+    let settled = false;
+    let loaded = false;
+    const startedAt = Date.now();
+    const finish = (result: AMapNamespace | Error) => {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timer);
+      if (result instanceof Error) {
+        script.remove();
+        reject(result);
+      } else resolve(result);
+    };
+    const checkReady = () => {
+      if (settled) return;
+      const api = (globalThis as { AMap?: AMapNamespace }).AMap;
+      if (api?.Map) {
+        finish(api);
+      } else if (Date.now() - startedAt >= 8000) {
+        finish(new Error(loaded
+          ? '高德地图脚本已加载，但 API 未初始化。请检查 JS API Key、域名白名单和安全密钥。'
+          : '高德地图连接超时，请检查网络或 Key 配置。'));
+      } else {
+        timer = globalThis.setTimeout(checkReady, 100);
+      }
+    };
+    let timer = globalThis.setTimeout(checkReady, 100);
     const params = new URLSearchParams({
       v: '2.0',
       key,
@@ -166,12 +192,8 @@ export function loadAMap(key: string, securityCode: string): Promise<AMapNamespa
     });
     script.src = 'https://webapi.amap.com/maps?' + params.toString();
     script.async = true;
-    script.onload = () => {
-      const loaded = (globalThis as { AMap?: AMapNamespace }).AMap;
-      if (loaded) resolve(loaded);
-      else reject(new Error('高德地图脚本已加载，但 API 没有初始化。'));
-    };
-    script.onerror = () => reject(new Error('高德地图资源加载失败，请检查网络或 Key 配置。'));
+    script.onload = () => { loaded = true; };
+    script.onerror = () => finish(new Error('高德地图资源加载失败，请检查网络或 Key 配置。'));
     document.head.appendChild(script);
   }).catch((error: unknown) => {
     amapPromise = null;

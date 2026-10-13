@@ -100,8 +100,16 @@ export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePla
 
   const wanted = wantedInterests(options.interests);
   const included = new Set((options.includePlaceIds ?? []).filter((id) => BEIJING_PLACE_MAP[id]));
+  const exactPlaces = options.preserveSelectedStops
+    ? Array.from(new Set(options.includePlaceIds ?? []))
+      .map((id) => BEIJING_PLACE_MAP[id])
+      .filter((place): place is BeijingPlace => Boolean(place && pool.includes(place)))
+    : [];
+  if (options.preserveSelectedStops && !exactPlaces.length) {
+    throw new Error('请至少保留一个北京目的地。');
+  }
   const requestedStart = options.startPlaceId ? BEIJING_PLACE_MAP[options.startPlaceId] : null;
-  const origin =
+  const origin = exactPlaces[0] ??
     (requestedStart && pool.some((item) => item.id === requestedStart.id) ? requestedStart : null) ??
     pool
       .slice()
@@ -114,39 +122,53 @@ export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePla
   let elapsed = dwellMinutes(origin, options, compactExplicit && included.has(origin.id));
   let totalDistanceKm = 0;
 
-  while (stops.length < MAX_STOPS && elapsed < options.minutes) {
-    const candidates = pool
-      .filter((item) => !used.has(item.id))
-      .map((item) => {
-        const transfer = transferEstimate(current, item, options.travelMode, options.pace.speed);
-        const dwell = dwellMinutes(item, options, compactExplicit && included.has(item.id));
-        const score = baseScore(item, wanted, included) - transfer.minutes * 0.16 - transfer.distance * 0.22;
-        return { item, transfer, dwell, score };
-      })
-      .filter(({ item, transfer, dwell }) =>
-        (included.has(item.id) || item.interests.some((id) => wanted.includes(id)) || item.mustSee) &&
-        elapsed + transfer.minutes + dwell <= options.minutes,
-      )
-      .sort((a, b) => b.score - a.score);
-
-    if (!candidates.length) break;
-    const pick = candidates[0];
-    const arrive = elapsed + pick.transfer.minutes;
-    const leave = arrive + pick.dwell;
+  const appendStop = (item: BeijingPlace, transfer: ReturnType<typeof transferEstimate>, dwell: number) => {
+    const arrive = elapsed + transfer.minutes;
+    const leave = arrive + dwell;
     stops.push({
-      place: pick.item,
+      place: item,
       arrive,
       leave,
-      travelMinutes: pick.transfer.minutes,
-      distanceKm: Math.round(pick.transfer.distance * 10) / 10,
-      travelMode: pick.transfer.mode,
+      travelMinutes: transfer.minutes,
+      distanceKm: Math.round(transfer.distance * 10) / 10,
+      travelMode: transfer.mode,
       routeProvider: 'estimate',
-      reason: reasonFor(pick.item, wanted),
+      reason: reasonFor(item, wanted),
     });
-    used.add(pick.item.id);
-    current = pick.item;
+    used.add(item.id);
+    current = item;
     elapsed = leave;
-    totalDistanceKm += pick.transfer.distance;
+    totalDistanceKm += transfer.distance;
+  };
+
+  if (options.preserveSelectedStops) {
+    for (const item of exactPlaces.slice(1)) {
+      appendStop(
+        item,
+        transferEstimate(current, item, options.travelMode, options.pace.speed),
+        dwellMinutes(item, options, compactExplicit && included.has(item.id)),
+      );
+    }
+  } else {
+    while (stops.length < MAX_STOPS && elapsed < options.minutes) {
+      const candidates = pool
+        .filter((item) => !used.has(item.id))
+        .map((item) => {
+          const transfer = transferEstimate(current, item, options.travelMode, options.pace.speed);
+          const dwell = dwellMinutes(item, options, compactExplicit && included.has(item.id));
+          const score = baseScore(item, wanted, included) - transfer.minutes * 0.16 - transfer.distance * 0.22;
+          return { item, transfer, dwell, score };
+        })
+        .filter(({ item, transfer, dwell }) =>
+          (included.has(item.id) || item.interests.some((id) => wanted.includes(id)) || item.mustSee) &&
+          elapsed + transfer.minutes + dwell <= options.minutes,
+        )
+        .sort((a, b) => b.score - a.score);
+
+      if (!candidates.length) break;
+      const pick = candidates[0];
+      appendStop(pick.item, pick.transfer, pick.dwell);
+    }
   }
 
   const optionalStops: BeijingRouteStop[] = pool
@@ -177,6 +199,7 @@ export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePla
 
   const allPrimary = [origin, ...stops.map((stop) => stop.place)];
   const remainingMinutes = Math.max(0, Math.round(options.minutes - elapsed));
+  const overrun = Math.max(0, Math.round(elapsed - options.minutes));
   const matchedInterests = wanted.filter((id) => allPrimary.some((item) => item.interests.includes(id)));
   const title = routeTitle(allPrimary, options);
 
@@ -188,7 +211,9 @@ export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePla
     stops,
     optionalStops,
     remainingMinutes,
-    remainingAdvice: remainingAdvice(remainingMinutes, optionalStops.length),
+    remainingAdvice: overrun
+      ? `当前路线超出预算约 ${overrun} 分钟。已保留全部选定站点，可增加游览时间或手动删除站点。`
+      : remainingAdvice(remainingMinutes, optionalStops.length),
     totalMinutes: elapsed,
     totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
     routeProvider: 'estimate',
