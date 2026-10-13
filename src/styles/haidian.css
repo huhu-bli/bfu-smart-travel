@@ -205,6 +205,38 @@
   inset: 0;
 }
 
+.beijing-fallback-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.beijing-fallback-point {
+  cursor: pointer;
+  outline: none;
+}
+
+.beijing-fallback-point:focus-visible circle {
+  stroke: #f59e0b;
+  stroke-width: 5;
+}
+
+.beijing-fallback-notice {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: grid;
+  gap: 3px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #244f81;
+  font-size: 12px;
+  box-shadow: 0 4px 20px rgba(31, 63, 104, 0.12);
+}
+
 .haidian-map-status {
   position: absolute;
   z-index: 2;

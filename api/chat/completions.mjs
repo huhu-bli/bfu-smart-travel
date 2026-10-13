@@ -6,10 +6,11 @@ const MAX_MESSAGES = 30;
 const UPSTREAM_TIMEOUT_MS = 25_000;
 const buckets = new Map();
 
-function isTrustedBrowserOrigin(origin) {
+export function isTrustedBrowserOrigin(origin) {
   return origin === 'https://huhu-bli.github.io'
-    || /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)
-    || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    || origin === 'https://bfu-smart-travel.vercel.app'
+    || /^https:\/\/bfu-smart-travel-git-[a-z0-9-]+-h2642341596-4653\.vercel\.app$/i.test(origin)
+    || /^http:\/\/(localhost|127\.0\.0\.1):5173$/.test(origin);
 }
 
 function setHeaders(res, headers = {}, origin = '') {

@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/lib/*.test.ts",
+    "test": "node --import tsx --test src/lib/*.test.ts api/chat/*.test.mjs",
     "preview": "vite preview --port 4173"
   },
   "dependencies": {

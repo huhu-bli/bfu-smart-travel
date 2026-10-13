@@ -104,6 +104,7 @@ export const BEIJING_PLACES: BeijingPlace[] = [
   place('national-botanical-garden', '国家植物园', 'haidian', '海淀区', 'park', '🌿', 116.2165, 40.003, 240, ['plant', 'research', 'photo'], '植物保育、科研科普与园林游览结合。', ['植物多样性', '温室', '科普'], '上午'),
   place('peking-university', '北京大学', 'haidian', '海淀区', 'university', '🎓', 116.3055, 39.9928, 150, ['culture', 'research', 'photo'], '历史建筑、湖景与校园文化相结合。', ['未名湖', '博雅塔', '校园建筑'], '下午', true, '入校政策以学校最新公告为准。'),
   place('tsinghua-university', '清华大学', 'haidian', '海淀区', 'university', '🎓', 116.3269, 40.003, 150, ['culture', 'research', 'photo'], '近代校园建筑与高校人文景观丰富。', ['清华园', '荷塘', '校园建筑'], '下午', true, '入校政策以学校最新公告为准。'),
+  place('beijing-jiaotong-university', '北京交通大学', 'haidian', '海淀区', 'university', '🎓', 116.337, 39.9505, 120, ['culture', 'research', 'photo'], '主校区以饮水思源碑、明湖等校园景观为代表。', ['北交', '北交大', '思源碑', '明湖'], '白天', false, '此处为主校区示意位置；入校安排请以学校公告为准。'),
   place('zhongguancun', '中关村', 'haidian', '海淀区', 'neighborhood', '💻', 116.3165, 39.9836, 90, ['research', 'food'], '北京科技创新与高校生活交汇的城市片区。', ['科技街区', '商业', '高校周边'], '傍晚'),
 
   place('garden-expo', '北京园博园', 'fengtai', '丰台区', 'park', '🌺', 116.1956, 39.8754, 240, ['plant', 'culture', 'photo'], '集中展示不同地域园林风格的大型园区。', ['园林', '永定塔', '湿地'], '上午'),
@@ -161,6 +162,7 @@ const BEIJING_PLACE_ALIASES: Partial<Record<string, string[]>> = {
   'national-botanical-garden': ['国家植物园', '北京植物园'],
   'peking-university': ['北大'],
   'tsinghua-university': ['清华'],
+  'beijing-jiaotong-university': ['北交大', '北交'],
   'universal-beijing': ['环球影城', '环球度假区'],
   'grand-canal-museum': ['大运河博物馆'],
   'ming-tombs': ['十三陵'],

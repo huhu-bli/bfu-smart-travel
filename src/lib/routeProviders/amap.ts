@@ -201,7 +201,9 @@ export function applyAmapMeasurements(
     remainingMinutes,
     remainingAdvice: overrun
       ? `按高德交通时间计算，当前路线超出预算约 ${overrun} 分钟，建议删除一个站点或缩短停留时间。`
-      : plan.remainingAdvice,
+      : plan.totalMinutes > options.minutes
+        ? `高德交通时间更新后还剩约 ${remainingMinutes} 分钟，可用于排队、休息或换乘。`
+        : plan.remainingAdvice,
     subtitle: `${plan.pace.label}节奏 · ${1 + stops.length} 个目的地 · 点位间约 ${totalDistanceKm} 公里`,
     routeProvider,
     routeNotice,

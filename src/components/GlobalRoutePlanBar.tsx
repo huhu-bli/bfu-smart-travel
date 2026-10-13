@@ -34,7 +34,7 @@ export default function GlobalRoutePlanBar({
           {primary.map((place, index) => (
             <span className="global-route-plan__chip" key={place.id}>
               <b>{index + 1}</b>{place.name}
-              <button type="button" aria-label={`从路线中删除${place.name}`} title={`删除${place.name}`} onClick={() => onRemoveStop(place.id)}>×</button>
+              <button type="button" aria-label={`从路线中删除${place.name}`} title={`删除${place.name}`} onClick={() => onRemoveStop(place.id)} disabled={primary.length === 1}>×</button>
             </span>
           ))}
         </div>
