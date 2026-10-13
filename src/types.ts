@@ -167,6 +167,8 @@ export interface BeijingRouteOptions {
   startPlaceId?: string;
   includePlaceIds?: string[];
   excludePlaceIds?: string[];
+  /** 编辑后的路线按用户选定的点位和顺序计算，不自动增删站点。 */
+  preserveSelectedStops?: boolean;
 }
 
 export interface BeijingRoutePlan {

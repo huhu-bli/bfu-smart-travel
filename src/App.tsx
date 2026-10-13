@@ -49,6 +49,7 @@ export default function App() {
   const [mapScope, setMapScope] = useState<'campus' | 'beijing'>('campus');
   const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
   const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
+  const beijingRevision = useRef(0);
 
   const options = useMemo(() => {
     const duration = DURATIONS.find((item) => item.id === durationId) ?? DURATIONS[1];
@@ -119,6 +120,7 @@ export default function App() {
   }, [options]);
 
   const generate = () => {
+    beijingRevision.current += 1;
     setGlobalRoute({
       kind: 'campus',
       plan: buildRoute(SPOTS, options),
@@ -139,6 +141,7 @@ export default function App() {
 
   /** Agent 一旦生成有效路线就写入全局计划；查看按钮只负责把用户带到编辑器。 */
   const savePlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
+    beijingRevision.current += 1;
     setGlobalRoute({
       kind: 'campus',
       plan: nextPlan,
@@ -176,6 +179,7 @@ export default function App() {
     nextPlan: BeijingRoutePlan,
     nextOptions: BeijingRouteOptions,
   ) => {
+    beijingRevision.current += 1;
     setGlobalRoute({
       kind: 'beijing',
       plan: nextPlan,
@@ -200,6 +204,7 @@ export default function App() {
   };
 
   const applyRouteEdits = (nextIncludedIds: string[], nextExcludedIds: string[]) => {
+    beijingRevision.current += 1;
     const nextOptions = {
       ...activeOptions,
       includeSpotIds: nextIncludedIds,
@@ -222,14 +227,16 @@ export default function App() {
 
   const applyBeijingRouteEdits = (includePlaceIds: string[], excludePlaceIds: string[]) => {
     if (globalRoute.kind !== 'beijing' || !includePlaceIds.length) return;
+    const revision = ++beijingRevision.current;
     const nextOptions: BeijingRouteOptions = {
       ...globalRoute.options,
       startPlaceId: includePlaceIds[0],
       includePlaceIds,
       excludePlaceIds,
+      preserveSelectedStops: true,
     };
     const estimatedPlan = buildBeijingRoute(nextOptions);
-    const source = globalRoute.source;
+    const source = 'manual';
     setGlobalRoute({
       kind: 'beijing',
       plan: estimatedPlan,
@@ -238,6 +245,7 @@ export default function App() {
       updatedAt: new Date().toISOString(),
     });
     void refineBeijingRouteWithAmap(estimatedPlan, nextOptions).then((refinedPlan) => {
+      if (beijingRevision.current !== revision) return;
       setGlobalRoute({
         kind: 'beijing',
         plan: refinedPlan,
