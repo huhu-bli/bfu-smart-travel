@@ -31,7 +31,11 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
 
   const apply = () => {
     const selected = Array.from(new Set(selectedIds));
-    const excluded = candidates.filter((place) => !selected.includes(place.id)).map((place) => place.id);
+    if (!selected.length) return;
+    const excluded = Array.from(new Set([
+      ...(options.excludePlaceIds ?? []),
+      ...primaryIds.filter((id) => !selected.includes(id)),
+    ])).filter((id) => !selected.includes(id));
     onEditRoute(selected, excluded);
     setEditing(false);
   };
@@ -77,7 +81,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
       {editing ? (
         <div className="route-editor">
           <div className="route-editor-head">
-            <div><strong>自由增删北京目的地</strong><p>当前范围内的点位均可勾选；算法会重新计算顺序和交通时间。</p></div>
+            <div><strong>自由增删北京目的地</strong><p>将按所选顺序重新计算交通时间；超出预算时保留站点并提示时长。</p></div>
             <span>{selectedIds.length} 个目的地</span>
           </div>
           <div className="route-editor-grid">
@@ -96,8 +100,8 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
             })}
           </div>
           <div className="route-editor-foot">
-            <span>跨区站点会增加换乘时间，超出总时长的点位将进入可选区。</span>
-            <div><button type="button" className="ghost-btn" onClick={() => setEditing(false)}>取消</button><button type="button" className="primary-btn primary-btn--sm" onClick={apply}>应用修改</button></div>
+            <span>跨区站点会增加换乘时间；请至少保留一个目的地。</span>
+            <div><button type="button" className="ghost-btn" onClick={() => setEditing(false)}>取消</button><button type="button" className="primary-btn primary-btn--sm" onClick={apply} disabled={!selectedIds.length}>应用修改</button></div>
           </div>
         </div>
       ) : null}
@@ -115,7 +119,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
             <li className="stop-item stop-item--origin">
               <span className="stop-index">1</span>
               <div className="stop-main"><div className="stop-title"><strong>{plan.origin.emoji} {plan.origin.name}</strong><span className="stop-time">09:00 开始</span></div><p className="stop-reason">{plan.origin.district} · {plan.origin.short}</p></div>
-              <button type="button" className="route-stop-remove" onClick={() => remove(plan.origin.id)} aria-label={`删除${plan.origin.name}`}>×</button>
+              <button type="button" className="route-stop-remove" onClick={() => remove(plan.origin.id)} aria-label={`删除${plan.origin.name}`} disabled={primaryIds.length === 1}>×</button>
             </li>
             {plan.stops.map((stop, index) => (
               <li key={stop.place.id} className="stop-item">
@@ -125,7 +129,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
                   <p className="stop-reason">{stop.reason}</p>
                   <div className="stop-meta"><span>{stop.travelMode} {stop.travelMinutes} 分钟 · 约 {stop.distanceKm} 公里</span><span>{stop.routeProvider === 'amap' ? '高德路线' : '本地估算'}</span><span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span><span>{stop.place.district}</span></div>
                 </div>
-                <button type="button" className="route-stop-remove" onClick={() => remove(stop.place.id)} aria-label={`删除${stop.place.name}`}>×</button>
+                <button type="button" className="route-stop-remove" onClick={() => remove(stop.place.id)} aria-label={`删除${stop.place.name}`} disabled={primaryIds.length === 1}>×</button>
               </li>
             ))}
           </ol>
@@ -136,7 +140,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
           </section>
 
           <section className="route-section route-section--advice">
-            <div className="route-section-head"><div><span className="route-section-kicker">FLEX TIME</span><strong>剩余时间建议</strong></div><span>约 {plan.remainingMinutes} 分钟</span></div>
+            <div className="route-section-head"><div><span className="route-section-kicker">FLEX TIME</span><strong>剩余时间建议</strong></div><span>{plan.totalMinutes > options.minutes ? `超出 ${Math.round(plan.totalMinutes - options.minutes)} 分钟` : `约 ${plan.remainingMinutes} 分钟`}</span></div>
             <p>{plan.remainingAdvice}</p>
           </section>
         </div>

@@ -15,6 +15,7 @@ import {
   type AMapPolylineInstance,
 } from '../lib/amapLoader';
 import type { BeijingDistrictId, BeijingPlaceCategory, BeijingRoutePlan } from '../types';
+import BeijingMapFallback from './BeijingMapFallback';
 
 interface Props {
   plan?: BeijingRoutePlan | null;
@@ -210,9 +211,17 @@ export default function BeijingMap({ plan = null }: Props) {
         <div className="haidian-map-canvas-wrap">
           <div ref={containerRef} className="haidian-map-canvas" />
           {!ready && !error ? <div className="haidian-map-status"><span>正在加载北京地图…</span></div> : null}
-          {error ? <div className="haidian-map-status haidian-map-status--error"><strong>地图暂时无法加载</strong><span>{error}</span></div> : null}
+          {error ? (
+            <>
+              <BeijingMapFallback places={filtered} plan={plan} selectedId={selectedId} onSelect={focus} />
+              <div className="beijing-fallback-notice" role="status">
+                <strong>当前显示位置示意图</strong>
+                <span>高德地图暂不可用；连线不代表实际道路。{error}</span>
+              </div>
+            </>
+          ) : null}
         </div>
-        <p className="haidian-map-note">{plan?.routeNotice ?? '地图使用高德 JS API；生成路线后可查看实际道路轨迹。'}</p>
+        <p className="haidian-map-note">{error ? '可点击点位并通过下方“在高德地图中打开”查看导航；路线时间以本地估算为准。' : plan?.routeNotice ?? '地图使用高德 JS API；生成路线后可查看实际道路轨迹。'}</p>
       </section>
 
       <aside className="haidian-place-panel">
