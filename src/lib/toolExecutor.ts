@@ -16,6 +16,7 @@ import type {
   PlanOptions,
 } from '../types';
 import { buildBeijingRoute } from './beijingPlanner';
+import { refineBeijingRouteWithAmap } from './routeProviders/amap';
 import { buildRoute, formatClock } from './planner';
 import { fetchWeather } from './weather';
 import { INTEREST_IDS } from './toolSchemas';
@@ -311,7 +312,8 @@ export async function runTool(
       excludePlaceIds,
     };
     try {
-      const plan = buildBeijingRoute(options);
+      const estimatedPlan = buildBeijingRoute(options);
+      const plan = await refineBeijingRouteWithAmap(estimatedPlan, options);
       context.beijingPlan = plan;
       context.beijingPlanOptions = options;
       [plan.origin, ...plan.stops.map((stop) => stop.place)].forEach((place) => {
@@ -363,7 +365,8 @@ export async function runTool(
         })),
         remainingMinutes: plan.remainingMinutes,
         remainingAdvice: plan.remainingAdvice,
-        note: '交通时间为路线算法估算；实时拥堵、公共交通换乘、开放时间和预约要求请以地图导航及官方公告为准。',
+        routeProvider: plan.routeProvider,
+        note: plan.routeNotice,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : '北京路线生成失败。';

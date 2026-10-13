@@ -8,7 +8,7 @@
 
 | 模块 | 说明 |
 | --- | --- |
-| 北京智能路线 | 按行政区、兴趣、可用时长和交通偏好生成跨区或单区路线，返回必游、可选、交通估算和剩余时间 |
+| 北京智能路线 | 按行政区、兴趣、可用时长和交通偏好生成跨区或单区路线；配置高德后返回真实步行/公交时间与道路轨迹，失败时自动回退估算 |
 | 校园智能路线 | 按兴趣标签、可用时长、步速节奏与出发门岗，自动挑选并排序校内点位 |
 | 校园地图 | **真实矢量地图**：用 OpenStreetMap 的校园边界、建筑轮廓、道路与绿地渲染成 SVG，路线高亮带绘制动画，点击任意点位查看讲解 |
 | 北京综合地图 | 展示覆盖 16 区的确定性基础点位，支持行政区、类别和关键词筛选，并高亮当前全局路线 |
@@ -68,7 +68,7 @@ npm run typecheck # TypeScript 类型检查
 | `build_route` | 生成路线，返回有序站点与时间 | `src/lib/planner.ts` 的 `buildRoute()` |
 | `get_spot_detail` | 取某点位的讲解、亮点、最佳时段、贴士 | `src/data/spots.ts` |
 | `list_beijing_places` | 按行政区、兴趣或关键词查询北京点位 | `src/data/beijingPlaces.ts` |
-| `build_beijing_route` | 生成可进入全局计划的北京城市路线 | `src/lib/beijingPlanner.ts` |
+| `build_beijing_route` | 生成可进入全局计划的北京城市路线 | `src/lib/beijingPlanner.ts` + `src/lib/routeProviders/amap.ts` |
 | `get_beijing_place_detail` | 获取北京城市点位详情 | `src/data/beijingPlaces.ts` |
 | `get_weather` | 查询目的地天气 | `src/lib/weather.ts` |
 

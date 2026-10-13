@@ -4,7 +4,7 @@ import App from './App';
 import './styles/global.css';
 import './styles/haidian.css';
 
-// Vite 负责把公开运行配置编译进前端；API Key 和 APP_TOKEN 不在这里出现。
+// Vite 只注入浏览器运行配置；千问 API Key 和 APP_TOKEN 绝不进入前端。
 (globalThis as { __BFU_ENV__?: Record<string, string> }).__BFU_ENV__ = {
   VITE_AGENT_PROXY_URL: import.meta.env.VITE_AGENT_PROXY_URL ?? '',
   VITE_AMAP_KEY: import.meta.env.VITE_AMAP_KEY ?? '',
