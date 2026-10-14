@@ -38,10 +38,10 @@ src/styles/haidian.css       综合地图响应式样式
 2. 把 GitHub Pages 域名加入高德安全域名白名单。
 3. 在 GitHub 仓库 `Settings → Secrets and variables → Actions` 中添加：
    - Repository variable：`AMAP_JS_KEY`
-   - Repository secret：`AMAP_SECURITY_CODE`
-4. 合并到 `main` 后，由 GitHub Pages 工作流自动重新部署。
+4. 在 Vercel 项目中为 Production 和 Preview 添加 Secret `AMAP_SECURITY_CODE`；再添加公开构建变量 `VITE_AMAP_KEY`。Vercel 函数通过 `/_AMapService/*` 代理高德服务并在服务端附加安全密钥。
+5. 合并到 `main` 后，重新部署 Vercel 和 GitHub Pages。
 
-Key 和安全密钥不写入 Git 历史。浏览器端地图安全仍依赖高德控制台的域名白名单配置。
+浏览器只得到 Web 端 JS API Key 和代理地址，安全密钥不写入 Git 历史、GitHub Pages 构建产物或浏览器。高德控制台仍应限制 Key 可使用的站点域名。
 
 ## 后续扩展
 
