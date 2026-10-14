@@ -144,7 +144,7 @@ export default function HaidianMap() {
     const initialise = async () => {
       try {
         const config = readAmapRuntimeConfig();
-        const AMap = await loadAMap(config.key, config.securityCode);
+        const AMap = await loadAMap(config.key, config.proxyUrl);
         if (!active) return;
         amapRef.current = AMap;
         const map = new AMap.Map(container, {
@@ -310,7 +310,7 @@ export default function HaidianMap() {
             <div className="haidian-map-status haidian-map-status--error">
               <strong>地图暂时不可用</strong>
               <span>{error}</span>
-              <small>请在 GitHub Actions 中配置 AMAP_JS_KEY 和 AMAP_SECURITY_CODE 后重新部署。</small>
+              <small>请检查高德 Web Key 和 Vercel 地图代理的配置。</small>
             </div>
           ) : null}
         </div>
