@@ -1,9 +1,9 @@
 /* 北京智能旅行 · 离线缓存
  * 策略：导航请求「网络优先、失败回退缓存」，静态资源「缓存优先」。
- * 只处理同源 GET 请求，绝不缓存代理请求（那会把 AI 回答也存下来）。
+ * 只处理同源静态 GET 请求，不缓存 AI 和高德代理的实时响应。
  */
 // 每次发布 Agent 关键修复时递增版本，确保手机端不会继续使用旧脚本。
-const CACHE = 'beijing-travel-v7';
+const CACHE = 'beijing-travel-v8';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -29,6 +29,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_AMapService/')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
