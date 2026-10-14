@@ -127,7 +127,7 @@ export interface AMapNamespace {
 
 let amapPromise: Promise<AMapNamespace> | null = null;
 
-type AmapEnvKey = 'VITE_AMAP_KEY' | 'VITE_AMAP_SECURITY_CODE';
+type AmapEnvKey = 'VITE_AMAP_KEY' | 'VITE_AMAP_PROXY_URL';
 
 function readBuildEnv(key: AmapEnvKey): string {
   const env = (import.meta as ImportMeta & { env?: Record<string, unknown> }).env;
@@ -135,14 +135,14 @@ function readBuildEnv(key: AmapEnvKey): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-export function readAmapRuntimeConfig(): { key: string; securityCode: string } {
+export function readAmapRuntimeConfig(): { key: string; proxyUrl: string } {
   return {
     key: readBuildEnv('VITE_AMAP_KEY'),
-    securityCode: readBuildEnv('VITE_AMAP_SECURITY_CODE'),
+    proxyUrl: readBuildEnv('VITE_AMAP_PROXY_URL') || `${globalThis.location?.origin ?? ''}/_AMapService`,
   };
 }
 
-export function loadAMap(key: string, securityCode: string): Promise<AMapNamespace> {
+export function loadAMap(key: string, proxyUrl: string): Promise<AMapNamespace> {
   const existing = (globalThis as { AMap?: AMapNamespace }).AMap;
   if (existing) return Promise.resolve(existing);
   if (amapPromise) return amapPromise;
@@ -151,11 +151,11 @@ export function loadAMap(key: string, securityCode: string): Promise<AMapNamespa
     return Promise.reject(new Error('北京地图尚未配置高德地图 JS API Key。'));
   }
 
-  if (securityCode) {
-    (globalThis as { _AMapSecurityConfig?: { securityJsCode: string } })._AMapSecurityConfig = {
-      securityJsCode: securityCode,
-    };
-  }
+  // The JS API sends service requests to our Vercel function. The jscode is
+  // appended there, never bundled into the website or sent to the browser.
+  (globalThis as { _AMapSecurityConfig?: { serviceHost: string } })._AMapSecurityConfig = {
+    serviceHost: proxyUrl.replace(/\/$/, ''),
+  };
 
   const pending = new Promise<AMapNamespace>((resolve, reject) => {
     const script = document.createElement('script');
@@ -178,7 +178,7 @@ export function loadAMap(key: string, securityCode: string): Promise<AMapNamespa
         finish(api);
       } else if (Date.now() - startedAt >= 8000) {
         finish(new Error(loaded
-          ? '高德地图脚本已加载，但 API 未初始化。请检查 JS API Key、域名白名单和安全密钥。'
+          ? '高德地图脚本已加载，但 API 未初始化。请检查 JS API Key、域名白名单和代理服务。'
           : '高德地图连接超时，请检查网络或 Key 配置。'));
       } else {
         timer = globalThis.setTimeout(checkReady, 100);
