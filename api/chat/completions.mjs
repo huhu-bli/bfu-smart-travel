@@ -10,6 +10,7 @@ export function isTrustedBrowserOrigin(origin) {
   return origin === 'https://huhu-bli.github.io'
     || origin === 'https://bfu-smart-travel.vercel.app'
     || /^https:\/\/bfu-smart-travel-git-[a-z0-9-]+-h2642341596-4653\.vercel\.app$/i.test(origin)
+    || /^https:\/\/bfu-smart-travel-[a-z0-9]+-h2642341596-4653\.vercel\.app$/i.test(origin)
     || /^http:\/\/(localhost|127\.0\.0\.1):5173$/.test(origin);
 }
 
