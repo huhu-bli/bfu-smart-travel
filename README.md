@@ -4,6 +4,8 @@
 
 前端是 React + Vite + TypeScript，静态页面托管在 GitHub Pages；千问请求通过 Vercel Serverless Function 转发，API Key 不进入浏览器。
 
+高德地图使用 Web 端 JS API Key。高德安全密钥仅保存在 Vercel 的 `AMAP_SECURITY_CODE` 环境变量中，`/_AMapService/*` 请求由 Vercel 函数代理；GitHub Pages 构建只注入公开的 `AMAP_JS_KEY` 和代理地址。Vercel 部署另需 `VITE_AMAP_KEY`，Preview 和 Production 环境都要配置。修改变量后分别重新部署对应站点。
+
 ## 功能
 
 | 模块 | 说明 |

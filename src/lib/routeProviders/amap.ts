@@ -217,7 +217,7 @@ export async function refineBeijingRouteWithAmap(
   const config = readAmapRuntimeConfig();
   if (!config.key || typeof document === 'undefined') return plan;
   try {
-    const AMap = await loadAMap(config.key, config.securityCode);
+    const AMap = await loadAMap(config.key, config.proxyUrl);
     const primaryPairs = plan.stops.map((stop, index) => ({
       from: index === 0 ? plan.origin : plan.stops[index - 1].place,
       to: stop.place,

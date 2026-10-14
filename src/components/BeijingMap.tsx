@@ -93,7 +93,7 @@ export default function BeijingMap({ plan = null }: Props) {
     void (async () => {
       try {
         const config = readAmapRuntimeConfig();
-        const AMap = await loadAMap(config.key, config.securityCode);
+        const AMap = await loadAMap(config.key, config.proxyUrl);
         if (!active) return;
         amapRef.current = AMap;
         const map = new AMap.Map(container, { center: BEIJING_CENTER, zoom: 9, viewMode: '2D' });
