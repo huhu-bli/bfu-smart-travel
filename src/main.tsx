@@ -8,7 +8,7 @@ import './styles/haidian.css';
 (globalThis as { __BFU_ENV__?: Record<string, string> }).__BFU_ENV__ = {
   VITE_AGENT_PROXY_URL: import.meta.env.VITE_AGENT_PROXY_URL ?? '',
   VITE_AMAP_KEY: import.meta.env.VITE_AMAP_KEY ?? '',
-  VITE_AMAP_SECURITY_CODE: import.meta.env.VITE_AMAP_SECURITY_CODE ?? '',
+  VITE_AMAP_PROXY_URL: import.meta.env.VITE_AMAP_PROXY_URL ?? '',
 };
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
