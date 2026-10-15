@@ -12,7 +12,7 @@ import {
   runAgentTurn,
   type AgentHistory,
 } from '../lib/agent';
-import { routeScene, sceneLabel, type Scene } from '../lib/sceneRouter';
+import { routeScene, sceneForTarget, sceneLabel, type Scene } from '../lib/sceneRouter';
 import {
   BEIJING_TARGET,
   resolveTravelTarget,
@@ -354,9 +354,7 @@ export default function AgentPanel({
     setBusy(true);
     const target = resolveTravelTarget(question, activeTargetRef.current);
     const routedScene = routeScene(question, activeSceneRef.current);
-    const scene = routedScene === 'campus-route' && target.kind !== 'campus'
-      ? 'outside-trip'
-      : routedScene;
+    const scene = sceneForTarget(routedScene, target);
     const key = conversationKey(scene, target);
     activeSceneRef.current = scene;
     activeTargetRef.current = target;
