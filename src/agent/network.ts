@@ -1,5 +1,5 @@
 import { PROXY_TIMEOUT_MS, resolveEndpoint } from './config';
-import { describeError, errorDetail, type ProbeResult } from './errors';
+import { AgentHttpError, describeError, errorDetail, type ProbeResult } from './errors';
 import type { AgentSettings } from './types';
 
 /** 向模型发送一次已经构造好的请求。协议和工具循环由上层负责。 */
@@ -30,7 +30,7 @@ export async function requestModel(
   }
 
   const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!response.ok) throw new Error(describeError(response.status, payload, settings));
+  if (!response.ok) throw new AgentHttpError(response.status, describeError(response.status, payload, settings));
   return payload ?? {};
 }
 

@@ -353,9 +353,14 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
     const optionalLine = result.optionalStops?.length
       ? `\n\n可选站点：${result.optionalStops.map((stop) => `${stop.name}（${stop.district}）`).join('、')}`
       : '';
+    const foodStops = [context.beijingPlan?.origin, ...(context.beijingPlan?.stops.map((stop) => stop.place) ?? [])]
+      .filter((place) => place?.category === 'neighborhood' && place.interests.includes('food'));
+    const diningLine = interests.includes('food')
+      ? `\n\n用餐建议：${foodStops.length ? `在${foodStops[0]?.name}预留一餐，` : '沿线预留一餐，'}可按喜好找京味餐饮；目前未收录已核实的具体餐馆，营业与排队情况请出发前确认。`
+      : '';
     return {
       text: routeLine
-        ? `给你生成了「${result.title}」：\n\n${routeLine}${optionalLine}\n\n预计 ${Math.round(result.totalMinutes)} 分钟，点位间约 ${result.totalDistanceKm} 公里。剩余约 ${result.remainingMinutes} 分钟：${result.remainingAdvice}${seasonalPlaces.length ? '\n\n银杏叶色和当日开放情况请出发前向园方确认。' : ''}`
+        ? `给你生成了「${result.title}」：\n\n${routeLine}${optionalLine}${diningLine}\n\n预计 ${Math.round(result.totalMinutes)} 分钟，点位间约 ${result.totalDistanceKm} 公里。剩余约 ${result.remainingMinutes} 分钟：${result.remainingAdvice}${seasonalPlaces.length ? '\n\n银杏叶色和当日开放情况请出发前向园方确认。' : ''}`
         : '暂时没有生成合适的北京路线，请补充时长、行政区或想去的景点。',
       plan: null,
       planOptions: null,

@@ -11,6 +11,7 @@ import type {
 } from './types';
 import type { Scene } from '../lib/sceneRouter';
 import { runTool } from '../lib/toolExecutor';
+import { ToolLoopLimitError } from './errors';
 
 const EMPTY_REPLY = '（模型没有返回文字，换个问法再试一次。）';
 
@@ -65,7 +66,7 @@ export async function runResponsesLoop(
     }
   }
 
-  throw new Error('工具调用轮次过多，把问题拆小一点再试。');
+  throw new ToolLoopLimitError();
 }
 
 export async function runChatLoop(
@@ -79,9 +80,16 @@ export async function runChatLoop(
 ): Promise<LoopOutcome> {
   const trimmedHistory = trimHistory(history);
   let messages: ChatMessage[] = [...(trimmedHistory.history as ChatMessage[]), { role: 'user', content: userText }];
+  const toolResults = new Map<string, string>();
+  let finishWithoutTools = false;
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
-    const response = await requestModel(settings, buildChatPayload(settings, messages, scene, contextHint));
+    const payload = buildChatPayload(settings, messages, scene, contextHint);
+    if (finishWithoutTools || round === MAX_ROUNDS) {
+      payload.tool_choice = 'none';
+      payload.tools = [];
+    }
+    const response = await requestModel(settings, payload);
     const turn = parseChatResponse(response);
 
     const assistant: ChatMessage = {
@@ -100,15 +108,26 @@ export async function runChatLoop(
       };
     }
 
+    // 如果服务商未遵守 tool_choice=none，不继续请求，也不留下未配对的工具调用。
+    if (payload.tool_choice === 'none') throw new ToolLoopLimitError();
+
     for (const call of turn.toolCalls) {
+      const signature = `${call.name}:${call.arguments}`;
+      const cached = toolResults.get(signature);
+      if (cached !== undefined) {
+        finishWithoutTools = true;
+        context.trace.push(`tool_loop(复用 ${call.name} 的结果)`);
+      }
+      const output = cached ?? await runTool(call.name, call.arguments, context);
+      toolResults.set(signature, output);
       messages.push({
         role: 'tool',
         tool_call_id: call.callId,
-        content: await runTool(call.name, call.arguments, context),
+        content: output,
       });
     }
   }
 
-  throw new Error('工具调用轮次过多，把问题拆小一点再试。');
+  throw new ToolLoopLimitError();
 }
 

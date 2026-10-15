@@ -53,12 +53,17 @@ function dwellMinutes(
 }
 
 function wantedInterests(interests: InterestId[]): InterestId[] {
-  return interests.length ? interests : ['culture', 'plant', 'photo'];
+  // 美食一日游还应有可逛的邻近地点，而不是排进一个占满全天的主题公园。
+  return interests.length ? interests.includes('food') && interests.length === 1
+    ? ['food', 'culture'] : interests : ['culture', 'plant', 'photo'];
 }
 
 function baseScore(place: BeijingPlace, wanted: InterestId[], included: Set<string>): number {
   const relevance = place.interests.filter((id) => wanted.includes(id)).length;
-  return relevance * 4 + (place.mustSee ? 2.5 : 0) + (included.has(place.id) ? 100 : 0);
+  const foodRoute = wanted.includes('food');
+  const diningArea = foodRoute && place.interests.includes('food') && place.category === 'neighborhood' ? 5 : 0;
+  const fullDayAttraction = foodRoute && place.visit >= 360 ? 8 : 0;
+  return relevance * 4 + (place.mustSee ? 2.5 : 0) + diningArea - fullDayAttraction + (included.has(place.id) ? 100 : 0);
 }
 
 function reasonFor(place: BeijingPlace, wanted: InterestId[]): string {

@@ -34,3 +34,13 @@ test('city route guard does not invent a ginkgo route outside the verified place
   assert.equal(context.beijingPlan, null);
   assert.match(answer, /未收录明确标注银杏/);
 });
+
+test('city route guard builds a full-day dining and sightseeing plan if Qwen skips the tool', async () => {
+  const question = '我明天有一天时间，想吃吃北京的特色美食并出去逛逛';
+  const context = contextFor(question);
+  const answer = await ensureCityRoute(question, '可以随便逛逛。', context);
+  assert.ok(context.beijingPlan);
+  assert.equal(context.beijingPlanOptions?.minutes, 480);
+  assert.match(answer, /预留用餐时间/);
+  assert.notEqual(context.beijingPlan.origin.id, 'universal-beijing');
+});

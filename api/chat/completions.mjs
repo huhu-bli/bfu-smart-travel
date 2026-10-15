@@ -3,7 +3,7 @@ const CHAT_PATH = '/chat/completions';
 const ALLOWED_MODELS = new Set(['qwen3.8-flash', 'qwen3.7-plus', 'qwen3.8-max', 'qwen-plus']);
 const MAX_BODY_CHARS = 120_000;
 const MAX_MESSAGES = 30;
-const UPSTREAM_TIMEOUT_MS = 25_000;
+const UPSTREAM_TIMEOUT_MS = 35_000;
 const buckets = new Map();
 
 export function isTrustedBrowserOrigin(origin) {

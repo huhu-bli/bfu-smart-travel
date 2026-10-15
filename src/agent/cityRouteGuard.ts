@@ -63,5 +63,11 @@ export async function ensureCityRoute(
   const seasonalNote = wantsGinkgo
     ? '所选赏叶点位收录有银杏，但当日叶色、开放时间请出发前向园方确认。'
     : '交通时间为估算，开放与预约情况请出发前确认。';
-  return `已生成「${plan.title}」：${stops.map((place, index) => `${index + 1}. ${place.name}`).join(' → ')}。预计 ${Math.round(plan.totalMinutes)} 分钟，点位间约 ${plan.totalDistanceKm} 公里。${seasonalNote}可以在全局计划中调整站点。`;
+  const diningArea = interests.includes('food')
+    ? stops.find((place) => place.category === 'neighborhood' && place.interests.includes('food'))
+    : null;
+  const diningNote = interests.includes('food')
+    ? `可以${diningArea ? `在${diningArea.name}` : '沿线'}预留用餐时间；具体餐馆和营业情况尚未核实。`
+    : '';
+  return `已生成「${plan.title}」：${stops.map((place, index) => `${index + 1}. ${place.name}`).join(' → ')}。预计 ${Math.round(plan.totalMinutes)} 分钟，点位间约 ${plan.totalDistanceKm} 公里。${diningNote}${seasonalNote}可以在全局计划中调整站点。`;
 }

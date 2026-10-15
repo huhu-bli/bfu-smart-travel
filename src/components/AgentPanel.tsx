@@ -9,6 +9,8 @@ import {
   describePlanOption,
   formatBeijingPlanSummary,
   formatPlanSummary,
+  AgentHttpError,
+  isRecoverableAgentFailure,
   runAgentTurn,
   type AgentHistory,
 } from '../lib/agent';
@@ -102,15 +104,6 @@ function clampPanelSize(width: number, height: number): PanelSize {
     width: Math.round(Math.min(maxWidth, Math.max(minWidth, width))),
     height: Math.round(Math.min(maxHeight, Math.max(minHeight, height))),
   };
-}
-
-function isNetworkFailure(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error.message.includes('浏览器无法连接代理服务') ||
-      error.message.includes('网络请求失败') ||
-      error.name === 'AbortError')
-  );
 }
 
 function readPanelSize(): PanelSize {
@@ -431,8 +424,8 @@ export default function AgentPanel({
       ]);
     } catch (error) {
       const reason = error instanceof Error ? error.message : '请求失败';
-      if (isNetworkFailure(error)) {
-        // 只有 Vercel 代理网络不可达时才使用本地助手；认证、权限和额度错误必须明确展示。
+      if (isRecoverableAgentFailure(error) && scene !== 'weather') {
+        // 超时、短暂服务异常或工具循环耗尽时给出可编辑的本地路线；鉴权和额度错误仍明确展示。
         const fallback = await answerLocally(question, localMemoryRef.current[key] ?? null);
         const fallbackKey = conversationKey(fallback.memory.scene, fallback.memory.target);
         localMemoryRef.current[fallbackKey] = fallback.memory;
@@ -458,19 +451,24 @@ export default function AgentPanel({
             tripIds: fallback.tripIds,
             trace: [
               `场景：${sceneLabel(fallback.memory.scene)}`,
-              `千问 Agent 网络暂时不可用（${reason}），已用内置助手作答`,
+              `千问 Agent 暂时不可用（${reason}），已用内置助手作答`,
               ...fallback.trace,
             ],
             offline: true,
           },
         ]);
       } else {
+        const advice = error instanceof AgentHttpError && [401, 403].includes(error.status)
+          ? '请检查服务端千问密钥与访问权限后重试。'
+          : error instanceof AgentHttpError && error.status === 429
+            ? '请稍后重试，并检查千问额度与限流状态。'
+            : '请稍后重试。';
         setTurns((prev) => [
           ...prev,
           {
             id: nextId(),
             role: 'assistant',
-            text: `千问 Agent 暂时不可用：${reason}\n\n请检查 Vercel 的 QWEN_API_KEY 和 APP_TOKEN 后重试。此次没有切换到内置助手。`,
+            text: `千问 Agent 暂时不可用：${reason}\n\n${advice}此次没有切换到内置助手。`,
             trace: [
               `场景：${sceneLabel(scene)}`,
               '千问 Agent 请求失败，未切换到内置助手',
