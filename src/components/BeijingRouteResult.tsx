@@ -118,14 +118,14 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
           <ol className="stop-list">
             <li className="stop-item stop-item--origin">
               <span className="stop-index">1</span>
-              <div className="stop-main"><div className="stop-title"><strong>{plan.origin.emoji} {plan.origin.name}</strong><span className="stop-time">09:00 开始</span></div><p className="stop-reason">{plan.origin.district} · {plan.origin.short}</p></div>
+              <div className="stop-main"><div className="stop-title"><strong>{plan.origin.emoji} {plan.origin.name}</strong><span className="stop-time">{formatClock(0, options.startHour ?? 9)} 示例出发</span></div><p className="stop-reason">{plan.origin.district} · {plan.origin.short}</p></div>
               <button type="button" className="route-stop-remove" onClick={() => remove(plan.origin.id)} aria-label={`删除${plan.origin.name}`} disabled={primaryIds.length === 1}>×</button>
             </li>
             {plan.stops.map((stop, index) => (
               <li key={stop.place.id} className="stop-item">
                 <span className="stop-index">{index + 2}</span>
                 <div className="stop-main">
-                  <div className="stop-title"><strong>{stop.place.emoji} {stop.place.name}</strong><span className="stop-time">{formatClock(stop.arrive)}–{formatClock(stop.leave)}</span></div>
+                  <div className="stop-title"><strong>{stop.place.emoji} {stop.place.name}</strong><span className="stop-time">{formatClock(stop.arrive, options.startHour ?? 9)}–{formatClock(stop.leave, options.startHour ?? 9)}</span></div>
                   <p className="stop-reason">{stop.reason}</p>
                   <div className="stop-meta"><span>{stop.travelMode} {stop.travelMinutes} 分钟 · 约 {stop.distanceKm} 公里</span><span>{stop.routeProvider === 'amap' ? '高德路线' : '本地估算'}</span><span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span><span>{stop.place.district}</span></div>
                 </div>

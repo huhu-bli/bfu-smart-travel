@@ -15,7 +15,7 @@ import type {
 import { formatDuration } from './planner';
 import { runTool } from './toolExecutor';
 import type { AgentToolContext } from '../agent/types';
-import { routeScene, type Scene } from './sceneRouter';
+import { routeScene, sceneForTarget, type Scene } from './sceneRouter';
 import {
   resolveTravelTarget,
   type TravelTarget,
@@ -226,9 +226,7 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
   const spots = campus?.spots ?? [];
   const parsedSpot = parseSpot(text, spots);
   const routed = routeScene(text, base?.scene ?? 'unknown');
-  const targetScene = routed === 'campus-route' && target.kind !== 'campus'
-    ? 'outside-trip'
-    : routed;
+  const targetScene = sceneForTarget(routed, target);
   const scene: Scene = targetScene === 'unknown' && parsedSpot ? 'spot-detail' : targetScene;
 
   const explicitMinutes = parseMinutes(text);
@@ -246,7 +244,7 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
   const memory: LocalMemory = {
     scene,
     target,
-    minutes: explicitMinutes ?? base?.minutes ?? 60,
+    minutes: explicitMinutes ?? base?.minutes ?? (/下午|半天/.test(text) ? 240 : 60),
     interests: base
       ? mergeInterests(text, parsedInterests, base.interests)
       : parsedInterests,
@@ -317,6 +315,13 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
     const districts = districtIdsFromText(text).length
       ? districtIdsFromText(text)
       : memory.target.districtIds ?? [];
+    const seasonalPlaces = text.includes('银杏')
+      ? BEIJING_PLACES.filter((place) =>
+          (!districts.length || districts.includes(place.districtId)) &&
+          place.highlights.some((highlight) => highlight.includes('银杏')),
+        )
+      : [];
+    const requestedPlaces = Array.from(new Set([...namedPlaces, ...seasonalPlaces]));
     const result = safeParse<{
       title: string;
       totalMinutes: number;
@@ -334,8 +339,9 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
           district_ids: districts,
           pace: 'normal',
           travel_mode: 'mixed',
-          start_place_id: namedPlaces[0]?.id ?? '',
-          include_place_ids: namedPlaces.map((place) => place.id),
+          start_place_id: requestedPlaces[0]?.id ?? '',
+          start_hour: /下午|傍晚/.test(text) ? 14 : 9,
+          include_place_ids: requestedPlaces.map((place) => place.id),
           exclude_place_ids: memory.beijingExcludePlaceIds ?? [],
         }),
         context,
@@ -349,7 +355,7 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
       : '';
     return {
       text: routeLine
-        ? `给你生成了「${result.title}」：\n\n${routeLine}${optionalLine}\n\n预计 ${Math.round(result.totalMinutes)} 分钟，点位间约 ${result.totalDistanceKm} 公里。剩余约 ${result.remainingMinutes} 分钟：${result.remainingAdvice}`
+        ? `给你生成了「${result.title}」：\n\n${routeLine}${optionalLine}\n\n预计 ${Math.round(result.totalMinutes)} 分钟，点位间约 ${result.totalDistanceKm} 公里。剩余约 ${result.remainingMinutes} 分钟：${result.remainingAdvice}${seasonalPlaces.length ? '\n\n银杏叶色和当日开放情况请出发前向园方确认。' : ''}`
         : '暂时没有生成合适的北京路线，请补充时长、行政区或想去的景点。',
       plan: null,
       planOptions: null,

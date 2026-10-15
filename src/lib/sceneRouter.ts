@@ -1,5 +1,6 @@
 /** 对话场景。场景决定当前请求可以看到哪些提示词、工具和上下文。 */
 export type Scene = 'campus-route' | 'spot-detail' | 'outside-trip' | 'weather' | 'system-help' | 'unknown';
+import type { TravelTarget } from './travelTarget';
 
 export type SceneToolName =
   | 'list_spots'
@@ -48,6 +49,7 @@ const ROUTE = /(路线|规划|怎么逛|逛|游览|游玩|出发|经过|安排|�
 const WEATHER = /(天气|下雨|降雨|雨伞|温度|气温|体感|风力|风速|湿度|紫外线|穿什么|防晒|适合出行|适合游览|适合逛|会不会下雨|晴不晴)/;
 const DETAIL = /(值得|怎么样|好不好|是什么|介绍|讲讲|说说|开放|几点|好玩|详情|详细|看看)/;
 const FOLLOW_UP = /(换|改成|调整|再安排|继续|第二站|第一站|上一条|刚才|它|这个|该点)/;
+const AUTUMN_CITY = /(银杏|赏秋|秋叶|红叶)/;
 
 /** 判断一句话属于哪个场景；无法确定时不强行猜测。 */
 export function routeScene(text: string, currentScene: Scene = 'unknown'): Scene {
@@ -60,6 +62,9 @@ export function routeScene(text: string, currentScene: Scene = 'unknown'): Scene
   if (EXPLICIT_OUTSIDE.test(value) || (OUTSIDE.test(value) && !CAMPUS_SCOPE.test(value))) {
     return 'outside-trip';
   }
+  if (AUTUMN_CITY.test(value) && currentScene !== 'campus-route' && currentScene !== 'spot-detail' && !CAMPUS_SCOPE.test(value)) {
+    return 'outside-trip';
+  }
   if (WEATHER.test(value)) {
     if (currentScene === 'campus-route' || currentScene === 'outside-trip') return currentScene;
     return 'weather';
@@ -68,6 +73,14 @@ export function routeScene(text: string, currentScene: Scene = 'unknown'): Scene
   if (DETAIL.test(value)) return 'spot-detail';
   if (currentScene !== 'unknown' && FOLLOW_UP.test(value)) return currentScene;
   return 'unknown';
+}
+
+/** 城市目标也可以是点位讲解或追问，统一交给拥有城市点位工具的场景。 */
+export function sceneForTarget(scene: Scene, target: TravelTarget): Scene {
+  if (target.kind !== 'campus' && (scene === 'campus-route' || scene === 'spot-detail' || (scene === 'unknown' && target.explicit))) {
+    return 'outside-trip';
+  }
+  return scene;
 }
 
 export function sceneLabel(scene: Scene): string {

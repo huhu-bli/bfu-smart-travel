@@ -159,6 +159,8 @@ export interface BeijingRouteStop {
 
 export interface BeijingRouteOptions {
   scope: 'beijing';
+  /** 行程示例出发小时；下午计划默认从 14:00 起算。 */
+  startHour?: number;
   interests: InterestId[];
   minutes: number;
   pace: PaceOption;
