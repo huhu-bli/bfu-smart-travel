@@ -302,6 +302,8 @@ export async function runTool(
     const startPlaceId = validPlaceIds.includes(requestedStart) ? requestedStart : undefined;
     const options: BeijingRouteOptions = {
       scope: 'beijing',
+      startHour: Number.isInteger(args.start_hour) && Number(args.start_hour) >= 0 && Number(args.start_hour) <= 23
+        ? Number(args.start_hour) : 9,
       interests,
       minutes,
       pace,
@@ -333,11 +335,12 @@ export async function runTool(
             placeId: plan.origin.id,
             name: plan.origin.name,
             district: plan.origin.district,
-            arrive: '09:00',
+            arrive: formatClock(0, options.startHour),
             leave: formatClock(
               plan.stops[0]
                 ? plan.stops[0].arrive - plan.stops[0].travelMinutes
                 : plan.totalMinutes,
+              options.startHour,
             ),
             travelMode: '起点',
             travelMinutes: 0,
@@ -347,8 +350,8 @@ export async function runTool(
             placeId: stop.place.id,
             name: stop.place.name,
             district: stop.place.district,
-            arrive: formatClock(stop.arrive),
-            leave: formatClock(stop.leave),
+            arrive: formatClock(stop.arrive, options.startHour),
+            leave: formatClock(stop.leave, options.startHour),
             travelMode: stop.travelMode,
             travelMinutes: stop.travelMinutes,
             distanceKm: stop.distanceKm,

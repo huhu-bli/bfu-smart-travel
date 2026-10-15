@@ -6,7 +6,7 @@ import type {
   RoutePlan,
 } from '../types';
 import { formatDuration } from '../lib/planner';
-import { routeScene, type Scene } from '../lib/sceneRouter';
+import { routeScene, sceneForTarget, type Scene } from '../lib/sceneRouter';
 import {
   resolveTravelTarget,
   targetContext,
@@ -14,6 +14,7 @@ import {
 } from '../lib/travelTarget';
 import { runChatLoop, runResponsesLoop } from './toolLoop';
 import { requestModel } from './network';
+import { ensureCityRoute } from './cityRouteGuard';
 import type {
   AgentHistory,
   AgentInputItem,
@@ -71,9 +72,7 @@ export async function runAgentTurn(params: {
   const { history, userText, settings } = params;
   const target = resolveTravelTarget(userText, params.previousTarget);
   const routedScene = routeScene(userText, params.scene ?? 'unknown');
-  const scene = routedScene === 'campus-route' && target.kind !== 'campus'
-    ? 'outside-trip'
-    : routedScene;
+  const scene = sceneForTarget(routedScene, target);
   const planCampusId = params.currentPlanOptions?.campusId ?? 'bfu';
   const sameCampus = target.kind === 'campus' && target.campusId === planCampusId;
   const currentPlan = scene === 'campus-route' && sameCampus ? params.currentPlan ?? null : null;
@@ -122,10 +121,23 @@ export async function runAgentTurn(params: {
           requestModel,
         );
 
+  const text = scene === 'outside-trip'
+    ? await ensureCityRoute(userText, outcome.text, context)
+    : outcome.text;
+  if (text !== outcome.text) {
+    // 后续追问只能看到真实工具结果；旧的错误结论不可留在上下文里。
+    const last = outcome.history[outcome.history.length - 1] as ChatMessage | AgentInputItem;
+    if (last?.role === 'assistant' && !('tool_calls' in last)) {
+      last.content = text;
+    } else {
+      (outcome.history as AgentInputItem[]).push({ role: 'assistant', content: text });
+    }
+  }
+
   return {
     scene,
     target,
-    text: outcome.text,
+    text,
     history: outcome.history,
     trimmed: outcome.trimmed,
     plan: context.plan,

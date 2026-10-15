@@ -86,11 +86,15 @@ export const BEIJING_PLACES: BeijingPlace[] = [
   place('temple-of-heaven', '天坛公园', 'dongcheng', '东城区', 'heritage', '⛩️', 116.4066, 39.8819, 150, ['culture', 'photo', 'plant'], '明清皇家祭天建筑群，也是经典中轴线景观。', ['祈年殿', '古柏', '中轴线'], '清晨或傍晚', true),
   place('lama-temple', '雍和宫', 'dongcheng', '东城区', 'heritage', '🛕', 116.4172, 39.9471, 90, ['culture', 'photo'], '保存完整的清代寺院建筑群。', ['寺院建筑', '胡同街区'], '上午'),
   place('nanluoguxiang', '南锣鼓巷', 'dongcheng', '东城区', 'neighborhood', '🏘️', 116.4032, 39.937, 90, ['culture', 'food', 'photo'], '适合步行感受胡同肌理与街区生活。', ['胡同', '街巷', '小店'], '傍晚'),
+  // 来源：https://yllhj.beijing.gov.cn/zwgk/zwxx/202310/t20231020_3283423.shtml
+  place('ditan-park', '地坛公园', 'dongcheng', '东城区', 'park', '🍂', 116.414443, 39.953777, 90, ['plant', 'culture', 'photo'], '园内银杏大道是北京的秋季赏叶地点。', ['银杏大道', '银杏', '古坛'], '秋季下午', false, '叶色、开放时间以当日官方信息为准。'),
 
   place('beihai-park', '北海公园', 'xicheng', '西城区', 'park', '🌊', 116.389, 39.9255, 120, ['plant', 'culture', 'photo'], '皇家园林与湖面景观结合的城市公园。', ['白塔', '湖景', '皇家园林'], '下午', true),
   place('shichahai', '什刹海', 'xicheng', '西城区', 'neighborhood', '🛶', 116.3852, 39.941, 120, ['culture', 'food', 'photo'], '由湖泊、胡同和历史街区组成的步行区域。', ['湖景', '胡同', '夜景'], '傍晚'),
   place('capital-museum', '首都博物馆', 'xicheng', '西城区', 'museum', '🏺', 116.341, 39.9055, 150, ['culture', 'research'], '聚焦北京城市历史、民俗与文物。', ['北京历史', '民俗展'], '上午'),
   place('beijing-zoo', '北京动物园', 'xicheng', '西城区', 'park', '🐼', 116.3374, 39.9385, 180, ['plant', 'research', 'photo'], '适合亲子与动物观察的综合园区。', ['大熊猫', '动物科普'], '上午'),
+  // 来源：https://www.beijing.gov.cn/renwen/zt/qrshzjc/202210/t20221026_2845499.html
+  place('yuetan-park', '月坛公园', 'xicheng', '西城区', 'park', '🍂', 116.352221, 39.916424, 90, ['plant', 'culture', 'photo'], '园内栽植银杏和元宝枫，适合秋季赏叶。', ['银杏', '元宝枫', '古坛'], '秋季下午', false, '叶色、开放时间以当日官方信息为准。'),
 
   place('olympic-park', '北京奥林匹克公园', 'chaoyang', '朝阳区', 'landmark', '🏟️', 116.3975, 40.0007, 150, ['sport', 'photo'], '鸟巢、水立方与城市公共空间集中分布。', ['鸟巢', '水立方', '夜景'], '傍晚', true),
   place('aosen', '奥林匹克森林公园', 'chaoyang', '朝阳区', 'park', '🌲', 116.3883, 40.0172, 180, ['plant', 'sport', 'photo'], '适合慢跑、骑行与城市自然观察的大型公园。', ['湿地', '慢跑', '四季景观'], '清晨'),

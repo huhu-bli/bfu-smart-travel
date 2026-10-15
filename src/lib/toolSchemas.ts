@@ -191,6 +191,10 @@ export const TOOL_SCHEMAS = [
           type: 'string',
           description: '明确的首站点位 id；没有指定时传空字符串。',
         },
+        start_hour: {
+          type: 'integer',
+          description: '示例出发小时（24 小时制）。用户说下午可传 14，未指定传 9；不表示已核实当日营业时间。',
+        },
         include_place_ids: {
           type: 'array',
           items: { type: 'string' },
@@ -202,7 +206,7 @@ export const TOOL_SCHEMAS = [
           description: '用户明确要求删除的北京点位 id。',
         },
       },
-      required: ['minutes', 'interests', 'district_ids', 'pace', 'travel_mode', 'start_place_id', 'include_place_ids', 'exclude_place_ids'],
+      required: ['minutes', 'interests', 'district_ids', 'pace', 'travel_mode', 'start_place_id', 'start_hour', 'include_place_ids', 'exclude_place_ids'],
       additionalProperties: false,
     },
   },
