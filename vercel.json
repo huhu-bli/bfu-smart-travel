@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/chat/completions.mjs": {
+      "maxDuration": 50
+    }
+  },
   "rewrites": [
     {
       "source": "/_AMapService/:amap_path*",

@@ -9,6 +9,30 @@ export interface ProbeResult {
   detail?: string;
 }
 
+export class AgentHttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'AgentHttpError';
+  }
+}
+
+export class ToolLoopLimitError extends Error {
+  constructor() {
+    super('工具调用轮次过多。');
+    this.name = 'ToolLoopLimitError';
+  }
+}
+
+/** 服务暂时不可用时让本地规划器接手；鉴权和额度错误仍原样显示。 */
+export function isRecoverableAgentFailure(error: unknown): boolean {
+  return error instanceof ToolLoopLimitError ||
+    (error instanceof AgentHttpError && [502, 503, 504].includes(error.status)) ||
+    (error instanceof Error && (
+      error.message.includes('浏览器无法连接代理服务') ||
+      error.name === 'AbortError'
+    ));
+}
+
 export function errorDetail(error: unknown): string {
   if (error instanceof Error) return `${error.name}: ${error.message}`;
   return String(error);
