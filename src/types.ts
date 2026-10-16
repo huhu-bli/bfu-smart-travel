@@ -100,7 +100,8 @@ export type BeijingPlaceCategory =
   | 'museum'
   | 'park'
   | 'university'
-  | 'neighborhood';
+  | 'neighborhood'
+  | 'restaurant';
 
 export type BeijingDistrictId =
   | 'dongcheng'

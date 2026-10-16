@@ -8,6 +8,10 @@ export interface PlaceSource {
   verifiedAt: string | null;
 }
 export interface PlaceMetadata {
+  version?: number;
+  address?: string;
+  ticketNote?: string;
+  coordinateSystem?: 'unknown' | 'gcj02';
   aliases?: string[];
   updatedAt?: string;
   openingHours?: string | null;

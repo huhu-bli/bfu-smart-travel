@@ -44,7 +44,7 @@ export function buildPlaceQuery(filter) {
     const literal = filter.keyword.replace(/[\\%_]/g, '\\$&');
     const key = bind(`%${literal}%`);
     where.push(`(p.name ILIKE ${key} ESCAPE '\\' OR p.short ILIKE ${key} ESCAPE '\\'
-      OR p.description ILIKE ${key} ESCAPE '\\' OR d.name ILIKE ${key} ESCAPE '\\'
+      OR p.description ILIKE ${key} ESCAPE '\\' OR p.address ILIKE ${key} ESCAPE '\\' OR d.name ILIKE ${key} ESCAPE '\\'
       OR EXISTS (SELECT 1 FROM unnest(p.aliases || p.highlights) term WHERE term ILIKE ${key} ESCAPE '\\'))`);
   }
   const condition = where.join(' AND ');
@@ -70,7 +70,8 @@ function publicPlace(row) {
     highlights: row.highlights, interests: row.interests, bestTime: row.best_time,
     tips: row.tips, mustSee: row.must_see, scope: row.scope,
     openingHours: row.opening_hours, bookingUrl: row.booking_url,
-    updatedAt: row.updated_at,
+    updatedAt: row.updated_at, version: row.version,
+    address: row.address, ticketNote: row.ticket_note, coordinateSystem: row.coordinate_system,
     sources: row.sources.map((s) => ({ reference: s.reference, kind: s.source_kind,
       verificationStatus: s.verification_status, verifiedAt: s.verified_at })),
   };

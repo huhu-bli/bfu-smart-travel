@@ -39,6 +39,7 @@ export const BEIJING_CATEGORY_LABELS: Record<BeijingPlaceCategory, string> = {
   park: '公园自然',
   university: '高校',
   neighborhood: '街区漫游',
+  restaurant: '餐饮美食',
 };
 
 const place = (

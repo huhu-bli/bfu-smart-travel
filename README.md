@@ -192,3 +192,7 @@ bfu-smart-travel/
 ## License
 
 MIT
+
+## 数据库维护
+
+景点新增、修订、批量导入预览、版本历史与归档恢复见 [维护说明](docs/place-database-maintenance.md)。公开接口保持只读，千问不直接写库。
