@@ -1,3 +1,4 @@
+import { BEIJING_PLACES } from '../data/beijingPlaces';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PACES } from '../data/interests';
@@ -17,7 +18,7 @@ test('beijingPlanner keeps explicit Beijing destinations in a one-day route', ()
     startPlaceId: 'forbidden-city',
     includePlaceIds: ['forbidden-city', 'temple-of-heaven', 'shichahai'],
     excludePlaceIds: [],
-  });
+  }, BEIJING_PLACES);
   const ids = [plan.origin.id, ...plan.stops.map((stop) => stop.place.id)];
   assert.deepEqual(ids.slice(0, 3), ['forbidden-city', 'temple-of-heaven', 'shichahai']);
   assert.ok(plan.totalMinutes <= 480);
@@ -34,7 +35,7 @@ test('beijingPlanner honours excluded city destinations', () => {
     startPlaceId: 'forbidden-city',
     includePlaceIds: ['forbidden-city'],
     excludePlaceIds: ['temple-of-heaven'],
-  });
+  }, BEIJING_PLACES);
   const ids = [
     plan.origin.id,
     ...plan.stops.map((stop) => stop.place.id),
@@ -62,7 +63,7 @@ test('beijingPlanner keeps every selected stop in order when editing, even over 
     excludePlaceIds: [],
     preserveSelectedStops: true,
   };
-  const added = buildBeijingRoute(options);
+  const added = buildBeijingRoute(options, BEIJING_PLACES);
   assert.deepEqual(
     [added.origin.id, ...added.stops.map((stop) => stop.place.id)],
     options.includePlaceIds,
@@ -74,7 +75,7 @@ test('beijingPlanner keeps every selected stop in order when editing, even over 
     ...options,
     includePlaceIds: ['forbidden-city', 'temple-of-heaven', 'shichahai'],
     excludePlaceIds: ['nanluoguxiang'],
-  });
+  }, BEIJING_PLACES);
   assert.deepEqual(
     [removed.origin.id, ...removed.stops.map((stop) => stop.place.id)],
     ['forbidden-city', 'temple-of-heaven', 'shichahai'],

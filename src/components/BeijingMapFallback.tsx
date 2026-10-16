@@ -1,4 +1,3 @@
-import { BEIJING_PLACES } from '../data/beijingPlaces';
 import type { BeijingPlace, BeijingRoutePlan } from '../types';
 
 interface Props {
@@ -11,25 +10,19 @@ interface Props {
 const width = 800;
 const height = 500;
 const padding = 38;
-const longitudes = BEIJING_PLACES.map((place) => place.lng);
-const latitudes = BEIJING_PLACES.map((place) => place.lat);
-const minLng = Math.min(...longitudes);
-const maxLng = Math.max(...longitudes);
-const minLat = Math.min(...latitudes);
-const maxLat = Math.max(...latitudes);
-
-function position(place: BeijingPlace): [number, number] {
-  return [
-    padding + ((place.lng - minLng) / (maxLng - minLng)) * (width - padding * 2),
-    height - padding - ((place.lat - minLat) / (maxLat - minLat)) * (height - padding * 2),
-  ];
-}
-
 /** 高德无法使用时，仍可查看站点的相对位置和计划顺序。线段不是实际道路。 */
 export default function BeijingMapFallback({ places, plan, selectedId, onSelect }: Props) {
   const route = plan ? [plan.origin, ...plan.stops.map((stop) => stop.place)] : [];
   const sequence = new Map(route.map((place, index) => [place.id, index + 1]));
   const visible = [...places, ...route.filter((place) => !places.some((item) => item.id === place.id))];
+  const minLng = Math.min(116, ...visible.map((place) => place.lng));
+  const maxLng = Math.max(116.8, ...visible.map((place) => place.lng));
+  const minLat = Math.min(39.6, ...visible.map((place) => place.lat));
+  const maxLat = Math.max(40.2, ...visible.map((place) => place.lat));
+  const position = (place: BeijingPlace): [number, number] => [
+    padding + ((place.lng - minLng) / (maxLng - minLng)) * (width - padding * 2),
+    height - padding - ((place.lat - minLat) / (maxLat - minLat)) * (height - padding * 2),
+  ];
 
   return (
     <svg className="beijing-fallback-map" viewBox={`0 0 ${width} ${height}`} role="group" aria-label="北京景点位置示意图，路线为直线连接">

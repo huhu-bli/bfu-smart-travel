@@ -9,13 +9,19 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/lib/*.test.ts src/agent/*.test.ts api/chat/*.test.mjs api/*.test.mjs",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "dev:api": "node scripts/dev-api.mjs",
+    "db:setup": "node --import tsx scripts/database.ts setup",
+    "db:migrate": "node --import tsx scripts/database.ts migrate",
+    "db:seed": "node --import tsx scripts/database.ts seed"
   },
   "dependencies": {
+    "pg": "^8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

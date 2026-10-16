@@ -1,4 +1,4 @@
-import { BEIJING_CATEGORY_LABELS, BEIJING_PLACE_MAP, BEIJING_PLACES } from '../data/beijingPlaces';
+import { BEIJING_CATEGORY_LABELS } from '../data/beijingPlaces';
 import { INTEREST_MAP } from '../data/interests';
 import type {
   BeijingPlace,
@@ -91,29 +91,30 @@ function routeTitle(planPlaces: BeijingPlace[], options: BeijingRouteOptions): s
   return `${scope} · ${interests}路线`;
 }
 
-function availablePlaces(options: BeijingRouteOptions): BeijingPlace[] {
+function availablePlaces(options: BeijingRouteOptions, places: BeijingPlace[]): BeijingPlace[] {
   const districts = new Set(options.districtIds);
   const excluded = new Set(options.excludePlaceIds ?? []);
-  return BEIJING_PLACES.filter(
+  return places.filter(
     (item) => !excluded.has(item.id) && (!districts.size || districts.has(item.districtId)),
   );
 }
 
-export function buildBeijingRoute(options: BeijingRouteOptions): BeijingRoutePlan {
-  const pool = availablePlaces(options);
+export function buildBeijingRoute(options: BeijingRouteOptions, places: BeijingPlace[]): BeijingRoutePlan {
+  const placeMap = Object.fromEntries(places.map((place) => [place.id, place]));
+  const pool = availablePlaces(options, places);
   if (!pool.length) throw new Error('当前筛选条件没有可规划的北京点位。');
 
   const wanted = wantedInterests(options.interests);
-  const included = new Set((options.includePlaceIds ?? []).filter((id) => BEIJING_PLACE_MAP[id]));
+  const included = new Set((options.includePlaceIds ?? []).filter((id) => placeMap[id]));
   const exactPlaces = options.preserveSelectedStops
     ? Array.from(new Set(options.includePlaceIds ?? []))
-      .map((id) => BEIJING_PLACE_MAP[id])
+      .map((id) => placeMap[id])
       .filter((place): place is BeijingPlace => Boolean(place && pool.includes(place)))
     : [];
   if (options.preserveSelectedStops && !exactPlaces.length) {
     throw new Error('请至少保留一个北京目的地。');
   }
-  const requestedStart = options.startPlaceId ? BEIJING_PLACE_MAP[options.startPlaceId] : null;
+  const requestedStart = options.startPlaceId ? placeMap[options.startPlaceId] : null;
   const origin = exactPlaces[0] ??
     (requestedStart && pool.some((item) => item.id === requestedStart.id) ? requestedStart : null) ??
     pool

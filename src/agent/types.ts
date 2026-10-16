@@ -58,6 +58,7 @@ export interface ToolCall {
 }
 
 export interface AgentToolContext {
+  placeRepository?: import('../lib/placeRepository').PlaceRepository;
   target: TravelTarget;
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;

@@ -11,11 +11,13 @@ import Planner from './components/Planner';
 import RouteResult from './components/RouteResult';
 import SpotDetail from './components/SpotDetail';
 import SpotsGallery from './components/SpotsGallery';
+import PlaceCatalog from './components/PlaceCatalog';
 import Trips from './components/Trips';
 import { DURATIONS, GATE_IDS, PACES } from './data/interests';
 import { SPOTS, SPOT_MAP } from './data/spots';
 import { campusById, spotAcrossCampuses } from './data/campuses';
 import { buildBeijingRoute } from './lib/beijingPlanner';
+import { databasePlaces, cityPlanningPlaces, type CatalogCityPlace } from './lib/placeRepository';
 import { refineBeijingRouteWithAmap } from './lib/routeProviders/amap';
 import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
@@ -46,6 +48,8 @@ export default function App() {
   const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
+  const [galleryScope, setGalleryScope] = useState<'database' | 'campus'>('database');
+  const [catalogPlanError, setCatalogPlanError] = useState('');
   const [mapScope, setMapScope] = useState<'campus' | 'beijing'>('campus');
   const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
   const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
@@ -235,16 +239,19 @@ export default function App() {
       excludePlaceIds,
       preserveSelectedStops: true,
     };
-    const estimatedPlan = buildBeijingRoute(nextOptions);
-    const source = 'manual';
-    setGlobalRoute({
-      kind: 'beijing',
-      plan: estimatedPlan,
-      options: nextOptions,
-      source,
-      updatedAt: new Date().toISOString(),
-    });
-    void refineBeijingRouteWithAmap(estimatedPlan, nextOptions).then((refinedPlan) => {
+    setCatalogPlanError('');
+    void cityPlanningPlaces(databasePlaces, nextOptions.districtIds, includePlaceIds).then(async (places) => {
+      if (beijingRevision.current !== revision) return;
+      const estimatedPlan = buildBeijingRoute(nextOptions, places);
+      const source = 'manual';
+      setGlobalRoute({
+        kind: 'beijing',
+        plan: estimatedPlan,
+        options: nextOptions,
+        source,
+        updatedAt: new Date().toISOString(),
+      });
+      const refinedPlan = await refineBeijingRouteWithAmap(estimatedPlan, nextOptions);
       if (beijingRevision.current !== revision) return;
       setGlobalRoute({
         kind: 'beijing',
@@ -253,6 +260,23 @@ export default function App() {
         source,
         updatedAt: new Date().toISOString(),
       });
+    }).catch((error: unknown) => {
+      if (beijingRevision.current === revision) setCatalogPlanError(error instanceof Error ? error.message : '路线更新失败。');
+    });
+  };
+  const planFromCatalog = (place: CatalogCityPlace) => {
+    const revision = ++beijingRevision.current;
+    setCatalogPlanError('');
+    const nextOptions: BeijingRouteOptions = { scope: 'beijing', startHour: 9, minutes: 240,
+      interests: place.interests, pace: PACES[1], travelMode: 'mixed', districtIds: [place.districtId],
+      startPlaceId: place.id, includePlaceIds: [place.id], excludePlaceIds: [] };
+    return cityPlanningPlaces(databasePlaces, nextOptions.districtIds, [place.id]).then(async (places) => {
+      const result = await refineBeijingRouteWithAmap(buildBeijingRoute(nextOptions, places), nextOptions);
+      if (beijingRevision.current !== revision) return;
+      setGlobalRoute({ kind: 'beijing', plan: result, options: nextOptions, source: 'manual', updatedAt: new Date().toISOString() });
+      setMapScope('beijing'); setTab('planner');
+    }).catch((error: unknown) => {
+      if (beijingRevision.current === revision) setCatalogPlanError(error instanceof Error ? error.message : '路线生成失败。');
     });
   };
 
@@ -316,14 +340,16 @@ export default function App() {
               逛遍北京。
             </h1>
             <p>
-              告诉 Agent 想去的行政区、景点、时长与兴趣，它会生成可保存、可增删、可在地图查看的北京路线。
+              先按地区和兴趣查询景点资料，再让 Agent 帮你安排可保存、可增删的旅行路线。
             </p>
             <div className="hero-agent-entry">
+              <button type="button" className="hero-agent-btn" onClick={() => { setGalleryScope('database'); setTab('spots'); }}>
+                查询景点
+              </button>
               <button type="button" className="hero-agent-btn" onClick={() => setAgentOpen(true)}>
                 <span aria-hidden="true">🤖</span>
                 让 Agent 帮我规划
               </button>
-              <span>例如：我有一天，想逛故宫、天坛和什刹海</span>
             </div>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -355,6 +381,7 @@ export default function App() {
           onRemoveStop={removePlanStop}
           onAddOptionalStop={addOptionalStop}
         />
+        {catalogPlanError ? <p role="alert">{catalogPlanError}</p> : null}
 
         <section className="explore-strip" aria-label="北京探索入口">
           <div className="explore-intro">
@@ -496,6 +523,12 @@ export default function App() {
           ) : null}
 
           {tab === 'spots' ? (
+            <>
+            <div className="map-scope-switch" role="group" aria-label="景点资料范围">
+              <button type="button" className={galleryScope === 'database' ? 'is-active' : ''} onClick={() => setGalleryScope('database')}>景点数据库</button>
+              <button type="button" className={galleryScope === 'campus' ? 'is-active' : ''} onClick={() => setGalleryScope('campus')}>校园导览</button>
+            </div>
+            {galleryScope === 'database' ? <PlaceCatalog onPlanCity={planFromCatalog} /> :
             <SpotsGallery
               spots={activeSpots}
               scopeLabel={activeCampus?.shortName ?? activeOptions.campusLabel ?? '当前路线'}
@@ -505,6 +538,8 @@ export default function App() {
               onTogglePlanSpot={togglePlanSpot}
               onSelect={setActiveSpotId}
             />
+            }
+            </>
           ) : null}
 
           {tab === 'trips' ? <Trips /> : null}

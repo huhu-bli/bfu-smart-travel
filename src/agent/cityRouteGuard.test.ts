@@ -1,3 +1,4 @@
+import { fixturePlaces } from '../../test/support/fixturePlaces';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveTravelTarget } from '../lib/travelTarget';
@@ -6,6 +7,7 @@ import { ensureCityRoute } from './cityRouteGuard';
 
 function contextFor(question: string): AgentToolContext {
   return {
+    placeRepository: fixturePlaces,
     target: resolveTravelTarget(question), plan: null, planOptions: null,
     beijingPlan: null, beijingPlanOptions: null,
     spotIds: [], placeIds: [], tripIds: [], trace: [],

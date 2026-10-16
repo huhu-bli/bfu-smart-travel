@@ -1,3 +1,4 @@
+import { fixturePlaces } from '../../test/support/fixturePlaces';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_AGENT_SETTINGS } from './config';
@@ -8,6 +9,7 @@ import type { AgentToolContext } from './types';
 
 function cityContext(): AgentToolContext {
   return {
+    placeRepository: fixturePlaces,
     target: BEIJING_TARGET, plan: null, planOptions: null,
     beijingPlan: null, beijingPlanOptions: null,
     spotIds: [], placeIds: [], tripIds: [], trace: [],

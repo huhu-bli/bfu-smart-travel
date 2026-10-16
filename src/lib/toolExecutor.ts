@@ -4,8 +4,6 @@ import type { Spot } from '../types';
 import { TRIPS } from '../data/trips';
 import {
   BEIJING_DISTRICT_IDS,
-  BEIJING_PLACE_MAP,
-  BEIJING_PLACES,
 } from '../data/beijingPlaces';
 import type {
   BeijingDistrictId,
@@ -19,12 +17,13 @@ import { buildBeijingRoute } from './beijingPlanner';
 import { refineBeijingRouteWithAmap } from './routeProviders/amap';
 import { buildRoute, formatClock } from './planner';
 import { fetchWeather } from './weather';
+import { databasePlaces, cityPlanningPlaces, PlaceDatabaseError } from './placeRepository';
 import { INTEREST_IDS } from './toolSchemas';
 import type { AgentToolContext } from '../agent/types';
 
 /**
- * 工具执行层：只负责读取本地数据并返回结构化结果。
- * 它不负责提示词、场景判断或网络请求，方便以后把 data 层迁移到 API/数据库。
+ * 工具执行层：通过仓储接口查询景点数据库，再调用确定性的路线算法。
+ * 模型不能执行 SQL 或写入数据库；数据库错误不能伪装成景点不存在。
  */
 
 function asStringArray(value: unknown, allowed: readonly string[]): string[] {
@@ -37,6 +36,7 @@ function asStringArray(value: unknown, allowed: readonly string[]): string[] {
 function resolveSpotId(raw: unknown, spots: Spot[]): string | null {
   if (typeof raw !== 'string') return null;
   const value = raw.trim();
+  if (!value) return null;
   if (spots.some((spot) => spot.id === value)) return value;
   const lowered = value.toLowerCase();
   const byId = spots.find((spot) => spot.id.toLowerCase() === lowered);
@@ -81,7 +81,7 @@ function campusForTool(
   return { campus: targetCampus };
 }
 
-export async function runTool(
+async function runToolCore(
   name: string,
   rawArguments: string,
   context: AgentToolContext,
@@ -92,6 +92,11 @@ export async function runTool(
   } catch {
     return JSON.stringify({ error: '参数不是合法 JSON，请重新调用。' });
   }
+  if (!args || typeof args !== 'object' || Array.isArray(args)) {
+    return JSON.stringify({ error: '工具参数必须是 JSON 对象。' });
+  }
+
+  const repository = context.placeRepository ?? databasePlaces;
 
   if (name === 'list_spots') {
     const resolved = campusForTool(args, context);
@@ -100,7 +105,7 @@ export async function runTool(
       return JSON.stringify({ error: resolved.error });
     }
     const campus = resolved.campus;
-    const spots = campus.spots ?? [];
+    const spots = (await repository.campus(campus.id, { limit: 100 })).places;
     const interests = asStringArray(args.interests, INTEREST_IDS);
     const keyword = typeof args.keyword === 'string' ? args.keyword.trim() : '';
     const matched = spots.filter((spot) => {
@@ -136,7 +141,7 @@ export async function runTool(
       return JSON.stringify({ error: resolved.error });
     }
     const campus = resolved.campus;
-    const spots = campus.spots ?? [];
+    const spots = (await repository.campus(campus.id, { limit: 100 })).places;
     const interests = asStringArray(args.interests, INTEREST_IDS) as InterestId[];
     const rawMinutes = typeof args.minutes === 'number' ? args.minutes : Number(args.minutes);
     const minutes = Number.isFinite(rawMinutes) ? Math.min(480, Math.max(15, Math.round(rawMinutes))) : 60;
@@ -207,7 +212,7 @@ export async function runTool(
       return JSON.stringify({ error: resolved.error });
     }
     const campus = resolved.campus;
-    const spots = campus.spots ?? [];
+    const spots = (await repository.campus(campus.id, { limit: 100 })).places;
     const id = resolveSpotId(args.spot_id, spots);
     if (!id) {
       context.trace.push('get_spot_detail(未找到)');
@@ -244,24 +249,16 @@ export async function runTool(
       : requestedDistricts;
     const interests = asStringArray(args.interests, INTEREST_IDS) as InterestId[];
     const keyword = typeof args.keyword === 'string' ? args.keyword.trim() : '';
-    const matched = BEIJING_PLACES.filter((place) => {
-      const districtHit = !districtIds.length || districtIds.includes(place.districtId);
-      const interestHit = !interests.length || place.interests.some((id) => interests.includes(id));
-      const keywordHit =
-        !keyword ||
-        place.name.includes(keyword) ||
-        place.district.includes(keyword) ||
-        place.short.includes(keyword) ||
-        place.highlights.some((item) => item.includes(keyword));
-      return districtHit && interestHit && keywordHit;
-    });
+    const page = await repository.city({ keyword, districtIds, interests, limit: 20 });
+    const matched = page.places;
     matched.slice(0, 20).forEach((place) => {
       if (!context.placeIds.includes(place.id)) context.placeIds.push(place.id);
     });
-    context.trace.push(`list_beijing_places(${matched.length} 个点位)`);
+    context.trace.push(`list_beijing_places(${page.total} 个点位 / 数据库)`);
     return JSON.stringify({
+      source: 'database',
       scope: districtIds.length ? context.target.label : '北京市',
-      count: matched.length,
+      count: page.total,
       places: matched.slice(0, 20).map((place) => ({
         id: place.id,
         name: place.name,
@@ -270,6 +267,7 @@ export async function runTool(
         visitMinutes: place.visit,
         interests: place.interests,
         short: place.short,
+        sources: place.sources,
       })),
     });
   }
@@ -295,7 +293,10 @@ export async function runTool(
     const travelMode = (['mixed', 'transit', 'walk'].includes(String(args.travel_mode))
       ? args.travel_mode
       : 'mixed') as CityTravelMode;
-    const validPlaceIds = BEIJING_PLACES.map((place) => place.id);
+    const requestedIds = [...(Array.isArray(args.include_place_ids) ? args.include_place_ids : []), args.start_place_id]
+      .filter((id): id is string => typeof id === 'string').slice(0, 100);
+    const places = await cityPlanningPlaces(repository, districtIds, requestedIds);
+    const validPlaceIds = places.map((place) => place.id);
     const includePlaceIds = asStringArray(args.include_place_ids, validPlaceIds);
     const excludePlaceIds = asStringArray(args.exclude_place_ids, validPlaceIds);
     const requestedStart = typeof args.start_place_id === 'string' ? args.start_place_id : '';
@@ -314,7 +315,7 @@ export async function runTool(
       excludePlaceIds,
     };
     try {
-      const estimatedPlan = buildBeijingRoute(options);
+      const estimatedPlan = buildBeijingRoute(options, places);
       const plan = await refineBeijingRouteWithAmap(estimatedPlan, options);
       context.beijingPlan = plan;
       context.beijingPlanOptions = options;
@@ -380,9 +381,10 @@ export async function runTool(
 
   if (name === 'get_beijing_place_detail') {
     const rawId = typeof args.place_id === 'string' ? args.place_id.trim() : '';
-    const place = BEIJING_PLACE_MAP[rawId] ?? BEIJING_PLACES.find(
-      (item) => item.name === rawId || item.name.includes(rawId) || rawId.includes(item.name),
-    );
+    if (!rawId) return JSON.stringify({ error: '请提供景点 id，或先查询景点数据库。' });
+    if (context.target.kind === 'campus') return JSON.stringify({ error: '当前目标是校园，请使用校园点位工具。' });
+    const exact = await repository.city({ ids: [rawId], districtIds: context.target.districtIds, limit: 1 });
+    const place = exact.places[0] ?? (await repository.city({ keyword: rawId, districtIds: context.target.districtIds, limit: 1 })).places[0];
     if (!place) {
       context.trace.push('get_beijing_place_detail(未找到)');
       return JSON.stringify({ error: '没有找到该北京点位，请先调用 list_beijing_places。' });
@@ -394,6 +396,8 @@ export async function runTool(
       name: place.name,
       district: place.district,
       category: place.category,
+      source: 'database',
+      sources: place.sources,
       description: place.description,
       highlights: place.highlights,
       bestTime: place.bestTime,
@@ -476,4 +480,14 @@ export async function runTool(
 
   context.trace.push(`${name}(未知工具)`);
   return JSON.stringify({ error: `未知工具：${name}` });
+}
+
+/** 查询失败时明确报告数据库状态，禁止回退成静态文件或让模型补造资料。 */
+export async function runTool(name: string, rawArguments: string, context: AgentToolContext): Promise<string> {
+  try { return await runToolCore(name, rawArguments, context); }
+  catch (error) {
+    if (!(error instanceof PlaceDatabaseError)) throw error;
+    context.trace.push(`${name}(景点数据库不可用)`);
+    throw error;
+  }
 }
