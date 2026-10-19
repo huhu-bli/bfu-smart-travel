@@ -1,3 +1,4 @@
+import { BEIJING_PLACES } from '../data/beijingPlaces';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PACES } from '../data/interests';
@@ -54,7 +55,7 @@ test('applyAmapMeasurements recalculates a Beijing plan without changing stop or
     includePlaceIds: ['forbidden-city', 'temple-of-heaven', 'shichahai'],
     excludePlaceIds: [],
   };
-  const estimate = buildBeijingRoute(options);
+  const estimate = buildBeijingRoute(options, BEIJING_PLACES);
   const ids = estimate.stops.map((stop) => stop.place.id);
   const measurements = estimate.stops.map((stop, index) => ({
     minutes: 20 + index,
@@ -82,7 +83,7 @@ test('applyAmapMeasurements keeps estimated legs when only part of AMap succeeds
     includePlaceIds: ['forbidden-city', 'temple-of-heaven', 'shichahai'],
     excludePlaceIds: [],
   };
-  const estimate = buildBeijingRoute(options);
+  const estimate = buildBeijingRoute(options, BEIJING_PLACES);
   const refined = applyAmapMeasurements(estimate, options, [{
     minutes: 25,
     distanceKm: 4,

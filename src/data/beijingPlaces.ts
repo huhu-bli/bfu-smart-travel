@@ -176,7 +176,7 @@ const BEIJING_PLACE_ALIASES: Partial<Record<string, string[]>> = {
   badaling: ['八达岭', '八达岭长城'],
 };
 
-function aliasesForPlace(item: BeijingPlace): string[] {
+export function aliasesForPlace(item: BeijingPlace): string[] {
   const shortened = item.name.replace(/(博物院|博物馆|遗址公园|森林公园|风景区|公园|大学)$/u, '');
   return Array.from(new Set([
     item.name,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BEIJING_CATEGORY_LABELS, BEIJING_PLACES } from '../data/beijingPlaces';
+import { BEIJING_CATEGORY_LABELS } from '../data/beijingPlaces';
+import { useCityPlaces } from '../lib/useCityPlaces';
 import { beijingRouteToText } from '../lib/beijingPlanner';
 import { formatClock, formatDuration } from '../lib/planner';
 import type { BeijingRouteOptions, BeijingRoutePlan } from '../types';
@@ -24,10 +25,8 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
     if (!editing) setSelectedIds(primaryIds);
   }, [editing, primaryIds]);
 
-  const candidates = useMemo(() => {
-    const districtSet = new Set(options.districtIds);
-    return BEIJING_PLACES.filter((place) => !districtSet.size || districtSet.has(place.districtId));
-  }, [options.districtIds]);
+  const { places: catalogPlaces, error: catalogError } = useCityPlaces({ districtIds: options.districtIds, limit: 100 });
+  const candidates = Array.from(new Map([plan.origin, ...plan.stops.map((stop) => stop.place), ...catalogPlaces].map((place) => [place.id, place])).values());
 
   const apply = () => {
     const selected = Array.from(new Set(selectedIds));
@@ -80,6 +79,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
 
       {editing ? (
         <div className="route-editor">
+          {catalogError ? <p role="alert">{catalogError}</p> : null}
           <div className="route-editor-head">
             <div><strong>自由增删北京目的地</strong><p>将按所选顺序重新计算交通时间；超出预算时保留站点并提示时长。</p></div>
             <span>{selectedIds.length} 个目的地</span>

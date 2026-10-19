@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { spotAcrossCampuses } from '../data/campuses';
-import { BEIJING_PLACE_MAP } from '../data/beijingPlaces';
+import { PlaceDatabaseError } from '../lib/placeRepository';
 import { TRIPS } from '../data/trips';
 import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
@@ -468,10 +468,10 @@ export default function AgentPanel({
           {
             id: nextId(),
             role: 'assistant',
-            text: `千问 Agent 暂时不可用：${reason}\n\n${advice}此次没有切换到内置助手。`,
+            text: error instanceof PlaceDatabaseError ? reason : `千问 Agent 暂时不可用：${reason}\n\n${advice}此次没有切换到内置助手。`,
             trace: [
               `场景：${sceneLabel(scene)}`,
-              '千问 Agent 请求失败，未切换到内置助手',
+              error instanceof PlaceDatabaseError ? '景点数据库查询失败，未生成路线' : '千问 Agent 请求失败，未切换到内置助手',
             ],
             isError: true,
           },
@@ -697,7 +697,9 @@ export default function AgentPanel({
                 {turn.placeIds && turn.placeIds.length ? (
                   <div className="agent-chips">
                     {turn.placeIds.slice(0, 8).map((id) => {
-                      const place = BEIJING_PLACE_MAP[id];
+                      const place = turn.beijingPlan
+                        ? [turn.beijingPlan.origin, ...turn.beijingPlan.stops.map((stop) => stop.place)].find((item) => item.id === id)
+                        : null;
                       return place ? <span key={id} className="agent-chip">{place.emoji} {place.name}</span> : null;
                     })}
                   </div>

@@ -1,9 +1,11 @@
+import { fixturePlaces } from '../../test/support/fixturePlaces';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runTool } from './toolExecutor';
 
 function districtContext() {
   return {
+    placeRepository: fixturePlaces,
     target: { kind: 'district' as const, label: '海淀区', routeSupported: true, explicit: true },
     plan: null,
     planOptions: null,

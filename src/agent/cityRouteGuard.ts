@@ -1,4 +1,4 @@
-import { BEIJING_PLACES, beijingPlacesFromText } from '../data/beijingPlaces';
+import { databasePlaces, cityPlanningPlaces, matchingCityPlaces } from '../lib/placeRepository';
 import { parseInterests, parseMinutes } from '../lib/localAgent';
 import { runTool } from '../lib/toolExecutor';
 import type { AgentToolContext } from './types';
@@ -15,9 +15,10 @@ export async function ensureCityRoute(
   if (context.target.kind === 'campus' || !CITY_ROUTE_REQUEST.test(userText) || /(删除|去掉|移除|取消)/.test(userText)) return modelText;
 
   const districts = context.target.districtIds ?? [];
+  const places = await cityPlanningPlaces(context.placeRepository ?? databasePlaces, districts);
   const wantsGinkgo = userText.includes('银杏');
   const ginkgoPlaces = wantsGinkgo
-    ? BEIJING_PLACES.filter((place) =>
+    ? places.filter((place) =>
         (!districts.length || districts.includes(place.districtId)) &&
         (place.name.includes('银杏') || place.highlights.some((highlight) => highlight.includes('银杏'))),
       )
@@ -42,7 +43,7 @@ export async function ensureCityRoute(
   const builtThisTurn = context.trace.some((entry) => entry.startsWith('build_beijing_route('));
   if (builtThisTurn && context.beijingPlan && !missingGinkgo && !wrongStartHour && !CITY_CAPABILITY_ERROR.test(modelText)) return modelText;
 
-  const namedIds = beijingPlacesFromText(userText)
+  const namedIds = matchingCityPlaces(userText, places)
     .filter((place) => !districts.length || districts.includes(place.districtId))
     .map((place) => place.id);
   const selectedIds = Array.from(new Set([...namedIds, ...ginkgoPlaces.map((place) => place.id)]));

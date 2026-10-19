@@ -3,7 +3,6 @@ import {
   BEIJING_CATEGORY_LABELS,
   BEIJING_CENTER,
   BEIJING_DISTRICTS,
-  BEIJING_PLACES,
 } from '../data/beijingPlaces';
 import {
   loadAMap,
@@ -16,6 +15,7 @@ import {
 } from '../lib/amapLoader';
 import type { BeijingDistrictId, BeijingPlaceCategory, BeijingRoutePlan } from '../types';
 import BeijingMapFallback from './BeijingMapFallback';
+import { useCityPlaces } from '../lib/useCityPlaces';
 
 interface Props {
   plan?: BeijingRoutePlan | null;
@@ -70,21 +70,10 @@ export default function BeijingMap({ plan = null }: Props) {
     [plan],
   );
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase('zh-CN');
-    return BEIJING_PLACES.filter((place) => {
-      const categoryHit = category === 'all' || place.category === category;
-      const districtHit = district === 'all' || place.districtId === district;
-      const queryHit =
-        !needle ||
-        place.name.toLocaleLowerCase('zh-CN').includes(needle) ||
-        place.district.includes(needle) ||
-        place.highlights.some((item) => item.includes(needle));
-      return categoryHit && districtHit && queryHit;
-    });
-  }, [category, district, query]);
-
-  const selected = BEIJING_PLACES.find((place) => place.id === selectedId) ?? null;
+  const { places: filtered, total, error: catalogError } = useCityPlaces({ keyword: query,
+    districtIds: district === 'all' ? [] : [district], category: category === 'all' ? '' : category, limit: 100 });
+  const visiblePlaces = [...filtered, ...(plan ? [plan.origin, ...plan.stops.map((stop) => stop.place)] : [])];
+  const selected = visiblePlaces.find((place) => place.id === selectedId) ?? null;
 
   useEffect(() => {
     let active = true;
@@ -168,7 +157,7 @@ export default function BeijingMap({ plan = null }: Props) {
   }, [filtered, plan, ready, routeIds]);
 
   const focus = (id: string) => {
-    const place = BEIJING_PLACES.find((item) => item.id === id);
+    const place = visiblePlaces.find((item) => item.id === id);
     if (!place) return;
     setSelectedId(id);
     mapRef.current?.setZoomAndCenter(14, [place.lng, place.lat]);
@@ -183,7 +172,7 @@ export default function BeijingMap({ plan = null }: Props) {
             <h2>北京综合旅行地图</h2>
             <p>覆盖 16 个行政区的代表性景点；蓝线为高德道路轨迹，灰线为本地估算。</p>
           </div>
-          <span className="haidian-count">{filtered.length} 个点位</span>
+          <span className="haidian-count">显示 {filtered.length} / {total} 个点位</span>
         </div>
 
         <div className="haidian-filter-bar">
@@ -221,6 +210,7 @@ export default function BeijingMap({ plan = null }: Props) {
             </>
           ) : null}
         </div>
+        {catalogError ? <p role="alert">{catalogError}</p> : null}
         <p className="haidian-map-note">{error ? '可点击点位并通过下方“在高德地图中打开”查看导航；路线时间以本地估算为准。' : plan?.routeNotice ?? '地图使用高德 JS API；生成路线后可查看实际道路轨迹。'}</p>
       </section>
 

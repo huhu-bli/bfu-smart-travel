@@ -3,6 +3,9 @@
   "functions": {
     "api/chat/completions.mjs": {
       "maxDuration": 50
+    },
+    "api/places.mjs": {
+      "maxDuration": 20
     }
   },
   "rewrites": [

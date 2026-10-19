@@ -1,7 +1,6 @@
+import { databasePlaces, cityPlanningPlaces, matchingCityPlaces, PlaceDatabaseError, type PlaceRepository } from './placeRepository';
 import { campusById, campusSpotMap } from '../data/campuses';
 import {
-  BEIJING_PLACES,
-  beijingPlacesFromText,
   districtIdsFromText,
 } from '../data/beijingPlaces';
 import type {
@@ -22,8 +21,8 @@ import {
 } from './travelTarget';
 
 /**
- * 内置助手：不联网、不需要任何密钥，用规则解析中文问题后调用与 AI 完全相同的工具。
- * 没配置密钥时由它兜底，保证网站对任何访客开箱可用。
+ * 内置助手：不调用大模型，用规则解析中文问题后查询同一套景点数据库和工具。
+ * 它仍需要访问景点服务；数据库不可用时不能用模型记忆或旧文件伪造查询成功。
  */
 
 export interface LocalAnswer {
@@ -217,7 +216,7 @@ function mergeInterests(
 /**
  * 对外入口：支持追问。例如先问「1 小时怎么逛」，再说「改成 2 小时」「换成南门」「不想看花了」。
  */
-export async function answerLocally(rawText: string, previous?: LocalMemory | null): Promise<LocalAnswer> {
+async function answerLocallyCore(rawText: string, previous: LocalMemory | null | undefined, repository: PlaceRepository): Promise<LocalAnswer> {
   const text = rawText.trim();
   const following = Boolean(previous) && !RESET.test(text);
   const base = following && previous ? previous : null;
@@ -231,7 +230,9 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
 
   const explicitMinutes = parseMinutes(text);
   const parsedInterests = parseInterests(text);
-  const namedBeijingPlaceIds = beijingPlacesFromText(text).map((place) => place.id);
+  const cityPlaces = target.kind !== 'campus' && scene !== 'system-help' && scene !== 'unknown' && scene !== 'weather'
+    ? await cityPlanningPlaces(repository, target.districtIds ?? [], [...(base?.beijingIncludePlaceIds ?? []), ...(base?.beijingExcludePlaceIds ?? [])]) : [];
+  const namedBeijingPlaceIds = matchingCityPlaces(text, cityPlaces).map((place) => place.id);
   const removesBeijingPlace = /(不要|不去|去掉|删除|移除|排除)/.test(text);
   const previousBeijingIncludes = base?.beijingIncludePlaceIds ?? [];
   const previousBeijingExcludes = base?.beijingExcludePlaceIds ?? [];
@@ -258,16 +259,30 @@ export async function answerLocally(rawText: string, previous?: LocalMemory | nu
     beijingExcludePlaceIds,
   };
 
-  const answer = await answerCore(rawText, memory);
+  const answer = await answerCore(rawText, memory, repository, cityPlaces);
   return {
     ...answer,
     memory: { ...memory, selectedSpotId: answer.spotIds[0] ?? memory.selectedSpotId },
   };
 }
 
-async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<LocalAnswer, 'memory'>> {
+export async function answerLocally(rawText: string, previous?: LocalMemory | null, repository: PlaceRepository = databasePlaces): Promise<LocalAnswer> {
+  try { return await answerLocallyCore(rawText, previous, repository); }
+  catch (error) {
+    if (!(error instanceof PlaceDatabaseError)) throw error;
+    const target = resolveTravelTarget(rawText, previous?.target);
+    return { text: error.message, plan: null, planOptions: null, spotIds: [], tripIds: [],
+      trace: ['景点数据库不可用，未生成路线'], memory: previous ?? {
+        scene: sceneForTarget(routeScene(rawText, 'unknown'), target), target,
+        minutes: parseMinutes(rawText) ?? 240, interests: parseInterests(rawText), gateId: '',
+      } };
+  }
+}
+
+async function answerCore(rawText: string, memory: LocalMemory, repository: PlaceRepository, cityPlaces: Awaited<ReturnType<typeof cityPlanningPlaces>>): Promise<Omit<LocalAnswer, 'memory'>> {
   const text = rawText.trim();
   const context = emptyContext(memory.target);
+  context.placeRepository = repository;
   const campus = memory.target.kind === 'campus' ? campusById(memory.target.campusId) : null;
   const spots = campus?.spots ?? [];
   const spotMap = campus ? campusSpotMap(campus) : {};
@@ -310,13 +325,13 @@ async function answerCore(rawText: string, memory: LocalMemory): Promise<Omit<Lo
   // 1) 北京城市路线
   if (memory.scene === 'outside-trip' || OUTSIDE_KEYWORDS.test(text)) {
     const namedPlaces = (memory.beijingIncludePlaceIds ?? [])
-      .map((id) => BEIJING_PLACES.find((place) => place.id === id))
-      .filter((place): place is (typeof BEIJING_PLACES)[number] => Boolean(place));
+      .map((id) => cityPlaces.find((place) => place.id === id))
+      .filter((place): place is (typeof cityPlaces)[number] => Boolean(place));
     const districts = districtIdsFromText(text).length
       ? districtIdsFromText(text)
       : memory.target.districtIds ?? [];
     const seasonalPlaces = text.includes('银杏')
-      ? BEIJING_PLACES.filter((place) =>
+      ? cityPlaces.filter((place) =>
           (!districts.length || districts.includes(place.districtId)) &&
           place.highlights.some((highlight) => highlight.includes('银杏')),
         )
