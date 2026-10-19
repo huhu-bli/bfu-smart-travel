@@ -15,6 +15,7 @@ import { formatDuration } from './planner';
 import { runTool } from './toolExecutor';
 import type { AgentToolContext } from '../agent/types';
 import { routeScene, sceneForTarget, type Scene } from './sceneRouter';
+import { resolveDatabaseTravelTarget } from './databaseTravelTarget';
 import {
   resolveTravelTarget,
   type TravelTarget,
@@ -220,7 +221,7 @@ async function answerLocallyCore(rawText: string, previous: LocalMemory | null |
   const text = rawText.trim();
   const following = Boolean(previous) && !RESET.test(text);
   const base = following && previous ? previous : null;
-  const target = resolveTravelTarget(text, base?.target);
+  const target = await resolveDatabaseTravelTarget(text, base?.target, repository);
   const campus = target.kind === 'campus' ? campusById(target.campusId) : null;
   const spots = campus?.spots ?? [];
   const parsedSpot = parseSpot(text, spots);

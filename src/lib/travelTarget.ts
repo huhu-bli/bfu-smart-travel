@@ -4,7 +4,7 @@ import {
   beijingPlacesFromText,
   districtIdsFromText,
 } from '../data/beijingPlaces';
-import type { BeijingDistrictId } from '../types';
+import type { BeijingDistrictId, BeijingPlace } from '../types';
 
 export interface TravelTarget {
   kind: 'city' | 'district' | 'campus';
@@ -38,7 +38,8 @@ const ROUTE_EDIT_TERMS = /(加入|增加|添加|删除|去掉|移除|保留|换�
  * 目的地解析独立于大模型。显式学校名称具有最高优先级，防止模型把其他学校
  * 错误回退为北林；追问没有再次提地点时沿用上一轮目标。
  */
-export function resolveTravelTarget(text: string, previous?: TravelTarget | null): TravelTarget {
+export function resolveTravelTarget(text: string, previous?: TravelTarget | null,
+  knownCityPlaces: Array<BeijingPlace & { aliases?: string[] }> = []): TravelTarget {
   const campus = campusByText(text);
   if (campus) {
     return {
@@ -49,7 +50,8 @@ export function resolveTravelTarget(text: string, previous?: TravelTarget | null
       explicit: true,
     };
   }
-  const places = beijingPlacesFromText(text);
+  const places = [...beijingPlacesFromText(text), ...knownCityPlaces.filter((place) =>
+    [place.name, ...(place.aliases ?? [])].some((alias) => alias.length >= 2 && text.includes(alias)))];
   const districtIds = districtIdsFromText(text);
   if (places.length || districtIds.length) {
     const detectedIds = Array.from(new Set([
