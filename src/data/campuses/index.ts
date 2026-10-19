@@ -73,11 +73,31 @@ export function campusById(id: string | null | undefined): CampusDefinition | nu
 }
 
 export function campusByText(text: string): CampusDefinition | null {
-  return (
-    CAMPUSES.find((campus) =>
-      [...campus.aliases].sort((a, b) => b.length - a.length).some((alias) => text.includes(alias)),
-    ) ?? null
-  );
+  // 先按用户原文位置识别学校，不能按注册表顺序让北林覆盖其他目标。
+  const mentions = CAMPUSES.flatMap((campus) => campus.aliases.flatMap((alias) => {
+    const matches: Array<{ campus: CampusDefinition; index: number; length: number }> = [];
+    for (let index = text.indexOf(alias); index !== -1; index = text.indexOf(alias, index + alias.length)) {
+      matches.push({ campus, index, length: alias.length });
+    }
+    return matches;
+  })).sort((a, b) => a.index - b.index || b.length - a.length);
+  const candidates: Array<{ campus: CampusDefinition; destination: boolean }> = [];
+  let end = -1;
+  for (const mention of mentions) {
+    if (mention.index < end) continue; // 同一名称只保留最长别名。
+    end = mention.index + mention.length;
+    const prefix = text.slice(0, mention.index).split(/[，,。.!！?？；;：:\n]/).pop() ?? '';
+    // 否定只延续到同一分句；“改去/换成”等新的目的地动作可以解除它。
+    const actions = [...prefix.matchAll(/(?:不要|不想|不打算|不准备|不需要|不再|不用|不去|不选|不是|并非|而非|别|排除|跳过|删除|移除|去掉)(?:\s|再|继续|去|用|逛|到|前往|参观|游览|选择|规划|安排|使用|采用|拿|在|以|把|基于|按照|只|仅)*|改去|改成|换去|换成|转去|前往|想去|打算去|计划去|准备去|安排|去|到|选择/g)];
+    const action = actions[actions.length - 1];
+    if (action && /^(?:不|别|并非|而非|排除|跳过|删除|移除|去掉)/.test(action[0])) continue;
+    candidates.push({
+      campus: mention.campus,
+      destination: Boolean(action && prefix.slice(action.index! + action[0].length).trim() === ''),
+    });
+  }
+  const destinations = candidates.filter((candidate) => candidate.destination);
+  return destinations[destinations.length - 1]?.campus ?? candidates[0]?.campus ?? null;
 }
 
 export function campusSpotMap(campus: CampusDefinition): Record<string, Spot> {
