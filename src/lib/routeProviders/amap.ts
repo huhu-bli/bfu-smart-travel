@@ -6,6 +6,7 @@ import type {
   AMapWalkingResult,
 } from '../amapLoader';
 import { loadAMap, readAmapRuntimeConfig } from '../amapLoader';
+import { remainingAdvice } from '../beijingPlanner';
 import type {
   BeijingPlace,
   BeijingRouteOptions,
@@ -21,6 +22,7 @@ export interface AmapRouteMeasurement {
 }
 
 type RouteMeasurement = AmapRouteMeasurement | null;
+const SINGLE_PLACE_NOTICE = '当前只有一个目的地，无需查询点位间交通；停留时长仍为估算。';
 
 function finiteNumber(value: unknown): number | null {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -186,7 +188,7 @@ export function applyAmapMeasurements(
       : 'hybrid';
   const remainingMinutes = Math.max(0, Math.round(options.minutes - elapsed));
   const overrun = Math.max(0, Math.round(elapsed - options.minutes));
-  const routeNotice = routeProvider === 'amap'
+  const routeNotice = !stops.length ? SINGLE_PLACE_NOTICE : routeProvider === 'amap'
     ? '交通时间与道路轨迹来自高德路线服务，出发前仍需确认实时运营和临时管制。'
     : routeProvider === 'hybrid'
       ? '部分路段来自高德路线服务，查询失败的路段已自动使用本地估算。'
@@ -201,9 +203,7 @@ export function applyAmapMeasurements(
     remainingMinutes,
     remainingAdvice: overrun
       ? `按高德交通时间计算，当前路线超出预算约 ${overrun} 分钟，建议删除一个站点或缩短停留时间。`
-      : plan.totalMinutes > options.minutes
-        ? `高德交通时间更新后还剩约 ${remainingMinutes} 分钟，可用于排队、休息或换乘。`
-        : plan.remainingAdvice,
+      : remainingAdvice(remainingMinutes, optionalStops, elapsed),
     subtitle: `${plan.pace.label}节奏 · ${1 + stops.length} 个目的地 · 点位间约 ${totalDistanceKm} 公里`,
     routeProvider,
     routeNotice,
@@ -214,6 +214,7 @@ export async function refineBeijingRouteWithAmap(
   plan: BeijingRoutePlan,
   options: BeijingRouteOptions,
 ): Promise<BeijingRoutePlan> {
+  if (!plan.stops.length) return { ...plan, routeProvider: 'estimate', routeNotice: SINGLE_PLACE_NOTICE };
   const config = readAmapRuntimeConfig();
   if (!config.key || typeof document === 'undefined') return plan;
   try {
