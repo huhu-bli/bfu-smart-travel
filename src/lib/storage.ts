@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
+import { restoreStoredValue } from './storedState';
 
 const PREFIX = 'bfu-smart-travel:';
 
-export function useLocalStorage<T>(key: string, initialValue: T) {
+export function useLocalStorage<T>(key: string, initialValue: T, decode?: (value: unknown) => T | undefined) {
   const storageKey = PREFIX + key;
 
   const [value, setValue] = useState<T>(() => {
     if (typeof window === 'undefined') return initialValue;
     try {
       const raw = window.localStorage.getItem(storageKey);
-      return raw === null ? initialValue : (JSON.parse(raw) as T);
+      return restoreStoredValue(raw, initialValue, decode);
     } catch {
       return initialValue;
     }

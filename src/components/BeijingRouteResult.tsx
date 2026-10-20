@@ -6,13 +6,14 @@ import { formatClock, formatDuration } from '../lib/planner';
 import type { BeijingRouteOptions, BeijingRoutePlan } from '../types';
 
 interface Props {
+  busy?: boolean;
   plan: BeijingRoutePlan;
   options: BeijingRouteOptions;
   onOpenMap: () => void;
   onEditRoute: (includePlaceIds: string[], excludePlaceIds: string[]) => void;
 }
 
-export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRoute }: Props) {
+export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRoute, busy = false }: Props) {
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const primaryIds = useMemo(
@@ -61,7 +62,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
   };
 
   return (
-    <section className="route-card beijing-route-card" id="route-result">
+    <section className="route-card beijing-route-card" id="route-result" aria-busy={busy}>
       <div className="route-head">
         <div>
           <span className="route-tag">北京城市路线 · {plan.routeProvider === 'amap' ? '高德实时' : plan.routeProvider === 'hybrid' ? '高德混合' : '本地估算'}</span>
@@ -91,6 +92,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
                 <label key={place.id} className={checked ? 'route-editor-option is-selected' : 'route-editor-option'}>
                   <input
                     type="checkbox"
+                    disabled={busy}
                     checked={checked}
                     onChange={() => setSelectedIds((current) => checked ? current.filter((id) => id !== place.id) : [...current, place.id])}
                   />
@@ -101,7 +103,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
           </div>
           <div className="route-editor-foot">
             <span>跨区站点会增加换乘时间；请至少保留一个目的地。</span>
-            <div><button type="button" className="ghost-btn" onClick={() => setEditing(false)}>取消</button><button type="button" className="primary-btn primary-btn--sm" onClick={apply} disabled={!selectedIds.length}>应用修改</button></div>
+            <div><button type="button" className="ghost-btn" onClick={() => setEditing(false)}>取消</button><button type="button" className="primary-btn primary-btn--sm" onClick={apply} disabled={busy || !selectedIds.length}>应用修改</button></div>
           </div>
         </div>
       ) : null}
@@ -119,7 +121,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
             <li className="stop-item stop-item--origin">
               <span className="stop-index">1</span>
               <div className="stop-main"><div className="stop-title"><strong>{plan.origin.emoji} {plan.origin.name}</strong><span className="stop-time">{formatClock(0, options.startHour ?? 9)} 示例出发</span></div><p className="stop-reason">{plan.origin.district} · {plan.origin.short}</p></div>
-              <button type="button" className="route-stop-remove" onClick={() => remove(plan.origin.id)} aria-label={`删除${plan.origin.name}`} disabled={primaryIds.length === 1}>×</button>
+              <button type="button" className="route-stop-remove" onClick={() => remove(plan.origin.id)} aria-label={`删除${plan.origin.name}`} disabled={busy || primaryIds.length === 1}>×</button>
             </li>
             {plan.stops.map((stop, index) => (
               <li key={stop.place.id} className="stop-item">
@@ -129,14 +131,14 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
                   <p className="stop-reason">{stop.reason}</p>
                   <div className="stop-meta"><span>{stop.travelMode} {stop.travelMinutes} 分钟 · 约 {stop.distanceKm} 公里</span><span>{stop.routeProvider === 'amap' ? '高德路线' : '本地估算'}</span><span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span><span>{stop.place.district}</span></div>
                 </div>
-                <button type="button" className="route-stop-remove" onClick={() => remove(stop.place.id)} aria-label={`删除${stop.place.name}`} disabled={primaryIds.length === 1}>×</button>
+                <button type="button" className="route-stop-remove" onClick={() => remove(stop.place.id)} aria-label={`删除${stop.place.name}`} disabled={busy || primaryIds.length === 1}>×</button>
               </li>
             ))}
           </ol>
 
           <section className="route-section route-section--optional">
             <div className="route-section-head"><div><span className="route-section-kicker">OPTIONAL</span><strong>可选站点</strong></div><span>{plan.optionalStops.length} 个备选</span></div>
-            {plan.optionalStops.length ? <ul className="optional-list">{plan.optionalStops.map((stop) => <li key={stop.place.id}><div className="optional-row"><span><strong>{stop.place.emoji} {stop.place.name}</strong><small>{stop.place.district} · {stop.travelMode}约 {stop.travelMinutes} 分钟</small></span><button type="button" className="optional-add-btn" onClick={() => addOptional(stop.place.id)}>加入主线</button></div></li>)}</ul> : <p className="route-section-empty">当前条件下没有更多合适的邻近站点。</p>}
+            {plan.optionalStops.length ? <ul className="optional-list">{plan.optionalStops.map((stop) => <li key={stop.place.id}><div className="optional-row"><span><strong>{stop.place.emoji} {stop.place.name}</strong><small>{stop.place.district} · {stop.travelMode}约 {stop.travelMinutes} 分钟</small></span><button type="button" className="optional-add-btn" disabled={busy} onClick={() => addOptional(stop.place.id)}>加入主线</button></div></li>)}</ul> : <p className="route-section-empty">当前条件下没有更多合适的邻近站点。</p>}
           </section>
 
           <section className="route-section route-section--advice">
