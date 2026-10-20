@@ -39,13 +39,20 @@ export async function ensureCityRoute(
     ? [context.beijingPlan.origin.id, ...context.beijingPlan.stops.map((stop) => stop.place.id)]
     : [];
   const missingGinkgo = wantsGinkgo && !ginkgoPlaces.some((place) => plannedIds.includes(place.id));
+  const namedPlaces = matchingCityPlaces(userText, places).filter((place) =>
+    [place.name, ...(place.aliases ?? [])].some((alias) => {
+      if (!alias) return false;
+      for (let index = userText.indexOf(alias); index !== -1; index = userText.indexOf(alias, index + alias.length)) {
+        const prefix = userText.slice(0, index).split(/[，,。.!！?？；;\n]/).pop() ?? '';
+        if (!/(?:不要|不想|别|不去|排除|跳过)(?:再|去|逛|到|用|前往|选择|\s)*$/.test(prefix)) return true;
+      }
+      return false;
+    }));
+  const namedIds = namedPlaces.map((place) => place.id);
+  const missingNamed = namedIds.some((id) => !plannedIds.includes(id));
   const wrongStartHour = /下午|傍晚/.test(userText) && context.beijingPlanOptions?.startHour !== 14;
   const builtThisTurn = context.trace.some((entry) => entry.startsWith('build_beijing_route('));
-  if (builtThisTurn && context.beijingPlan && !missingGinkgo && !wrongStartHour && !CITY_CAPABILITY_ERROR.test(modelText)) return modelText;
-
-  const namedIds = matchingCityPlaces(userText, places)
-    .filter((place) => !districts.length || districts.includes(place.districtId))
-    .map((place) => place.id);
+  if (builtThisTurn && context.beijingPlan && !missingNamed && !missingGinkgo && !wrongStartHour && !CITY_CAPABILITY_ERROR.test(modelText)) return modelText;
   const selectedIds = Array.from(new Set([...namedIds, ...ginkgoPlaces.map((place) => place.id)]));
   const minutes = parseMinutes(userText) ?? context.beijingPlanOptions?.minutes ?? 240;
   const interests = parseInterests(userText);
@@ -54,13 +61,18 @@ export async function ensureCityRoute(
     include_place_ids: selectedIds,
     start_place_id: selectedIds[0] ?? '',
     start_hour: /下午|傍晚/.test(userText) ? 14 : 9,
-    pace: 'normal', travel_mode: 'mixed',
+    pace: context.beijingPlanOptions?.pace.id ?? 'normal',
+    travel_mode: context.beijingPlanOptions?.travelMode ?? 'mixed',
   }), context)) as { error?: string };
   if (result.error || !context.beijingPlan) {
     return result.error ?? '暂时无法生成符合条件的北京路线，请调整地点或时长。';
   }
   const plan = context.beijingPlan;
   const stops = [plan.origin, ...plan.stops.map((stop) => stop.place)];
+  const omitted = namedPlaces.filter((place) => !stops.some((stop) => stop.id === place.id));
+  const omissionNote = omitted.length
+    ? `你指定的${omitted.map((place) => place.name).join('、')}尚未排入必游主线；按当前${minutes}分钟预算和${plan.pace.label}节奏，本次计算未能安排全部地点。可以增加时间、减少停留或调整节奏后重新规划。`
+    : '';
   const seasonalNote = wantsGinkgo
     ? '所选赏叶点位收录有银杏，但当日叶色、开放时间请出发前向园方确认。'
     : '交通时间为估算，开放与预约情况请出发前确认。';
@@ -70,5 +82,5 @@ export async function ensureCityRoute(
   const diningNote = interests.includes('food')
     ? `可以${diningArea ? `在${diningArea.name}` : '沿线'}预留用餐时间；具体餐馆和营业情况尚未核实。`
     : '';
-  return `已生成「${plan.title}」：${stops.map((place, index) => `${index + 1}. ${place.name}`).join(' → ')}。预计 ${Math.round(plan.totalMinutes)} 分钟，点位间约 ${plan.totalDistanceKm} 公里。${diningNote}${seasonalNote}可以在全局计划中调整站点。`;
+  return `已生成「${plan.title}」：${stops.map((place, index) => `${index + 1}. ${place.name}`).join(' → ')}。预计 ${Math.round(plan.totalMinutes)} 分钟，点位间约 ${plan.totalDistanceKm} 公里。${omissionNote}${diningNote}${seasonalNote}可以在全局计划中调整站点。`;
 }

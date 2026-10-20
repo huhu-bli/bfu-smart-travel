@@ -12,6 +12,7 @@ import { runTool } from '../src/lib/toolExecutor.ts';
 import { resolveDatabaseTravelTarget } from '../src/lib/databaseTravelTarget.ts';
 import { resolveTravelTarget } from '../src/lib/travelTarget.ts';
 import { answerLocally } from '../src/lib/localAgent.ts';
+import { ensureCityRoute } from '../src/agent/cityRouteGuard.ts';
 
 const manifest = JSON.parse(await readFile(new URL('../database/catalogs/beijing-common-travel.provenance.json', import.meta.url)));
 const document = JSON.parse(await readFile(new URL('../database/catalogs/beijing-common-travel.json', import.meta.url)));
@@ -106,4 +107,38 @@ test('Agent builds usable classic, science and food plans from the expanded SQL 
     for (const id of item.ids) assert.ok(ids.includes(id), `${id} missing from ${ids}`);
     assert.ok(context.beijingPlan.totalMinutes <= item.minutes);
   }
+});
+
+test('city guard repairs a model route that omitted an explicitly requested database destination', async () => {
+  await ready;
+  const context = { placeRepository: repository, target: resolveTravelTarget('北京市西城区'),
+    plan: null, planOptions: null, beijingPlan: null, beijingPlanOptions: null,
+    spotIds: [], placeIds: [], tripIds: [], trace: [] };
+  await runTool('build_beijing_route', JSON.stringify({ minutes: 300, pace: 'easy', travel_mode: 'walk',
+    start_place_id: 'niujie', include_place_ids: ['niujie'], interests: ['food'] }), context);
+  // Reproduce the model returning only the first named destination.
+  context.beijingPlan.stops = [];
+  const answer = await ensureCityRoute('我有5小时，想逛牛街，再去陶然亭公园慢走', '已经全部安排好了。', context);
+  const ids = [context.beijingPlan.origin.id, ...context.beijingPlan.stops.map((s) => s.place.id)];
+  assert.ok(ids.includes('niujie') && ids.includes('taoranting-park'));
+  assert.equal(context.beijingPlanOptions.pace.id, 'easy');
+  assert.equal(context.beijingPlanOptions.travelMode, 'walk');
+  assert.ok(context.beijingPlan.totalMinutes <= 300);
+  assert.match(answer, /牛街.*陶然亭公园/);
+  assert.doesNotMatch(answer, /已经全部安排好了|尚未排入/);
+});
+
+test('city guard names requested destinations left out of a short leisurely route instead of claiming completion', async () => {
+  await ready;
+  const context = { placeRepository: repository, target: resolveTravelTarget('北京市西城区'),
+    plan: null, planOptions: null, beijingPlan: null, beijingPlanOptions: null,
+    spotIds: [], placeIds: [], tripIds: [], trace: [] };
+  await runTool('build_beijing_route', JSON.stringify({ minutes: 240, pace: 'easy', travel_mode: 'walk',
+    start_place_id: 'niujie', include_place_ids: ['niujie'], interests: ['food'] }), context);
+  context.beijingPlan.stops = [];
+  const answer = await ensureCityRoute('我有4小时，想逛牛街，再去陶然亭公园慢走', '4小时全部安排得很从容。', context);
+  assert.equal(context.beijingPlanOptions.pace.id, 'easy');
+  assert.ok(context.beijingPlan.totalMinutes <= 240);
+  assert.match(answer, /陶然亭公园尚未排入必游主线/);
+  assert.doesNotMatch(answer, /全部安排得很从容/);
 });
