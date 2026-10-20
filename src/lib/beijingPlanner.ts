@@ -74,11 +74,12 @@ function reasonFor(place: BeijingPlace, wanted: InterestId[]): string {
   return `${match}${place.mustSee ? ' · 北京代表性目的地' : ''} · ${place.short}`;
 }
 
-function remainingAdvice(minutes: number, optionalCount: number): string {
+export function remainingAdvice(minutes: number, optionalStops: BeijingRouteStop[], elapsed: number): string {
+  const fitting = optionalStops.filter((stop) => stop.leave - elapsed <= minutes);
   if (minutes < 20) return '当前时间基本排满，建议保留给排队、安检和换乘。';
-  if (minutes < 60) return optionalCount ? '可从可选站点中补充 1 处，或保留作交通机动。' : '建议留作交通、休息和用餐机动。';
-  if (minutes < 120) return optionalCount ? '可按体力补充 1–2 个邻近可选站点。' : '可以安排一顿正餐或在当前区域深度漫步。';
-  return optionalCount ? '还可加入可选站点，但跨区移动前应确认当日交通时间。' : '剩余时间较多，可增加同区景点或安排餐饮休息。';
+  if (fitting.length) return `按当前交通与停留估算，可从${fitting.map((stop) => stop.place.name).join('、')}中选择 1 处；加入后请重新核对总时长。`;
+  if (optionalStops.length) return '当前可选站点的交通与停留合计均超过剩余时间，建议留作休息、用餐或交通机动；增加预算后再加入。';
+  return minutes < 120 ? '建议留作交通、休息和用餐机动。' : '剩余时间较多，可增加同区景点或安排餐饮休息。';
 }
 
 function routeTitle(planPlaces: BeijingPlace[], options: BeijingRouteOptions): string {
@@ -219,7 +220,7 @@ export function buildBeijingRoute(options: BeijingRouteOptions, places: BeijingP
     remainingMinutes,
     remainingAdvice: overrun
       ? `当前路线超出预算约 ${overrun} 分钟。已保留全部选定站点，可增加游览时间或手动删除站点。`
-      : remainingAdvice(remainingMinutes, optionalStops.length),
+      : remainingAdvice(remainingMinutes, optionalStops, elapsed),
     totalMinutes: elapsed,
     totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
     routeProvider: 'estimate',

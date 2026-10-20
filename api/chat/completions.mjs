@@ -108,6 +108,7 @@ export default async function handler(req, res) {
   if (!ALLOWED_MODELS.has(payload.model)) return sendError(res, '模型不在代理白名单内。', 403, origin);
 
   let upstream;
+  let text;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
@@ -117,6 +118,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({ model: payload.model, messages: payload.messages, tools: payload.tools, tool_choice: payload.tool_choice || 'auto', stream: false }),
       signal: controller.signal,
     });
+    // 收到响应头不代表正文已传完；整个读取过程都必须受超时保护。
+    text = await upstream.text();
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       return sendError(res, '千问上游请求超时，请稍后重试。', 504, origin);
@@ -125,7 +128,6 @@ export default async function handler(req, res) {
   } finally {
     clearTimeout(timer);
   }
-  const text = await upstream.text();
   setHeaders(res, { 'Content-Type': upstream.headers.get('content-type') || 'application/json' }, origin);
   res.statusCode = upstream.status;
   return res.end(text);

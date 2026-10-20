@@ -2,7 +2,8 @@ import { BEIJING_PLACES } from '../data/beijingPlaces';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PACES } from '../data/interests';
-import { buildBeijingRoute, distanceKm } from './beijingPlanner';
+import { buildBeijingRoute, distanceKm, remainingAdvice } from './beijingPlanner';
+import type { BeijingRouteStop } from '../types';
 import { BEIJING_PLACE_MAP, beijingPlacesFromText } from '../data/beijingPlaces';
 
 const normalPace = PACES.find((item) => item.id === 'normal')!;
@@ -88,3 +89,10 @@ test('beijingPlanner exposes Beijing Jiaotong University as a searchable city pl
   assert.equal(beijingPlacesFromText('北交大附近有什么景点')[0]?.id, 'beijing-jiaotong-university');
 });
 
+test('remaining time advice checks both travel and dwell instead of recommending unaffordable optional stops', () => {
+  const stop = { place: BEIJING_PLACE_MAP['forbidden-city'], arrive: 70, leave: 130 } as BeijingRouteStop;
+  assert.match(remainingAdvice(54, [stop], 60), /均超过剩余时间/);
+  assert.doesNotMatch(remainingAdvice(54, [stop], 60), /选择 1 处/);
+  assert.match(remainingAdvice(70, [stop], 60), /故宫.*选择 1 处/);
+  assert.match(remainingAdvice(10, [stop], 60), /保留/);
+});
