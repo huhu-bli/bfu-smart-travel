@@ -37,8 +37,8 @@ export interface PlacePage<T> {
   offset: number;
 }
 export interface PlaceRepository {
-  city(filters?: PlaceFilters): Promise<PlacePage<CatalogCityPlace>>;
-  campus(campusId: string, filters?: PlaceFilters): Promise<PlacePage<CatalogSpot>>;
+  city(filters?: PlaceFilters, signal?: AbortSignal): Promise<PlacePage<CatalogCityPlace>>;
+  campus(campusId: string, filters?: PlaceFilters, signal?: AbortSignal): Promise<PlacePage<CatalogSpot>>;
 }
 export class PlaceDatabaseError extends Error {
   constructor(message: string) { super(message); this.name = 'PlaceDatabaseError'; }
@@ -50,7 +50,7 @@ function placesEndpoint(): string {
   return DEFAULT_AGENT_SETTINGS.proxyUrl.replace(/\/+$/, '') + '/places';
 }
 
-async function requestPlaces<T>(scope: 'city' | 'campus', filters: PlaceFilters, campusId?: string): Promise<PlacePage<T>> {
+async function requestPlaces<T>(scope: 'city' | 'campus', filters: PlaceFilters, campusId?: string, signal?: AbortSignal): Promise<PlacePage<T>> {
   const params = new URLSearchParams({ scope, limit: String(filters.limit ?? 20), offset: String(filters.offset ?? 0) });
   if (campusId) params.set('campus_id', campusId);
   if (filters.keyword?.trim()) params.set('q', filters.keyword.trim());
@@ -58,22 +58,45 @@ async function requestPlaces<T>(scope: 'city' | 'campus', filters: PlaceFilters,
   filters.districtIds?.forEach((id) => params.append('district_id', id));
   filters.interests?.forEach((id) => params.append('interest', id));
   filters.ids?.forEach((id) => params.append('id', id));
-  try {
-    const response = await fetch(placesEndpoint() + '?' + params, { signal: AbortSignal.timeout(12000) });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || payload?.source !== 'database' || !Array.isArray(payload.places)) {
-      throw new PlaceDatabaseError(typeof payload?.error === 'string' ? payload.error : '景点数据库查询失败，请稍后重试。');
+  // 两次尝试共用超时预算；取消筛选、切页或离开页面后不再重试旧请求。
+  const timeout = AbortSignal.timeout(12000);
+  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const pause = () => new Promise<void>((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); reject(combined.reason); };
+    const timer = setTimeout(() => { combined.removeEventListener('abort', abort); resolve(); }, 300);
+    if (combined.aborted) abort();
+    else combined.addEventListener('abort', abort, { once: true });
+  });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      combined.throwIfAborted();
+      const response = await fetch(placesEndpoint() + '?' + params, { signal: combined });
+      if (attempt === 0 && [502, 503, 504].includes(response.status)) {
+        await response.body?.cancel();
+        await pause();
+        continue;
+      }
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || payload?.source !== 'database' || !Array.isArray(payload.places)) {
+        throw new PlaceDatabaseError(typeof payload?.error === 'string' ? payload.error : '景点数据库查询失败，请稍后重试。');
+      }
+      return payload as PlacePage<T>;
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason;
+      if (!combined.aborted && attempt === 0 && error instanceof TypeError) {
+        await pause();
+        continue;
+      }
+      if (error instanceof PlaceDatabaseError) throw error;
+      throw new PlaceDatabaseError('无法连接景点数据库服务，请稍后重试。');
     }
-    return payload as PlacePage<T>;
-  } catch (error) {
-    if (error instanceof PlaceDatabaseError) throw error;
-    throw new PlaceDatabaseError('无法连接景点数据库服务，请稍后重试。');
   }
+  throw new PlaceDatabaseError('景点数据库查询失败，请稍后重试。');
 }
 
 export const databasePlaces: PlaceRepository = {
-  city: (filters = {}) => requestPlaces<CatalogCityPlace>('city', filters),
-  campus: (campusId, filters = {}) => requestPlaces<CatalogSpot>('campus', filters, campusId),
+  city: (filters = {}, signal) => requestPlaces<CatalogCityPlace>('city', filters, undefined, signal),
+  campus: (campusId, filters = {}, signal) => requestPlaces<CatalogSpot>('campus', filters, campusId, signal),
 };
 
 /** 规划只读取有限候选集合，并补齐用户明确指定的地点，不把全库塞进模型。 */

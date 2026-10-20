@@ -18,17 +18,18 @@ export default function PlaceCatalog({ onPlanCity }: { onPlanCity: (place: Catal
   const [planningId, setPlanningId] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     setBusy(true); setError(''); setPlaces([]);
     const timer = window.setTimeout(() => {
       const filters = { keyword, districtIds: district ? [district] : [], interests: interest ? [interest] : [], limit: 12, offset };
-      const request = scope === 'city' ? databasePlaces.city(filters) : databasePlaces.campus(scope, { ...filters, districtIds: [] });
+      const request = scope === 'city' ? databasePlaces.city(filters, controller.signal) : databasePlaces.campus(scope, { ...filters, districtIds: [] }, controller.signal);
       void request.then((page) => {
         if (active) { setPlaces(page.places); setTotal(page.total); }
       }).catch((reason: unknown) => {
         if (active) { setError(reason instanceof Error ? reason.message : '景点查询失败。'); setTotal(0); }
       }).finally(() => { if (active) setBusy(false); });
     }, 250);
-    return () => { active = false; window.clearTimeout(timer); };
+    return () => { active = false; controller.abort(); window.clearTimeout(timer); };
   }, [scope, district, interest, keyword, offset, retry]);
 
   return <section className="place-catalog" aria-label="景点数据库查询">
