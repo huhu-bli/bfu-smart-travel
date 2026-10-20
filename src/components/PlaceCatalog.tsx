@@ -4,7 +4,7 @@ import { CAMPUSES } from '../data/campuses';
 import { INTERESTS } from '../data/interests';
 import { databasePlaces, type CatalogCityPlace, type CatalogSpot } from '../lib/placeRepository';
 
-export default function PlaceCatalog({ onPlanCity }: { onPlanCity: (place: CatalogCityPlace) => Promise<void> }) {
+export default function PlaceCatalog({ onPlanCity, planBusy = false }: { onPlanCity: (place: CatalogCityPlace) => Promise<void>; planBusy?: boolean }) {
   const [scope, setScope] = useState('city');
   const [district, setDistrict] = useState('');
   const [interest, setInterest] = useState('');
@@ -64,7 +64,7 @@ export default function PlaceCatalog({ onPlanCity }: { onPlanCity: (place: Catal
         <p>{place.tips}</p>
         {place.sources?.map((source) => <p key={source.reference}>来源：{source.reference} · {source.verificationStatus === 'verified' ? '已核实' : '待核实'}</p>)}
       </details>
-      {'district' in place ? <button type="button" disabled={planningId !== null} onClick={() => {
+      {'district' in place ? <button type="button" disabled={planBusy || planningId !== null} onClick={() => {
         setPlanningId(place.id);
         void onPlanCity(place).finally(() => setPlanningId(null));
       }}>{planningId === place.id ? '正在规划…' : '以此为起点规划路线'}</button> : null}

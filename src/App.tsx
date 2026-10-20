@@ -21,6 +21,8 @@ import { databasePlaces, cityPlanningPlaces, type CatalogCityPlace } from './lib
 import { refineBeijingRouteWithAmap } from './lib/routeProviders/amap';
 import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
+import { decodeStoredGlobalRoute } from './lib/storedState';
+import { createRouteUpdateGate } from './lib/routeUpdateGate';
 import type {
   BeijingRouteOptions,
   BeijingRoutePlan,
@@ -53,7 +55,13 @@ export default function App() {
   const [mapScope, setMapScope] = useState<'campus' | 'beijing'>('campus');
   const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
   const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
-  const beijingRevision = useRef(0);
+  const beijingUpdates = useRef(createRouteUpdateGate());
+  const [beijingUpdating, setBeijingUpdating] = useState(false);
+  const invalidateBeijingUpdate = () => {
+    beijingUpdates.current.invalidate();
+    setBeijingUpdating(false);
+    setCatalogPlanError('');
+  };
 
   const options = useMemo(() => {
     const duration = DURATIONS.find((item) => item.id === durationId) ?? DURATIONS[1];
@@ -76,13 +84,7 @@ export default function App() {
     options,
     source: 'manual',
     updatedAt: new Date().toISOString(),
-  });
-  useEffect(() => {
-    const savedKind = (globalRoute as GlobalRoutePlan & { kind?: 'campus' | 'beijing' }).kind;
-    if (!savedKind) {
-      setGlobalRoute({ ...globalRoute, kind: 'campus' } as CampusGlobalRoutePlan);
-    }
-  }, [globalRoute, setGlobalRoute]);
+  }, decodeStoredGlobalRoute);
   const fallbackCampusRoute = useMemo<CampusGlobalRoutePlan>(() => ({
     kind: 'campus',
     plan: buildRoute(SPOTS, options),
@@ -90,10 +92,10 @@ export default function App() {
     source: 'manual',
     updatedAt: new Date().toISOString(),
   }), [options]);
-  // 兼容升级前 localStorage 中没有 kind 字段的校园计划。
+  // 城市路线保留校园手动入口的独立默认计划；旧缓存由读取层迁移。
   const campusRoute = globalRoute.kind === 'beijing'
     ? fallbackCampusRoute
-    : ({ ...globalRoute, kind: 'campus' } as CampusGlobalRoutePlan);
+    : globalRoute;
   const plan = campusRoute.plan;
   const activeOptions = campusRoute.options;
   const activeCampus = campusById(activeOptions.campusId ?? 'bfu');
@@ -124,7 +126,7 @@ export default function App() {
   }, [options]);
 
   const generate = () => {
-    beijingRevision.current += 1;
+    invalidateBeijingUpdate();
     setGlobalRoute({
       kind: 'campus',
       plan: buildRoute(SPOTS, options),
@@ -145,7 +147,7 @@ export default function App() {
 
   /** Agent 一旦生成有效路线就写入全局计划；查看按钮只负责把用户带到编辑器。 */
   const savePlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
-    beijingRevision.current += 1;
+    invalidateBeijingUpdate();
     setGlobalRoute({
       kind: 'campus',
       plan: nextPlan,
@@ -183,7 +185,7 @@ export default function App() {
     nextPlan: BeijingRoutePlan,
     nextOptions: BeijingRouteOptions,
   ) => {
-    beijingRevision.current += 1;
+    invalidateBeijingUpdate();
     setGlobalRoute({
       kind: 'beijing',
       plan: nextPlan,
@@ -208,7 +210,7 @@ export default function App() {
   };
 
   const applyRouteEdits = (nextIncludedIds: string[], nextExcludedIds: string[]) => {
-    beijingRevision.current += 1;
+    invalidateBeijingUpdate();
     const nextOptions = {
       ...activeOptions,
       includeSpotIds: nextIncludedIds,
@@ -231,7 +233,9 @@ export default function App() {
 
   const applyBeijingRouteEdits = (includePlaceIds: string[], excludePlaceIds: string[]) => {
     if (globalRoute.kind !== 'beijing' || !includePlaceIds.length) return;
-    const revision = ++beijingRevision.current;
+    const revision = beijingUpdates.current.begin();
+    if (revision === undefined) return;
+    setBeijingUpdating(true);
     const nextOptions: BeijingRouteOptions = {
       ...globalRoute.options,
       startPlaceId: includePlaceIds[0],
@@ -241,7 +245,7 @@ export default function App() {
     };
     setCatalogPlanError('');
     void cityPlanningPlaces(databasePlaces, nextOptions.districtIds, includePlaceIds).then(async (places) => {
-      if (beijingRevision.current !== revision) return;
+      if (!beijingUpdates.current.isCurrent(revision)) return;
       const estimatedPlan = buildBeijingRoute(nextOptions, places);
       const source = 'manual';
       setGlobalRoute({
@@ -252,7 +256,7 @@ export default function App() {
         updatedAt: new Date().toISOString(),
       });
       const refinedPlan = await refineBeijingRouteWithAmap(estimatedPlan, nextOptions);
-      if (beijingRevision.current !== revision) return;
+      if (!beijingUpdates.current.isCurrent(revision)) return;
       setGlobalRoute({
         kind: 'beijing',
         plan: refinedPlan,
@@ -261,22 +265,28 @@ export default function App() {
         updatedAt: new Date().toISOString(),
       });
     }).catch((error: unknown) => {
-      if (beijingRevision.current === revision) setCatalogPlanError(error instanceof Error ? error.message : '路线更新失败。');
+      if (beijingUpdates.current.isCurrent(revision)) setCatalogPlanError(error instanceof Error ? error.message : '路线更新失败。');
+    }).finally(() => {
+      if (beijingUpdates.current.finish(revision)) setBeijingUpdating(false);
     });
   };
   const planFromCatalog = (place: CatalogCityPlace) => {
-    const revision = ++beijingRevision.current;
+    const revision = beijingUpdates.current.begin();
+    if (revision === undefined) return Promise.resolve();
+    setBeijingUpdating(true);
     setCatalogPlanError('');
     const nextOptions: BeijingRouteOptions = { scope: 'beijing', startHour: 9, minutes: 240,
       interests: place.interests, pace: PACES[1], travelMode: 'mixed', districtIds: [place.districtId],
       startPlaceId: place.id, includePlaceIds: [place.id], excludePlaceIds: [] };
     return cityPlanningPlaces(databasePlaces, nextOptions.districtIds, [place.id]).then(async (places) => {
       const result = await refineBeijingRouteWithAmap(buildBeijingRoute(nextOptions, places), nextOptions);
-      if (beijingRevision.current !== revision) return;
+      if (!beijingUpdates.current.isCurrent(revision)) return;
       setGlobalRoute({ kind: 'beijing', plan: result, options: nextOptions, source: 'manual', updatedAt: new Date().toISOString() });
       setMapScope('beijing'); setTab('planner');
     }).catch((error: unknown) => {
-      if (beijingRevision.current === revision) setCatalogPlanError(error instanceof Error ? error.message : '路线生成失败。');
+      if (beijingUpdates.current.isCurrent(revision)) setCatalogPlanError(error instanceof Error ? error.message : '路线生成失败。');
+    }).finally(() => {
+      if (beijingUpdates.current.finish(revision)) setBeijingUpdating(false);
     });
   };
 
@@ -376,11 +386,13 @@ export default function App() {
         </section>
 
         <GlobalRoutePlanBar
+          busy={beijingUpdating}
           route={globalRoute}
           onOpen={() => setTab('planner')}
           onRemoveStop={removePlanStop}
           onAddOptionalStop={addOptionalStop}
         />
+        {beijingUpdating ? <p role="status" aria-live="polite">正在更新路线，请稍候再增删目的地…</p> : null}
         {catalogPlanError ? <p role="alert">{catalogPlanError}</p> : null}
 
         <section className="explore-strip" aria-label="北京探索入口">
@@ -428,6 +440,7 @@ export default function App() {
           {tab === 'planner' ? (
             globalRoute.kind === 'beijing' ? (
               <BeijingRouteResult
+                busy={beijingUpdating}
                 plan={globalRoute.plan}
                 options={globalRoute.options}
                 onOpenMap={openPlanMap}
@@ -528,7 +541,7 @@ export default function App() {
               <button type="button" className={galleryScope === 'database' ? 'is-active' : ''} onClick={() => setGalleryScope('database')}>景点数据库</button>
               <button type="button" className={galleryScope === 'campus' ? 'is-active' : ''} onClick={() => setGalleryScope('campus')}>校园导览</button>
             </div>
-            {galleryScope === 'database' ? <PlaceCatalog onPlanCity={planFromCatalog} /> :
+            {galleryScope === 'database' ? <PlaceCatalog planBusy={beijingUpdating} onPlanCity={planFromCatalog} /> :
             <SpotsGallery
               spots={activeSpots}
               scopeLabel={activeCampus?.shortName ?? activeOptions.campusLabel ?? '当前路线'}

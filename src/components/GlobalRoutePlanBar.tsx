@@ -3,6 +3,7 @@ import { formatDuration } from '../lib/planner';
 import type { GlobalRoutePlan } from '../types';
 
 interface Props {
+  busy?: boolean;
   route: GlobalRoutePlan;
   onOpen: () => void;
   onRemoveStop: (spotId: string) => void;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function GlobalRoutePlanBar({
+  busy = false,
   route,
   onOpen,
   onRemoveStop,
@@ -19,7 +21,7 @@ export default function GlobalRoutePlanBar({
     const { plan } = route;
     const primary = [plan.origin, ...plan.stops.map((stop) => stop.place)];
     return (
-      <section className="global-route-plan" aria-label="我的北京全局路线计划">
+      <section className="global-route-plan" aria-label="我的北京全局路线计划" aria-busy={busy}>
         <div className="global-route-plan__head">
           <div>
             <span className="global-route-plan__eyebrow">
@@ -34,14 +36,14 @@ export default function GlobalRoutePlanBar({
           {primary.map((place, index) => (
             <span className="global-route-plan__chip" key={place.id}>
               <b>{index + 1}</b>{place.name}
-              <button type="button" aria-label={`从路线中删除${place.name}`} title={`删除${place.name}`} onClick={() => onRemoveStop(place.id)} disabled={primary.length === 1}>×</button>
+              <button type="button" aria-label={`从路线中删除${place.name}`} title={`删除${place.name}`} onClick={() => onRemoveStop(place.id)} disabled={busy || primary.length === 1}>×</button>
             </span>
           ))}
         </div>
         {plan.optionalStops.length ? (
           <details className="global-route-plan__optional">
             <summary>从 {plan.optionalStops.length} 个可选目的地中添加</summary>
-            <div>{plan.optionalStops.map((stop) => <button type="button" key={stop.place.id} onClick={() => onAddOptionalStop(stop.place.id)}>＋ {stop.place.name}</button>)}</div>
+            <div>{plan.optionalStops.map((stop) => <button type="button" disabled={busy} key={stop.place.id} onClick={() => onAddOptionalStop(stop.place.id)}>＋ {stop.place.name}</button>)}</div>
           </details>
         ) : null}
       </section>
