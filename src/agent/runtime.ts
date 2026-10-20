@@ -8,10 +8,10 @@ import type {
 import { formatDuration } from '../lib/planner';
 import { routeScene, sceneForTarget, type Scene } from '../lib/sceneRouter';
 import {
-  resolveTravelTarget,
   targetContext,
   type TravelTarget,
 } from '../lib/travelTarget';
+import { resolveDatabaseTravelTarget, sameTravelTarget } from '../lib/databaseTravelTarget';
 import { runChatLoop, runResponsesLoop } from './toolLoop';
 import { requestModel } from './network';
 import { ensureCityRoute } from './cityRouteGuard';
@@ -69,8 +69,10 @@ export async function runAgentTurn(params: {
   currentBeijingPlan?: BeijingRoutePlan | null;
   currentBeijingPlanOptions?: BeijingRouteOptions | null;
 }): Promise<AgentTurnResult> {
-  const { history, userText, settings } = params;
-  const target = resolveTravelTarget(userText, params.previousTarget);
+  const { userText, settings } = params;
+  const target = await resolveDatabaseTravelTarget(userText, params.previousTarget);
+  // 前端尚未识别的新点位可能改变场景；不要把旧校园历史传入城市工具循环。
+  const history = sameTravelTarget(target, params.previousTarget) ? params.history : [];
   const routedScene = routeScene(userText, params.scene ?? 'unknown');
   const scene = sceneForTarget(routedScene, target);
   const planCampusId = params.currentPlanOptions?.campusId ?? 'bfu';

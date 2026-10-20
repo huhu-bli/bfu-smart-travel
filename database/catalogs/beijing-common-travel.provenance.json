@@ -1,0 +1,960 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-19",
+  "coordinateLicense": "CC0-1.0",
+  "coordinateLicenseSource": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+  "note": "事实来源与坐标来源独立保留；本批记录仍标记待核实，不把资料读取日期冒充实地验证日期。建议停留时长为产品估算。",
+  "deferred": [
+    {
+      "name": "中山公园",
+      "reason": "已取得官方地址，但当前开放坐标记录精度为0.01度，暂不作为可规划坐标导入。"
+    },
+    {
+      "name": "鲜鱼口美食街",
+      "reason": "坐标搜索命中社区或餐馆，未确认街区实体。"
+    },
+    {
+      "name": "大栅栏、五道营胡同、北京国际鲜花港",
+      "reason": "坐标及实体仍待逐项核对，未使用猜测坐标。"
+    }
+  ],
+  "places": [
+    {
+      "id": "jingshan-park",
+      "name": "景山公园",
+      "districtId": "xicheng",
+      "category": "park",
+      "emoji": "🌳",
+      "visit": 90,
+      "interests": [
+        "plant",
+        "culture",
+        "photo"
+      ],
+      "aliases": [
+        "景山公园",
+        "景山",
+        "万春亭"
+      ],
+      "short": "在中轴线附近登高观察古城布局，兼顾园林与古建筑。",
+      "description": "在中轴线附近登高观察古城布局，兼顾园林与古建筑。",
+      "highlights": [
+        "登高",
+        "中轴线",
+        "古建筑"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市西城区景山西街44号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://www.beijing.gov.cn/renwen/rwzyd/lyjq/4A/jsgy/202210/t20221019_2839458.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.39055555556,
+        "lat": 39.923611111111,
+        "precision": null,
+        "source": "https://www.wikidata.org/wiki/Q734499#P625",
+        "statementId": "q734499$7959C7B8-8C31-4A16-BA98-172C387CA2C5"
+      }
+    },
+    {
+      "id": "taoranting-park",
+      "name": "陶然亭公园",
+      "districtId": "xicheng",
+      "category": "park",
+      "emoji": "🌳",
+      "visit": 120,
+      "interests": [
+        "plant",
+        "culture",
+        "photo"
+      ],
+      "aliases": [
+        "陶然亭公园",
+        "陶然亭"
+      ],
+      "short": "以亭文化和城市园林为特色，可安排较舒缓的公园游览。",
+      "description": "以亭文化和城市园林为特色，可安排较舒缓的公园游览。",
+      "highlights": [
+        "亭文化",
+        "园林",
+        "慢走"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市西城区太平街19号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://gygl.beijing.gov.cn/dwjj/dwjj_zsdw/201911/t20191129_728862.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.37546388889,
+        "lat": 39.872438888889,
+        "precision": 2.7777777777778e-06,
+        "source": "https://www.wikidata.org/wiki/Q835886#P625",
+        "statementId": "q835886$99820170-4cb9-bc81-905f-df9e6b302b3a"
+      }
+    },
+    {
+      "id": "yuyuantan-park",
+      "name": "玉渊潭公园",
+      "districtId": "haidian",
+      "category": "park",
+      "emoji": "🌳",
+      "visit": 120,
+      "interests": [
+        "plant",
+        "sport",
+        "photo"
+      ],
+      "aliases": [
+        "玉渊潭公园",
+        "玉渊潭"
+      ],
+      "short": "以湖面和樱花景观为特色，适合步行看景；花期随季节变化。",
+      "description": "以湖面和樱花景观为特色，适合步行看景；花期随季节变化。",
+      "highlights": [
+        "樱花",
+        "湖景",
+        "散步"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市海淀区西三环中路10号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://gygl.beijing.gov.cn/dwjj/dwjj_zsdw/201911/t20191129_728859.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.31399,
+        "lat": 39.91569,
+        "precision": 1e-05,
+        "source": "https://www.wikidata.org/wiki/Q12011122#P625",
+        "statementId": "Q12011122$4A38B1DC-1B66-44B0-B50A-2C2AAB85A6EC"
+      }
+    },
+    {
+      "id": "zizhuyuan-park",
+      "name": "紫竹院公园",
+      "districtId": "haidian",
+      "category": "park",
+      "emoji": "🌳",
+      "visit": 100,
+      "interests": [
+        "plant",
+        "photo",
+        "culture"
+      ],
+      "aliases": [
+        "紫竹院公园",
+        "紫竹院"
+      ],
+      "short": "园内竹林与水景相结合，可作为海淀公园慢游的一站。",
+      "description": "园内竹林与水景相结合，可作为海淀公园慢游的一站。",
+      "highlights": [
+        "竹林",
+        "荷花",
+        "慢走"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市海淀区中关村南大街35号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://gygl.beijing.gov.cn/dwjj/dwjj_zsdw/201911/t20191129_728904.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.31314444444445,
+        "lat": 39.94136666666667,
+        "precision": 2.77778e-07,
+        "source": "https://www.wikidata.org/wiki/Q7261399#P625",
+        "statementId": "Q7261399$E1A15656-35A4-457D-8859-C6FC5B4EDF1F"
+      }
+    },
+    {
+      "id": "beijing-daguanyuan",
+      "name": "北京大观园",
+      "districtId": "xicheng",
+      "category": "park",
+      "emoji": "🌳",
+      "visit": 150,
+      "interests": [
+        "plant",
+        "culture",
+        "photo"
+      ],
+      "aliases": [
+        "北京大观园",
+        "大观园",
+        "红楼文化"
+      ],
+      "short": "围绕《红楼梦》营造的园林景观，可结合文学与摄影兴趣游览。",
+      "description": "围绕《红楼梦》营造的园林景观，可结合文学与摄影兴趣游览。",
+      "highlights": [
+        "红楼梦",
+        "古典园林",
+        "影视文化"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市西城区南菜园西街12号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362772/545892/index.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.35002,
+        "lat": 39.87021,
+        "precision": 1e-05,
+        "source": "https://www.wikidata.org/wiki/Q10902197#P625",
+        "statementId": "Q10902197$FCB5AF6B-8E2A-48E8-97BE-F0D8DEAEE35C"
+      }
+    },
+    {
+      "id": "prince-gong-mansion",
+      "name": "恭王府博物馆",
+      "districtId": "xicheng",
+      "category": "heritage",
+      "emoji": "🏯",
+      "visit": 150,
+      "interests": [
+        "culture",
+        "plant",
+        "photo"
+      ],
+      "aliases": [
+        "恭王府博物馆",
+        "恭王府",
+        "恭王府花园"
+      ],
+      "short": "王府建筑与花园相连，可与什刹海片区的城市漫步搭配。",
+      "description": "王府建筑与花园相连，可与什刹海片区的城市漫步搭配。",
+      "highlights": [
+        "王府",
+        "花园",
+        "清代历史"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市西城区前海西街17号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362772/545949/index.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.379862,
+        "lat": 39.936636,
+        "precision": 2.77778e-05,
+        "source": "https://www.wikidata.org/wiki/Q2666344#P625",
+        "statementId": "Q2666344$f586c0e7-440b-b96c-d4da-b44e91631417"
+      }
+    },
+    {
+      "id": "confucius-temple-beijing",
+      "name": "北京孔庙",
+      "districtId": "dongcheng",
+      "category": "heritage",
+      "emoji": "🏯",
+      "visit": 90,
+      "interests": [
+        "culture",
+        "research",
+        "photo"
+      ],
+      "aliases": [
+        "北京孔庙",
+        "孔庙"
+      ],
+      "short": "在国子监街了解祭孔建筑与科举文化；邻近国子监但本点位不包含整条街。",
+      "description": "在国子监街了解祭孔建筑与科举文化；邻近国子监但本点位不包含整条街。",
+      "highlights": [
+        "古建筑",
+        "科举文化",
+        "国子监街"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市东城区国子监街13号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://www.beijing.gov.cn/renwen/rwzyd/qgzdwwbhdw/bjkm/202210/t20221027_2845971.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.408299,
+        "lat": 39.945183,
+        "precision": 1e-06,
+        "source": "https://www.wikidata.org/wiki/Q1064580#P625",
+        "statementId": "q1064580$D7C4626F-3591-40E2-A2A4-536A6206F289"
+      }
+    },
+    {
+      "id": "national-natural-history-museum",
+      "name": "国家自然博物馆",
+      "districtId": "dongcheng",
+      "category": "museum",
+      "emoji": "🏛️",
+      "visit": 150,
+      "interests": [
+        "research",
+        "culture"
+      ],
+      "aliases": [
+        "国家自然博物馆",
+        "北京自然博物馆",
+        "自然博物馆"
+      ],
+      "short": "以自然历史和生物标本为主题，可列为家庭科普游的室内候选。",
+      "description": "以自然历史和生物标本为主题，可列为家庭科普游的室内候选。",
+      "highlights": [
+        "室内",
+        "自然科普",
+        "亲子科普"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市东城区天桥南大街126号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362772/545772/index.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.39365,
+        "lat": 39.88165,
+        "precision": 1e-06,
+        "source": "https://www.wikidata.org/wiki/Q846583#P625",
+        "statementId": "Q846583$773E2C3A-05E2-403E-9830-1A3955E9BB87"
+      }
+    },
+    {
+      "id": "china-science-technology-museum",
+      "name": "中国科学技术馆",
+      "districtId": "chaoyang",
+      "category": "museum",
+      "emoji": "🏛️",
+      "visit": 180,
+      "interests": [
+        "research",
+        "culture"
+      ],
+      "aliases": [
+        "中国科学技术馆",
+        "中国科技馆",
+        "科技馆"
+      ],
+      "short": "以互动展陈传播科学知识，可安排较完整的科普参观时段。",
+      "description": "以互动展陈传播科学知识，可安排较完整的科普参观时段。",
+      "highlights": [
+        "室内",
+        "科学体验",
+        "亲子科普"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市朝阳区北辰东路5号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://english.beijing.gov.cn/travellinginbeijing/museums/202603/t20260323_4563774.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.39244,
+        "lat": 40.005,
+        "precision": 1e-05,
+        "source": "https://www.wikidata.org/wiki/Q1074292#P625",
+        "statementId": "Q1074292$33345F32-A5DB-4B47-97F8-929451B7B5E2"
+      }
+    },
+    {
+      "id": "china-railway-museum-dongjiao",
+      "name": "中国铁道博物馆东郊展馆",
+      "districtId": "chaoyang",
+      "category": "museum",
+      "emoji": "🏛️",
+      "visit": 150,
+      "interests": [
+        "research",
+        "culture",
+        "photo"
+      ],
+      "aliases": [
+        "中国铁道博物馆东郊展馆",
+        "铁道博物馆东郊馆",
+        "东郊铁道博物馆"
+      ],
+      "short": "以铁路机车车辆为主题，含室内外展区；这里特指东郊展馆。",
+      "description": "以铁路机车车辆为主题，含室内外展区；这里特指东郊展馆。",
+      "highlights": [
+        "铁路科普",
+        "机车",
+        "室内与室外"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市朝阳区南春路4号院",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362772/546045/index.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.5103,
+        "lat": 39.9963,
+        "precision": 2.77777777778e-06,
+        "source": "https://www.wikidata.org/wiki/Q1074280#P625",
+        "statementId": "Q1074280$21B7FA85-EAE3-4C74-8ACA-027B83FCBC00"
+      }
+    },
+    {
+      "id": "military-museum",
+      "name": "中国人民革命军事博物馆",
+      "districtId": "haidian",
+      "category": "museum",
+      "emoji": "🏛️",
+      "visit": 180,
+      "interests": [
+        "culture",
+        "research"
+      ],
+      "aliases": [
+        "中国人民革命军事博物馆",
+        "军博",
+        "军事博物馆"
+      ],
+      "short": "通过展陈了解军事历史与装备，可作为海淀室内参观候选。",
+      "description": "通过展陈了解军事历史与装备，可作为海淀室内参观候选。",
+      "highlights": [
+        "室内",
+        "军事历史",
+        "科普"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市海淀区复兴路9号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://www.jb.mil.cn/",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.31772222,
+        "lat": 39.90766944,
+        "precision": 2.77777777778e-06,
+        "source": "https://www.wikidata.org/wiki/Q1789184#P625",
+        "statementId": "Q1789184$457C966F-808A-412E-916D-7DBC10EB0102"
+      }
+    },
+    {
+      "id": "chinese-gardens-museum",
+      "name": "中国园林博物馆",
+      "districtId": "fengtai",
+      "category": "museum",
+      "emoji": "🏛️",
+      "visit": 150,
+      "interests": [
+        "plant",
+        "culture",
+        "research"
+      ],
+      "aliases": [
+        "中国园林博物馆",
+        "园博馆",
+        "园林博物馆"
+      ],
+      "short": "兼有展厅、室内展园和室外园林，可与园博园片区搭配。",
+      "description": "兼有展厅、室内展园和室外园林，可与园博园片区搭配。",
+      "highlights": [
+        "园林文化",
+        "室内展陈",
+        "室外展园"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市丰台区射击场路15号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://map.beijing.gov.cn/place?categoryId=bwg&placeId=5c2dc4a0080b852d3f422a26",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.1764225,
+        "lat": 39.879603,
+        "precision": 1e-06,
+        "source": "https://www.wikidata.org/wiki/Q18651344#P625",
+        "statementId": "Q18651344$5501296B-0B8C-49ED-B4BA-FD27343CFABE"
+      }
+    },
+    {
+      "id": "qianmen-street",
+      "name": "前门大街",
+      "districtId": "dongcheng",
+      "category": "neighborhood",
+      "emoji": "🏘️",
+      "visit": 100,
+      "interests": [
+        "food",
+        "culture",
+        "photo"
+      ],
+      "aliases": [
+        "前门大街",
+        "前门步行街"
+      ],
+      "short": "结合历史街区与餐饮小店安排步行和用餐，具体门店另行核实。",
+      "description": "结合历史街区与餐饮小店安排步行和用餐，具体门店另行核实。",
+      "highlights": [
+        "老字号",
+        "美食街区",
+        "城市漫步"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市东城区前门大街",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://www.beijing.gov.cn/zhengce/gfxwj/201905/t20190522_58010.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.39183333333334,
+        "lat": 39.895208333333336,
+        "precision": 2.777777777777778e-06,
+        "source": "https://www.wikidata.org/wiki/Q10899082#P625",
+        "statementId": "Q10899082$A674F98F-3AF5-4FA6-99A9-9A4DDAE15BED"
+      }
+    },
+    {
+      "id": "guijie",
+      "name": "簋街",
+      "districtId": "dongcheng",
+      "category": "neighborhood",
+      "emoji": "🏘️",
+      "visit": 90,
+      "interests": [
+        "food",
+        "culture"
+      ],
+      "aliases": [
+        "簋街",
+        "东直门内大街",
+        "簋街美食街"
+      ],
+      "short": "以餐饮为主的街区，可在游览后预留一段用餐时间。",
+      "description": "以餐饮为主的街区，可在游览后预留一段用餐时间。",
+      "highlights": [
+        "餐饮街区",
+        "用餐",
+        "夜间城市生活"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市东城区东直门内大街",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://www.beijing.gov.cn/zhengce/gfxwj/201905/t20190522_58010.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.41621388888889,
+        "lat": 39.939769444444444,
+        "precision": 2.777777777777778e-06,
+        "source": "https://www.wikidata.org/wiki/Q10870819#P625",
+        "statementId": "Q10870819$B74670B7-3BAA-4F10-A7F6-2C1C11A18C4A"
+      }
+    },
+    {
+      "id": "niujie",
+      "name": "牛街",
+      "districtId": "xicheng",
+      "category": "neighborhood",
+      "emoji": "🏘️",
+      "visit": 90,
+      "interests": [
+        "food",
+        "culture"
+      ],
+      "aliases": [
+        "牛街",
+        "牛街美食街"
+      ],
+      "short": "可结合街区漫步安排北京风味小吃与用餐；不把街区当作单一餐馆。",
+      "description": "可结合街区漫步安排北京风味小吃与用餐；不把街区当作单一餐馆。",
+      "highlights": [
+        "京味小吃",
+        "清真美食",
+        "街区漫步"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市西城区牛街",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://www.beijing.gov.cn/renwen/zt/jcxclyjc/ldzn/xltj/202601/t20260130_4477184.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.357441,
+        "lat": 39.885139,
+        "precision": 2.77778e-07,
+        "source": "https://www.wikidata.org/wiki/Q15554799#P625",
+        "statementId": "Q15554799$7dc00753-4029-ebd6-723b-c01d924f5ffd"
+      }
+    },
+    {
+      "id": "beijing-city-library",
+      "name": "北京城市图书馆",
+      "districtId": "tongzhou",
+      "category": "landmark",
+      "emoji": "📍",
+      "visit": 120,
+      "interests": [
+        "culture",
+        "research",
+        "photo"
+      ],
+      "aliases": [
+        "北京城市图书馆",
+        "城市图书馆",
+        "森林书苑"
+      ],
+      "short": "通州的公共阅读与文化空间，可与大运河博物馆片区搭配。",
+      "description": "通州的公共阅读与文化空间，可与大运河博物馆片区搭配。",
+      "highlights": [
+        "室内",
+        "阅读",
+        "公共文化空间"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市通州区绿心路1号院3号楼",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://map.beijing.gov.cn/place?categoryId=tsg&placeId=66b066ffe4a9ed67df2d566e",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.7085,
+        "lat": 39.8829,
+        "precision": 0.0001,
+        "source": "https://www.wikidata.org/wiki/Q105718285#P625",
+        "statementId": "Q105718285$63c9122a-4e88-ae4b-4497-2e158493d4f4"
+      }
+    },
+    {
+      "id": "nanhaizi-park",
+      "name": "南海子公园",
+      "districtId": "daxing",
+      "category": "park",
+      "emoji": "🌳",
+      "visit": 180,
+      "interests": [
+        "plant",
+        "sport",
+        "photo"
+      ],
+      "aliases": [
+        "南海子公园",
+        "南海子",
+        "北京南海子郊野公园"
+      ],
+      "short": "北京南部的大型公园，可安排湿地景观与慢步游览；麋鹿苑需单独确认入场安排。",
+      "description": "北京南部的大型公园，可安排湿地景观与慢步游览；麋鹿苑需单独确认入场安排。",
+      "highlights": [
+        "湿地",
+        "公园慢游",
+        "散步"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市大兴区黄亦路16号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://tyj.beijing.gov.cn/bjsports/gzdt84/zwdt/436240030/index.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.477452,
+        "lat": 39.769132,
+        "precision": 0.00027777777777778,
+        "source": "https://www.wikidata.org/wiki/Q10908454#P625",
+        "statementId": "Q10908454$04FE724A-5E0B-4397-BB8C-2AE5DDFF504A"
+      }
+    },
+    {
+      "id": "shijingshan-amusement-park",
+      "name": "石景山游乐园",
+      "districtId": "shijingshan",
+      "category": "landmark",
+      "emoji": "📍",
+      "visit": 240,
+      "interests": [
+        "sport",
+        "photo"
+      ],
+      "aliases": [
+        "石景山游乐园",
+        "石景山游乐园景区"
+      ],
+      "short": "可作为家庭游乐出行目的地；项目开放、年龄与身高要求须逐项确认。",
+      "description": "可作为家庭游乐出行目的地；项目开放、年龄与身高要求须逐项确认。",
+      "highlights": [
+        "游乐园",
+        "家庭出游",
+        "游乐设施"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市石景山区石景山路25号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://map.beijing.gov.cn/place?categoryId=lyzxz&placeId=60cb3ca9bd15ba1c65342ec9",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.2028,
+        "lat": 39.9109,
+        "precision": 0.0001,
+        "source": "https://www.wikidata.org/wiki/Q814725#P625",
+        "statementId": "Q814725$CFDAF6D9-4CDE-4FAA-9F4E-949645698031"
+      }
+    },
+    {
+      "id": "china-aviation-museum",
+      "name": "中国航空博物馆",
+      "districtId": "changping",
+      "category": "museum",
+      "emoji": "🏛️",
+      "visit": 180,
+      "interests": [
+        "research",
+        "culture",
+        "photo"
+      ],
+      "aliases": [
+        "中国航空博物馆",
+        "航空博物馆",
+        "航空博物馆小汤山"
+      ],
+      "short": "以航空器和航空历史为主题，需为往返昌平的交通保留时间。",
+      "description": "以航空器和航空历史为主题，需为往返昌平的交通保留时间。",
+      "highlights": [
+        "航空科普",
+        "飞机",
+        "室内与室外"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。",
+      "mustSee": false,
+      "address": "北京市昌平区小汤山镇大汤山村700号",
+      "openingHours": null,
+      "bookingUrl": null,
+      "ticketNote": "尚未核实当前票价与预约要求，请查看官方公告。",
+      "sources": [
+        {
+          "kind": "official",
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362773/546544/index.html",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "reviewNote": "已核对地点名称、行政区及来源中列出的地址或特征；未实地核实入口、开放与票价。",
+      "coordinate": {
+        "system": "wgs84",
+        "globe": "Q2",
+        "lng": 116.36361111,
+        "lat": 40.1825,
+        "precision": 0.00027777777777778,
+        "source": "https://www.wikidata.org/wiki/Q776446#P625",
+        "statementId": "Q776446$86FB279D-C3FB-4614-8EB9-CA910CDBF428"
+      }
+    }
+  ]
+}

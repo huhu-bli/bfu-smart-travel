@@ -14,6 +14,8 @@
     "db:setup": "node --import tsx scripts/database.ts setup",
     "db:migrate": "node --import tsx scripts/database.ts migrate",
     "db:seed": "node --import tsx scripts/database.ts seed",
+    "db:build-common": "node scripts/build-common-travel.mjs",
+    "db:expand-common": "node scripts/maintain-places.mjs import database/catalogs/beijing-common-travel.json",
     "db:validate": "node scripts/maintain-places.mjs validate",
     "db:import": "node scripts/maintain-places.mjs import",
     "db:export": "node scripts/maintain-places.mjs export",
