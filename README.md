@@ -1,6 +1,6 @@
 # 北京智能旅行 · Beijing Smart Travel
 
-> 数据库功能分支：景点查询已接入 PostgreSQL，新增普通数据库搜索页。上线前须配置服务端 DATABASE_URL 并初始化数据，详见 [景点数据库说明](docs/place-database.md)。本地可先运行 npm run db:setup 和 npm run dev:api。
+> 景点查询已接入 PostgreSQL，支持不经千问的数据库搜索。正式站已连接云端数据库；部署新环境须配置服务端 DATABASE_URL 并初始化数据，详见 [景点数据库说明](docs/place-database.md)。本地可先运行 npm run db:setup 和 npm run dev:api。
 
 
 面向北京市 16 个行政区景点、高校、博物馆、公园与街区的智能路线规划器。城市级路线与校园精细路线使用两套独立算法、统一进入全局计划；北京林业大学、北京交通大学继续保留独立校内点位，绝不跨校复用路线。
@@ -192,3 +192,7 @@ bfu-smart-travel/
 ## License
 
 MIT
+
+## 数据库维护
+
+景点新增、修订、批量导入预览、版本历史与归档恢复见 [维护说明](docs/place-database-maintenance.md)。公开接口保持只读，千问不直接写库。

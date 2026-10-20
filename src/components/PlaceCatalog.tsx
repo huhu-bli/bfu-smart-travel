@@ -57,6 +57,9 @@ export default function PlaceCatalog({ onPlanCity }: { onPlanCity: (place: Catal
       <p>{place.highlights.join(' · ')}</p>
       <details><summary>资料与开放信息</summary>
         <p>开放信息：{place.openingHours || '尚未核实，请以官方公告为准。'}</p>
+        <p>地址：{place.address || '尚未收录'}</p>
+        <p>票价说明：{place.ticketNote || '尚未收录，请以官方公告为准。'}</p>
+        {place.bookingUrl?.startsWith('https://') ? <p><a href={place.bookingUrl} target="_blank" rel="noopener noreferrer">查看收录的预约页面</a></p> : null}
         <p>{place.tips}</p>
         {place.sources?.map((source) => <p key={source.reference}>来源：{source.reference} · {source.verificationStatus === 'verified' ? '已核实' : '待核实'}</p>)}
       </details>

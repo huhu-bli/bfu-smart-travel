@@ -61,7 +61,7 @@ function wantedInterests(interests: InterestId[]): InterestId[] {
 function baseScore(place: BeijingPlace, wanted: InterestId[], included: Set<string>): number {
   const relevance = place.interests.filter((id) => wanted.includes(id)).length;
   const foodRoute = wanted.includes('food');
-  const diningArea = foodRoute && place.interests.includes('food') && place.category === 'neighborhood' ? 5 : 0;
+  const diningArea = foodRoute && place.interests.includes('food') && ['neighborhood', 'restaurant'].includes(place.category) ? 5 : 0;
   const fullDayAttraction = foodRoute && place.visit >= 360 ? 8 : 0;
   return relevance * 4 + (place.mustSee ? 2.5 : 0) + diningArea - fullDayAttraction + (included.has(place.id) ? 100 : 0);
 }

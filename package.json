@@ -13,7 +13,14 @@
     "dev:api": "node scripts/dev-api.mjs",
     "db:setup": "node --import tsx scripts/database.ts setup",
     "db:migrate": "node --import tsx scripts/database.ts migrate",
-    "db:seed": "node --import tsx scripts/database.ts seed"
+    "db:seed": "node --import tsx scripts/database.ts seed",
+    "db:validate": "node scripts/maintain-places.mjs validate",
+    "db:import": "node scripts/maintain-places.mjs import",
+    "db:export": "node scripts/maintain-places.mjs export",
+    "db:history": "node scripts/maintain-places.mjs history",
+    "db:archive": "node scripts/maintain-places.mjs archive",
+    "db:restore": "node scripts/maintain-places.mjs restore",
+    "db:check": "node scripts/maintain-places.mjs check"
   },
   "dependencies": {
     "pg": "^8.23.1",

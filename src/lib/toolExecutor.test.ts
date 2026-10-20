@@ -2,6 +2,8 @@ import { fixturePlaces } from '../../test/support/fixturePlaces';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runTool } from './toolExecutor';
+import { resolveTravelTarget } from './travelTarget';
+import type { AgentToolContext } from '../agent/types';
 
 function districtContext() {
   return {
@@ -65,4 +67,21 @@ test('toolExecutor returns a matching trip when the budget is sufficient', async
     ) as { trips: Array<{ budget: string }>; budgetMatched: boolean };
     assert.equal(result.budgetMatched, true);
     assert.ok(result.trips.length > 0);
+});
+
+test('toolExecutor keeps a city-to-BJTU follow-up within the target campus despite wrong model arguments', async () => {
+  const context: AgentToolContext = {
+    ...districtContext(),
+    target: resolveTravelTarget('改去北京交通大学，只在校园内逛3小时，不要用北林点位。', resolveTravelTarget('东城区看银杏')),
+  };
+  const listed = JSON.parse(await runTool('list_spots', JSON.stringify({ campus_id: 'bfu' }), context));
+  assert.equal(listed.campusId, 'bjtu');
+  assert.ok(listed.spots.length > 0);
+  assert.ok(listed.spots.every((spot: { id: string }) => spot.id.startsWith('bjtu-')));
+  const built = JSON.parse(await runTool('build_route', JSON.stringify({ campus_id: 'bfu', minutes: 180 }), context));
+  assert.equal(built.campusId, 'bjtu');
+  assert.equal(context.planOptions?.campusId, 'bjtu');
+  assert.ok(context.plan?.stops.length);
+  assert.ok(context.plan!.stops.every((stop) => stop.spot.id.startsWith('bjtu-')));
+  assert.ok(context.plan!.totalMinutes <= 180);
 });
