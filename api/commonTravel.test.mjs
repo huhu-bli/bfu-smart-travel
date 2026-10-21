@@ -13,6 +13,8 @@ import { resolveDatabaseTravelTarget } from '../src/lib/databaseTravelTarget.ts'
 import { resolveTravelTarget } from '../src/lib/travelTarget.ts';
 import { answerLocally } from '../src/lib/localAgent.ts';
 import { ensureCityRoute } from '../src/agent/cityRouteGuard.ts';
+import { prepareBeijingRouteEdit } from '../src/lib/beijingRouteEditor.ts';
+import { PACES } from '../src/data/interests.ts';
 
 const manifest = JSON.parse(await readFile(new URL('../database/catalogs/beijing-common-travel.provenance.json', import.meta.url)));
 const document = JSON.parse(await readFile(new URL('../database/catalogs/beijing-common-travel.json', import.meta.url)));
@@ -141,4 +143,40 @@ test('city guard names requested destinations left out of a short leisurely rout
   assert.ok(context.beijingPlan.totalMinutes <= 240);
   assert.match(answer, /陶然亭公园尚未排入必游主线/);
   assert.doesNotMatch(answer, /全部安排得很从容/);
+});
+
+test('manual city edits query cross-district selections by ID and keep their exact order even over budget', async () => {
+  await ready;
+  const previous = { scope: 'beijing', minutes: 120, startHour: 14, interests: ['food'], pace: PACES[1],
+    travelMode: 'mixed', districtIds: ['xicheng'], startPlaceId: 'niujie', includePlaceIds: ['niujie'] };
+  const selected = ['niujie', 'forbidden-city', 'taoranting-park'];
+  const result = await prepareBeijingRouteEdit(repository, previous, [...selected, 'niujie'], ['forbidden-city', 'shichahai']);
+  assert.deepEqual([result.plan.origin.id, ...result.plan.stops.map((stop) => stop.place.id)], selected);
+  assert.deepEqual(result.options.districtIds, ['xicheng', 'dongcheng']);
+  assert.deepEqual(result.options.excludePlaceIds, ['shichahai']);
+  assert.equal(result.options.startHour, 14);
+  assert.equal(result.options.minutes, 120);
+  assert.ok(result.plan.totalMinutes > 120);
+  assert.match(result.plan.remainingAdvice, /超出预算/);
+  const removed = await prepareBeijingRouteEdit(repository, result.options, ['forbidden-city'], ['niujie', 'taoranting-park']);
+  assert.deepEqual(removed.options.districtIds, ['dongcheng']);
+  assert.equal(removed.plan.origin.id, 'forbidden-city');
+  assert.deepEqual(removed.plan.stops, []);
+  assert.deepEqual(previous.districtIds, ['xicheng']);
+});
+
+test('manual edits reject removed database destinations without silently dropping them or changing the saved options', async () => {
+  await ready;
+  const previous = { scope: 'beijing', minutes: 240, interests: ['food'], pace: PACES[1],
+    travelMode: 'mixed', districtIds: ['xicheng'], startPlaceId: 'niujie', includePlaceIds: ['niujie'] };
+  const before = structuredClone(previous);
+  await assert.rejects(prepareBeijingRouteEdit(repository, previous, [], []), /至少保留/);
+  await assert.rejects(prepareBeijingRouteEdit(repository, previous, ['niujie', 'not-in-database'], []), /已不可用/);
+  await db.query("UPDATE places SET status='archived' WHERE id='niujie'");
+  try {
+    await assert.rejects(prepareBeijingRouteEdit(repository, previous, ['niujie', 'forbidden-city'], []), /原计划已保留/);
+  } finally {
+    await db.query("UPDATE places SET status='active' WHERE id='niujie'");
+  }
+  assert.deepEqual(previous, before);
 });

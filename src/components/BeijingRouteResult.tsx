@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BEIJING_CATEGORY_LABELS } from '../data/beijingPlaces';
+import { BEIJING_CATEGORY_LABELS, BEIJING_DISTRICTS } from '../data/beijingPlaces';
+import type { CatalogCityPlace } from '../lib/placeRepository';
+import type { BeijingDistrictId } from '../types';
 import { useCityPlaces } from '../lib/useCityPlaces';
 import { beijingRouteToText } from '../lib/beijingPlanner';
 import { formatClock, formatDuration } from '../lib/planner';
@@ -21,13 +23,20 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
     [plan],
   );
   const [selectedIds, setSelectedIds] = useState(primaryIds);
+  const [selectedPlaces, setSelectedPlaces] = useState<CatalogCityPlace[]>([]);
+  const [keyword, setKeyword] = useState('');
+  const [district, setDistrict] = useState('');
+  const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    if (!editing) setSelectedIds(primaryIds);
+    if (!editing) { setSelectedIds(primaryIds); setSelectedPlaces([]); }
   }, [editing, primaryIds]);
+  useEffect(() => { setEditing(false); }, [primaryIds]);
 
-  const { places: catalogPlaces, error: catalogError } = useCityPlaces({ districtIds: options.districtIds, limit: 100 });
-  const candidates = Array.from(new Map([plan.origin, ...plan.stops.map((stop) => stop.place), ...catalogPlaces].map((place) => [place.id, place])).values());
+  const { places: catalogPlaces, error: catalogError, total, loading, reload } = useCityPlaces({
+    keyword, districtIds: district ? [district as BeijingDistrictId] : [], limit: 12, offset,
+  });
+  const candidates = Array.from(new Map([plan.origin, ...plan.stops.map((stop) => stop.place), ...selectedPlaces, ...catalogPlaces].map((place) => [place.id, place])).values());
 
   const apply = () => {
     const selected = Array.from(new Set(selectedIds));
@@ -85,6 +94,15 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
             <div><strong>自由增删北京目的地</strong><p>将按所选顺序重新计算交通时间；超出预算时保留站点并提示时长。</p></div>
             <span>{selectedIds.length} 个目的地</span>
           </div>
+          <div className="catalog-filters">
+            <label>添加目的地的地区<select value={district} disabled={busy} onChange={(event) => { setDistrict(event.target.value); setOffset(0); }}>
+              <option value="">北京全部地区</option>
+              {BEIJING_DISTRICTS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select></label>
+            <label>搜索目的地<input value={keyword} maxLength={100} disabled={busy} placeholder="例如：故宫、牛街、颐和园" onChange={(event) => { setKeyword(event.target.value); setOffset(0); }} /></label>
+          </div>
+          <p role="status" aria-live="polite">{loading ? '正在查询目的地…' : catalogError ? '查询失败，已选目的地仍保留。' : `数据库匹配 ${total} 个地点；已选项会保留在列表中。`}</p>
+          {catalogError ? <button type="button" className="ghost-btn" onClick={reload}>重试目的地查询</button> : null}
           <div className="route-editor-grid">
             {candidates.map((place) => {
               const checked = selectedIds.includes(place.id);
@@ -94,12 +112,20 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
                     type="checkbox"
                     disabled={busy}
                     checked={checked}
-                    onChange={() => setSelectedIds((current) => checked ? current.filter((id) => id !== place.id) : [...current, place.id])}
+                    onChange={() => {
+                      setSelectedIds((current) => current.includes(place.id) ? current.filter((id) => id !== place.id) : [...current, place.id]);
+                      setSelectedPlaces((current) => checked ? current.filter((item) => item.id !== place.id) : [...current.filter((item) => item.id !== place.id), place]);
+                    }}
                   />
                   <span><strong>{place.emoji} {place.name}</strong><small>{place.district} · {BEIJING_CATEGORY_LABELS[place.category]}</small></span>
                 </label>
               );
             })}
+          </div>
+          <div className="catalog-pagination">
+            <button type="button" aria-label="上一页目的地" disabled={busy || loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - 12))}>上一页</button>
+            <span>第 {Math.floor(offset / 12) + 1} 页</span>
+            <button type="button" aria-label="下一页目的地" disabled={busy || loading || offset + 12 >= total} onClick={() => setOffset(offset + 12)}>下一页</button>
           </div>
           <div className="route-editor-foot">
             <span>跨区站点会增加换乘时间；请至少保留一个目的地。</span>

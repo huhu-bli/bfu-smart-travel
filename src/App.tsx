@@ -23,6 +23,7 @@ import { buildRoute, formatDuration } from './lib/planner';
 import { toggleInList, useLocalStorage } from './lib/storage';
 import { decodeStoredGlobalRoute } from './lib/storedState';
 import { createRouteUpdateGate } from './lib/routeUpdateGate';
+import { prepareBeijingRouteEdit } from './lib/beijingRouteEditor';
 import type {
   BeijingRouteOptions,
   BeijingRoutePlan,
@@ -236,17 +237,9 @@ export default function App() {
     const revision = beijingUpdates.current.begin();
     if (revision === undefined) return;
     setBeijingUpdating(true);
-    const nextOptions: BeijingRouteOptions = {
-      ...globalRoute.options,
-      startPlaceId: includePlaceIds[0],
-      includePlaceIds,
-      excludePlaceIds,
-      preserveSelectedStops: true,
-    };
     setCatalogPlanError('');
-    void cityPlanningPlaces(databasePlaces, nextOptions.districtIds, includePlaceIds).then(async (places) => {
+    void prepareBeijingRouteEdit(databasePlaces, globalRoute.options, includePlaceIds, excludePlaceIds).then(async ({ plan: estimatedPlan, options: nextOptions }) => {
       if (!beijingUpdates.current.isCurrent(revision)) return;
-      const estimatedPlan = buildBeijingRoute(nextOptions, places);
       const source = 'manual';
       setGlobalRoute({
         kind: 'beijing',
