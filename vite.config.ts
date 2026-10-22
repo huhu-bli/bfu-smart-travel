@@ -6,6 +6,8 @@ export default defineConfig({
   base: './',
   plugins: [react()],
   build: {
+    // 显式转换可选链等语法，兼容仍在使用旧版 iOS 的 Safari。
+    target: ['safari13', 'chrome87', 'edge88', 'firefox78'],
     outDir: 'dist',
     sourcemap: false,
   },
