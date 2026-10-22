@@ -73,7 +73,8 @@ function publicPlace(row) {
     updatedAt: row.updated_at, version: row.version,
     address: row.address, ticketNote: row.ticket_note, coordinateSystem: row.coordinate_system,
     sources: row.sources.map((s) => ({ reference: s.reference, kind: s.source_kind,
-      verificationStatus: s.verification_status, verifiedAt: s.verified_at })),
+      verificationStatus: s.verification_status,
+      verifiedAt: s.verified_at ? new Date(s.verified_at).toISOString().slice(0, 10) : null })),
   };
   return row.scope === 'city'
     ? { ...shared, category: row.category, districtId: row.district_id, district: row.district, lng: row.lng, lat: row.lat }

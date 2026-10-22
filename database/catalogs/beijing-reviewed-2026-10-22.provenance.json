@@ -1,0 +1,407 @@
+{
+  "reviewedAt": "2026-10-22",
+  "method": "Official pages reviewed for the fields below. Existing import and coordinate sources remain unverified. Coordinates are reference positions, not entrances. Ticket notes explicitly retain unresolved prices.",
+  "officialFacts": {
+    "forbidden-city": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.dpm.org.cn/Visit.html",
+        "https://ticket.dpm.org.cn/",
+        "https://intl.dpm.org.cn/visit.html"
+      ]
+    },
+    "national-museum": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.chnmuseum.cn/cg/"
+      ]
+    },
+    "summer-palace": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://summerpalace.net.cn/visit.html",
+        "https://wwj.beijing.gov.cn/bjww/wwjzzcslm/1737418/1738088/1742737/523247/index.html"
+      ]
+    },
+    "temple-of-heaven": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.tiantanpark.cn/index.html",
+        "https://www.tiantanpark.cn/guide_service.html",
+        "https://yllhj.beijing.gov.cn/ztxx/kpjd/202312/t20231222_3508034.shtml"
+      ]
+    },
+    "fragrant-hills": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.xiangshanpark.com/cn/",
+        "https://gygl.beijing.gov.cn/mlgy/mlgy_lsmy/202305/t20230505_3087852.html"
+      ]
+    },
+    "beijing-zoo": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.bjzoo.com.cn/"
+      ]
+    },
+    "national-botanical-garden": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.chnbg.cn/",
+        "https://www.chnbg.cn/detail/526.html?_isa=1"
+      ]
+    },
+    "yuyuantan-park": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.yuyuantanpark.cn/",
+        "https://www.yuyuantanpark.cn/news/506.html"
+      ]
+    },
+    "taoranting-park": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.trt-park.cn/news/N00002.html"
+      ]
+    },
+    "zizhuyuan-park": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://english.beijing.gov.cn/specials/parktours/guidevisitors/zizhuyuanpark/overview/202301/t20230111_2896429.html",
+        "https://english.beijing.gov.cn/specials/parktours/guidevisitors/zizhuyuanpark/index.html",
+        "https://zyk.bjhd.gov.cn/kjhd/lyhd/201810/t20181023_4530786.shtml"
+      ]
+    },
+    "capital-museum": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.capitalmuseum.org.cn/visit",
+        "https://www.capitalmuseum.org.cn/news/6f5b571224214a1fa2c5019cea051080"
+      ]
+    },
+    "grand-canal-museum": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.canalmuseum.org.cn/index.html",
+        "https://wwj.beijing.gov.cn/bjww/362771/362772/743627282/index.html",
+        "https://www.bjwmb.gov.cn/yw/10051236.html"
+      ]
+    },
+    "beijing-city-library": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://bjlib.clcn.net.cn/page/default/opentime",
+        "https://ykt.clcn.net.cn/announcement/1285.html"
+      ]
+    },
+    "national-natural-history-museum": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.nnhm.org.cn/cgzx/cgxx/index.shtml",
+        "https://www.nnhm.org.cn/lxwm/",
+        "https://wap.nnhm.org.cn/bwgjj/bwgjj/wap_index.shtml"
+      ]
+    },
+    "china-science-technology-museum": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://cstm.org.cn/ykfw/yygp/index.html",
+        "https://www.cstm.org.cn/index.html",
+        "https://www.cstm.org.cn/ykfw/lxwm/index.html"
+      ]
+    },
+    "prince-gong-mansion": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.pgm.org.cn/pgm/cgzl/201808/0091ebe1dfe345fa8936574adbb6a4d6.shtml",
+        "https://en.pgm.org.cn/2022-06/06/c_759193.htm"
+      ]
+    },
+    "yuanmingyuan": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://www.yuanmingyuanpark.cn/pw/qtfw/202005/t20200509_4403117.html",
+        "https://www.yuanmingyuanpark.cn/pw/mmp/202004/t20200430_4402175.html"
+      ]
+    },
+    "beihai-park": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://english.beijing.gov.cn/specials/parktours/guidevisitors/beihaipark/index.html",
+        "https://english.beijing.gov.cn/specials/ticketing/parks/202407/t20240719_3753320.html"
+      ]
+    },
+    "jingshan-park": {
+      "verifiedFields": [
+        "address",
+        "openingHours",
+        "ticketNote"
+      ],
+      "reviewedAt": "2026-10-22",
+      "officialPages": [
+        "https://english.beijing.gov.cn/specials/parktours/guidevisitors/jingshanpark/"
+      ]
+    }
+  },
+  "coordinates": [
+    {
+      "id": "summer-palace",
+      "entity": "Q4132",
+      "statementId": "q4132$BDF4FD6B-5DDF-4A2D-85A2-325A515EF67C",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.2689,
+      "latitude": 39.9975,
+      "precision": null,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "grand-canal-museum",
+      "entity": "Q105718642",
+      "statementId": "Q105718642$c4cc868f-4f68-503f-2d54-53ae590f3db4",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.7108,
+      "latitude": 39.8795,
+      "precision": 0.0001,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "forbidden-city",
+      "entity": "Q2047427",
+      "statementId": "Q2047427$C5F74E76-7024-4D7D-BF7C-4471ED9099E7",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.39083333,
+      "latitude": 39.91555556,
+      "precision": 1e-06,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "national-museum",
+      "entity": "Q1074318",
+      "statementId": "q1074318$B5204A70-6B97-4AAF-A393-96FA6B5294F8",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.395,
+      "latitude": 39.90361111111111,
+      "precision": 0.0002777777777777778,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "temple-of-heaven",
+      "entity": "Q125445",
+      "statementId": "Q125445$f2bd2cfa-b287-4e0e-8d3b-ffdedcaf18fb",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.4066,
+      "latitude": 39.8822,
+      "precision": 0.0001,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "beihai-park",
+      "entity": "Q133650",
+      "statementId": "q133650$C8F1E541-3E09-4165-94F4-E352FDAFFDC9",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.38305555556,
+      "latitude": 39.924444444444,
+      "precision": null,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "fragrant-hills",
+      "entity": "Q943688",
+      "statementId": "q943688$0F4CB45C-CC54-4848-B645-162585F4735D",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.17969166667,
+      "latitude": 39.990997222222,
+      "precision": 2.7777777777778e-06,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "beijing-zoo",
+      "entity": "Q220083",
+      "statementId": "q220083$903395A0-191A-4C92-B258-F88F0C2BA38D",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.33333333333,
+      "latitude": 39.938611111111,
+      "precision": null,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "yuanmingyuan",
+      "entity": "Q907894",
+      "statementId": "Q907894$46E9EFA3-B476-4299-B9D8-22E6EF149B0C",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.30679305555556,
+      "latitude": 40.012045,
+      "precision": 2.77778e-05,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "capital-museum",
+      "entity": "Q1189666",
+      "statementId": "Q1189666$bbe017b9-4e70-a58f-5ae6-377102136cca",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.336,
+      "latitude": 39.905,
+      "precision": 2.777777777777778e-05,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "aosen",
+      "entity": "Q7089073",
+      "statementId": "Q7089073$A2408FE2-C6C8-4840-8E4E-FBBB66700289",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.38605833,
+      "latitude": 40.01770278,
+      "precision": 2.77777777778e-06,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "mutianyu",
+      "entity": "Q212610",
+      "statementId": "Q212610$0B4FD62F-5EB5-4957-A140-C84A6533299F",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.5619,
+      "latitude": 40.43801667,
+      "precision": 2.77777777778e-06,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    },
+    {
+      "id": "badaling",
+      "entity": "Q798826",
+      "statementId": "Q798826$029CDD28-5B8C-46FC-9BD3-792BA3BEA6B4",
+      "sourceCoordinateSystem": "wgs84",
+      "targetCoordinateSystem": "gcj02",
+      "license": "CC0",
+      "reviewedAt": "2026-10-22",
+      "longitude": 116.00649,
+      "latitude": 40.35428,
+      "precision": 1e-06,
+      "globe": "http://www.wikidata.org/entity/Q2"
+    }
+  ]
+}

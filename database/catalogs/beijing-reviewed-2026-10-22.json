@@ -1,0 +1,1357 @@
+{
+  "schemaVersion": 1,
+  "places": [
+    {
+      "id": "forbidden-city",
+      "name": "故宫博物院",
+      "emoji": "🏯",
+      "aliases": [
+        "故宫博物院",
+        "故宫"
+      ],
+      "visit": 180,
+      "short": "北京中轴线上最具代表性的宫殿建筑群。",
+      "description": "北京中轴线上最具代表性的宫殿建筑群。",
+      "highlights": [
+        "中轴线",
+        "古建筑",
+        "宫廷文化"
+      ],
+      "interests": [
+        "culture",
+        "photo"
+      ],
+      "bestTime": "上午",
+      "tips": "门票提前7日20:00开售，不售当日票；由午门入院。武英殿自2026年10月19日起暂闭，延禧宫2026年9月1日至10月31日暂闭，恢复安排查看官方公告。；通常需要提前预约，周一开放情况请以官方公告为准。；地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日 08:30–17:00，16:00停止入院；11月1日至次年3月31日 08:30–16:30，15:30停止入院。周一闭馆，法定节假日除外。",
+      "bookingUrl": "https://ticket.dpm.org.cn/",
+      "address": "北京市东城区景山前街4号；参观入口为午门",
+      "ticketNote": "成人门票旺季60元、淡季40元；珍宝馆、钟表馆分别另收10元，优惠及免票资格以官方规则为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.dpm.org.cn/Visit.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://ticket.dpm.org.cn/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://intl.dpm.org.cn/visit.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q2047427",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "heritage",
+      "districtId": "dongcheng",
+      "lng": 116.397075,
+      "lat": 39.916957,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "national-museum",
+      "name": "中国国家博物馆",
+      "emoji": "🏛️",
+      "aliases": [
+        "中国国家博物馆",
+        "中国国家",
+        "国博"
+      ],
+      "visit": 180,
+      "short": "系统了解中国历史与文化的重要国家级博物馆。",
+      "description": "系统了解中国历史与文化的重要国家级博物馆。",
+      "highlights": [
+        "国家级博物馆",
+        "历史展览"
+      ],
+      "interests": [
+        "culture",
+        "research"
+      ],
+      "bestTime": "上午",
+      "tips": "提前7日17:00放票，按预约时段入馆，携带预约使用的有效身份证件。；建议提前预约并预留安检时间。；地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": "通常09:00–17:00，16:00停止入馆；6月1日至10月31日延长至17:30，16:30停止入馆。周一闭馆，法定节假日除外。",
+      "bookingUrl": "https://www.chnmuseum.cn/cg/",
+      "address": "北京市东城区东长安街16号",
+      "ticketNote": "免费实名预约参观；部分临时展览或活动政策以官方公告为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.chnmuseum.cn/cg/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q1074318",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "museum",
+      "districtId": "dongcheng",
+      "lng": 116.401242,
+      "lat": 39.905014,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "summer-palace",
+      "name": "颐和园",
+      "emoji": "⛩️",
+      "aliases": [
+        "颐和园"
+      ],
+      "visit": 240,
+      "short": "以昆明湖和万寿山为核心的皇家园林。",
+      "description": "以昆明湖和万寿山为核心的皇家园林。",
+      "highlights": [
+        "昆明湖",
+        "长廊",
+        "佛香阁"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "上午",
+      "tips": "周一关闭的是园中园，公园大门开放安排与园中园不同。；地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日公园06:00–20:00，19:00停止入园；11月1日至次年3月31日06:30–19:00，18:00停止入园。园中园旺季08:00–18:00（17:30停止进入）、淡季08:30–17:00（16:30停止进入）；园中园周一关闭，法定节假日除外。",
+      "bookingUrl": "https://summerpalace.net.cn/visit.html",
+      "address": "北京市海淀区新建宫门路19号",
+      "ticketNote": "公园门票旺季30元、淡季20元；联票旺季60元、淡季50元，园中园和优惠规则以官方票务说明为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://summerpalace.net.cn/visit.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://wwj.beijing.gov.cn/bjww/wwjzzcslm/1737418/1738088/1742737/523247/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q4132",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "heritage",
+      "districtId": "haidian",
+      "lng": 116.274944,
+      "lat": 39.998726,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "temple-of-heaven",
+      "name": "天坛公园",
+      "emoji": "⛩️",
+      "aliases": [
+        "天坛公园",
+        "天坛"
+      ],
+      "visit": 150,
+      "short": "明清皇家祭天建筑群，也是经典中轴线景观。",
+      "description": "明清皇家祭天建筑群，也是经典中轴线景观。",
+      "highlights": [
+        "祈年殿",
+        "古柏",
+        "中轴线"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "清晨或傍晚",
+      "tips": "大门票与进入祈年殿等景点院落的票种不同；较早的政府页面时间与当前公园页面有差异，开放时间采用公园当前页面。；地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日公园06:00–22:00，21:00停止入园；11月1日至次年3月31日06:30–22:00，21:00停止入园。景点院落旺季08:00–18:00（17:30停止进入），淡季08:00–17:00（16:30停止进入）；院落周一关闭，法定节假日除外。",
+      "bookingUrl": "https://www.tiantanpark.cn/guide_service.html",
+      "address": "北京市东城区天坛内东里7号",
+      "ticketNote": "成人大门票旺季15元、淡季10元；联票旺季34元、淡季28元。联票涵盖范围与优惠票以官方页面为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.tiantanpark.cn/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.tiantanpark.cn/guide_service.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://yllhj.beijing.gov.cn/ztxx/kpjd/202312/t20231222_3508034.shtml",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q125445",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "heritage",
+      "districtId": "dongcheng",
+      "lng": 116.41284,
+      "lat": 39.883602,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "fragrant-hills",
+      "name": "香山公园",
+      "emoji": "🍁",
+      "aliases": [
+        "香山公园",
+        "香山"
+      ],
+      "visit": 240,
+      "short": "西山山地公园，秋季红叶最具代表性。",
+      "description": "西山山地公园，秋季红叶最具代表性。",
+      "highlights": [
+        "红叶",
+        "登山",
+        "城市远眺"
+      ],
+      "interests": [
+        "photo",
+        "plant",
+        "sport"
+      ],
+      "bestTime": "清晨",
+      "tips": "地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "4月1日至11月15日06:00–19:30，18:30停止入园；11月16日至次年3月31日06:00–19:00，18:00停止入园。革命旧址、香山寺、碧云寺等院落周一关闭，法定节假日除外。",
+      "bookingUrl": "https://www.xiangshanpark.com/cn/",
+      "address": "北京市海淀区香山买卖街40号",
+      "ticketNote": "公园成人门票旺季10元、淡季5元；碧云寺另收10元，其他项目及优惠另见官方说明。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.xiangshanpark.com/cn/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://gygl.beijing.gov.cn/mlgy/mlgy_lsmy/202305/t20230505_3087852.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q943688",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "park",
+      "districtId": "haidian",
+      "lng": 116.185857,
+      "lat": 39.992294,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "beijing-zoo",
+      "name": "北京动物园",
+      "emoji": "🐼",
+      "aliases": [
+        "北京动物园"
+      ],
+      "visit": 180,
+      "short": "适合亲子与动物观察的综合园区。",
+      "description": "适合亲子与动物观察的综合园区。",
+      "highlights": [
+        "大熊猫",
+        "动物科普"
+      ],
+      "interests": [
+        "photo",
+        "plant",
+        "research"
+      ],
+      "bestTime": "上午",
+      "tips": "地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日07:30–19:00，18:00停止入园；11月1日至次年3月31日07:30–18:00，17:00停止入园。",
+      "bookingUrl": "https://www.bjzoo.com.cn/",
+      "address": "北京市西城区西直门外大街137号",
+      "ticketNote": "公园成人门票旺季15元、淡季10元；熊猫馆、海洋馆及其他单独收费项目请另查官方票务。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.bjzoo.com.cn/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q220083",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "park",
+      "districtId": "xicheng",
+      "lng": 116.339483,
+      "lat": 39.939934,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "national-botanical-garden",
+      "name": "国家植物园",
+      "emoji": "🌿",
+      "aliases": [
+        "国家植物园",
+        "北京植物园"
+      ],
+      "visit": 240,
+      "short": "植物保育、科研科普与园林游览结合。",
+      "description": "植物保育、科研科普与园林游览结合。",
+      "highlights": [
+        "植物多样性",
+        "温室",
+        "科普"
+      ],
+      "interests": [
+        "photo",
+        "plant",
+        "research"
+      ],
+      "bestTime": "上午",
+      "tips": "北园温室、卧佛寺等周一关闭，法定节假日除外；南园温室周一上午关闭，12:00恢复开放。购票时确认南北园和票种。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "北园3月16日至11月15日06:00–21:00，20:00停止入园；11月16日至次年3月15日06:30–19:00，18:00停止入园。南园旺季08:00–18:00，17:00停止入园；淡季08:00–18:00，16:30停止入园。",
+      "bookingUrl": "https://www.chnbg.cn/detail/526.html?_isa=1",
+      "address": "北京市海淀区香山卧佛寺路",
+      "ticketNote": "南园、北园、通票及温室等票种不同；本条未转录图片中的票价，请以官方购票页为准。",
+      "coordinateSystem": "unknown",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.chnbg.cn/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.chnbg.cn/detail/526.html?_isa=1",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "park",
+      "districtId": "haidian",
+      "lng": 116.2165,
+      "lat": 40.003,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "yuyuantan-park",
+      "name": "玉渊潭公园",
+      "emoji": "🌳",
+      "aliases": [
+        "玉渊潭公园",
+        "玉渊潭"
+      ],
+      "visit": 120,
+      "short": "以湖面和樱花景观为特色，适合步行看景；花期随季节变化。",
+      "description": "以湖面和樱花景观为特色，适合步行看景；花期随季节变化。",
+      "highlights": [
+        "樱花",
+        "湖景",
+        "散步"
+      ],
+      "interests": [
+        "photo",
+        "plant",
+        "sport"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "1月1日至5月31日及9月1日至12月31日06:00–21:30，21:00停止入园；6月1日至8月31日06:00–22:30，21:30停止入园。",
+      "bookingUrl": "https://www.yuyuantanpark.cn/",
+      "address": "北京市海淀区西三环中路10号",
+      "ticketNote": "平日成人门票2元、半价票1元；春季赏花等专项活动票价另行公告。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://gygl.beijing.gov.cn/dwjj/dwjj_zsdw/201911/t20191129_728859.html",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q12011122#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.yuyuantanpark.cn/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.yuyuantanpark.cn/news/506.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "park",
+      "districtId": "haidian",
+      "lng": 116.320093,
+      "lat": 39.916975,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "taoranting-park",
+      "name": "陶然亭公园",
+      "emoji": "🌳",
+      "aliases": [
+        "陶然亭公园",
+        "陶然亭"
+      ],
+      "visit": 120,
+      "short": "以亭文化和城市园林为特色，可安排较舒缓的公园游览。",
+      "description": "以亭文化和城市园林为特色，可安排较舒缓的公园游览。",
+      "highlights": [
+        "亭文化",
+        "园林",
+        "慢走"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日06:00–22:00；11月1日至次年3月31日06:00–21:30。均于21:00停止入园。",
+      "bookingUrl": "https://www.trt-park.cn/news/N00002.html",
+      "address": "北京市西城区太平街19号",
+      "ticketNote": "普通成人门票2元、半价票1元；专项活动和收费项目另见公告。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://gygl.beijing.gov.cn/dwjj/dwjj_zsdw/201911/t20191129_728862.html",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q835886#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.trt-park.cn/news/N00002.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "park",
+      "districtId": "xicheng",
+      "lng": 116.381686,
+      "lat": 39.873826,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "zizhuyuan-park",
+      "name": "紫竹院公园",
+      "emoji": "🌳",
+      "aliases": [
+        "紫竹院公园",
+        "紫竹院"
+      ],
+      "visit": 100,
+      "short": "园内竹林与水景相结合，可作为海淀公园慢游的一站。",
+      "description": "园内竹林与水景相结合，可作为海淀公园慢游的一站。",
+      "highlights": [
+        "竹林",
+        "荷花",
+        "慢走"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日06:00–22:00；11月1日至次年3月31日06:00–21:30。均于21:00停止入园。",
+      "bookingUrl": "https://english.beijing.gov.cn/specials/parktours/guidevisitors/zizhuyuanpark/overview/202301/t20230111_2896429.html",
+      "address": "北京市海淀区中关村南大街35号",
+      "ticketNote": "公园免费开放；游船等单独经营项目另行收费。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://gygl.beijing.gov.cn/dwjj/dwjj_zsdw/201911/t20191129_728904.html",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q7261399#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://english.beijing.gov.cn/specials/parktours/guidevisitors/zizhuyuanpark/overview/202301/t20230111_2896429.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://english.beijing.gov.cn/specials/parktours/guidevisitors/zizhuyuanpark/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://zyk.bjhd.gov.cn/kjhd/lyhd/201810/t20181023_4530786.shtml",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "park",
+      "districtId": "haidian",
+      "lng": 116.319249,
+      "lat": 39.942651,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "capital-museum",
+      "name": "首都博物馆",
+      "emoji": "🏺",
+      "aliases": [
+        "首都博物馆"
+      ],
+      "visit": 150,
+      "short": "聚焦北京城市历史、民俗与文物。",
+      "description": "聚焦北京城市历史、民俗与文物。",
+      "highlights": [
+        "北京历史",
+        "民俗展"
+      ],
+      "interests": [
+        "culture",
+        "research"
+      ],
+      "bestTime": "上午",
+      "tips": "持有效身份证件从北门安检登记入馆；免预约不代表闭馆日也可入馆。；地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "临时安排：2026年10月19日至23日闭馆；10月24日起09:00–17:00，16:00停止入馆，每周二闭馆。特殊情况以新公告为准。",
+      "bookingUrl": "https://www.capitalmuseum.org.cn/visit",
+      "address": "北京市西城区复兴门外大街16号",
+      "ticketNote": "实行免预约参观；本条尚未单独核实各展览收费政策，特展及活动以官方公告为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.capitalmuseum.org.cn/visit",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.capitalmuseum.org.cn/news/6f5b571224214a1fa2c5019cea051080",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q1189666",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "museum",
+      "districtId": "xicheng",
+      "lng": 116.342152,
+      "lat": 39.906327,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "grand-canal-museum",
+      "name": "北京大运河博物馆",
+      "emoji": "🚢",
+      "aliases": [
+        "北京大运河博物馆",
+        "大运河博物馆",
+        "北京大运河"
+      ],
+      "visit": 150,
+      "short": "展示大运河历史文化的专题博物馆。",
+      "description": "展示大运河历史文化的专题博物馆。",
+      "highlights": [
+        "大运河",
+        "城市副中心",
+        "建筑"
+      ],
+      "interests": [
+        "culture",
+        "research"
+      ],
+      "bestTime": "上午",
+      "tips": "携带有效身份证件。此馆位于北京通州，与扬州的中国大运河博物馆不同。；地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": "10:00–20:00，19:00停止入馆；周一闭馆，法定节假日除外。",
+      "bookingUrl": "https://www.canalmuseum.org.cn/index.html",
+      "address": "北京市通州区绿心路1号院5号楼",
+      "ticketNote": "实行免预约参观；常设展免费，收费特展及活动以当期公告为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.canalmuseum.org.cn/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362772/743627282/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.bjwmb.gov.cn/yw/10051236.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q105718642",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "museum",
+      "districtId": "tongzhou",
+      "lng": 116.716826,
+      "lat": 39.880697,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "beijing-city-library",
+      "name": "北京城市图书馆",
+      "emoji": "📍",
+      "aliases": [
+        "北京城市图书馆",
+        "城市图书馆",
+        "森林书苑"
+      ],
+      "visit": 120,
+      "short": "通州的公共阅读与文化空间，可与大运河博物馆片区搭配。",
+      "description": "通州的公共阅读与文化空间，可与大运河博物馆片区搭配。",
+      "highlights": [
+        "室内",
+        "阅读",
+        "公共文化空间"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "research"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "库本文献阅览需按馆方要求预约；潞云筑已调整时段，请勿继续按旧资料中的24小时开放安排行程。；停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "主馆周二至周日10:00–20:00，周一闭馆。潞云筑自2026年9月1日起周一至周日09:00–21:00；法定节假日另行通知。",
+      "bookingUrl": "https://bjlib.clcn.net.cn/page/default/opentime",
+      "address": "北京市通州区绿心路1号院3号楼",
+      "ticketNote": "公共阅览服务及专项活动、文献预约的具体规则以官方服务页面为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://map.beijing.gov.cn/place?categoryId=tsg&placeId=66b066ffe4a9ed67df2d566e",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q105718285#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://bjlib.clcn.net.cn/page/default/opentime",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://ykt.clcn.net.cn/announcement/1285.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "landmark",
+      "districtId": "tongzhou",
+      "lng": 116.714522,
+      "lat": 39.884094,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "national-natural-history-museum",
+      "name": "国家自然博物馆",
+      "emoji": "🏛️",
+      "aliases": [
+        "国家自然博物馆",
+        "北京自然博物馆",
+        "自然博物馆"
+      ],
+      "visit": 150,
+      "short": "以自然历史和生物标本为主题，可列为家庭科普游的室内候选。",
+      "description": "以自然历史和生物标本为主题，可列为家庭科普游的室内候选。",
+      "highlights": [
+        "室内",
+        "自然科普",
+        "亲子科普"
+      ],
+      "interests": [
+        "culture",
+        "research"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "提前3日11:00放票，所有观众包括儿童均需预约，按预约时段入馆，不提供现场预约。；停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "09:00–17:00，16:30停止入馆；周一闭馆，法定节假日除外。",
+      "bookingUrl": "https://www.nnhm.org.cn/cgzx/cgxx/index.shtml",
+      "address": "北京市东城区天桥南大街126号",
+      "ticketNote": "基本陈列免费实名预约；特殊展览或收费体验以馆方公告为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362772/545772/index.html",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q846583#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.nnhm.org.cn/cgzx/cgxx/index.shtml",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.nnhm.org.cn/lxwm/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://wap.nnhm.org.cn/bwgjj/bwgjj/wap_index.shtml",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "museum",
+      "districtId": "dongcheng",
+      "lng": 116.399889,
+      "lat": 39.883051,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "china-science-technology-museum",
+      "name": "中国科学技术馆",
+      "emoji": "🏛️",
+      "aliases": [
+        "中国科学技术馆",
+        "中国科技馆",
+        "科技馆"
+      ],
+      "visit": 180,
+      "short": "以互动展陈传播科学知识，可安排较完整的科普参观时段。",
+      "description": "以互动展陈传播科学知识，可安排较完整的科普参观时段。",
+      "highlights": [
+        "室内",
+        "科学体验",
+        "亲子科普"
+      ],
+      "interests": [
+        "culture",
+        "research"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "提前7日18:00放票，免票观众也需按要求预约。；停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "主展厅通常周二至周日09:30–17:00；节假日及临时调整以馆方公告为准。儿童科学乐园分上午09:30–12:50、下午13:40–17:00两场。",
+      "bookingUrl": "https://pcticket.cstm.org.cn/",
+      "address": "北京市朝阳区北辰东路5号",
+      "ticketNote": "主展厅成人票30元；儿童科学乐园单场30元。其他展厅、影院、优惠及免费资格另见官方规则，各票种不能混用。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://english.beijing.gov.cn/travellinginbeijing/museums/202603/t20260323_4563774.html",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q1074292#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://cstm.org.cn/ykfw/yygp/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.cstm.org.cn/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.cstm.org.cn/ykfw/lxwm/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "museum",
+      "districtId": "chaoyang",
+      "lng": 116.398694,
+      "lat": 40.006406,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "prince-gong-mansion",
+      "name": "恭王府博物馆",
+      "emoji": "🏯",
+      "aliases": [
+        "恭王府博物馆",
+        "恭王府",
+        "恭王府花园"
+      ],
+      "visit": 150,
+      "short": "王府建筑与花园相连，可与什刹海片区的城市漫步搭配。",
+      "description": "王府建筑与花园相连，可与什刹海片区的城市漫步搭配。",
+      "highlights": [
+        "王府",
+        "花园",
+        "清代历史"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "请通过官方渠道实名购票，提前查看预约余量。；停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "08:30–17:00；16:00停止售票、16:10停止入馆。周一闭馆，法定节假日除外。",
+      "bookingUrl": "https://web.pgm.org.cn/",
+      "address": "北京市西城区前海西街17号",
+      "ticketNote": "成人门票40元；优惠及免票条件以馆方最新票务规定为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://wwj.beijing.gov.cn/bjww/362771/362772/545949/index.html",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q2666344#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.pgm.org.cn/pgm/cgzl/201808/0091ebe1dfe345fa8936574adbb6a4d6.shtml",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://en.pgm.org.cn/2022-06/06/c_759193.htm",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "heritage",
+      "districtId": "xicheng",
+      "lng": 116.386098,
+      "lat": 39.93803,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "yuanmingyuan",
+      "name": "圆明园遗址公园",
+      "emoji": "🪷",
+      "aliases": [
+        "圆明园遗址公园",
+        "圆明园"
+      ],
+      "visit": 180,
+      "short": "遗址、湖泊与季节植物景观并存。",
+      "description": "遗址、湖泊与季节植物景观并存。",
+      "highlights": [
+        "西洋楼遗址",
+        "荷塘",
+        "历史"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "下午",
+      "tips": "通票比大门票提前2小时停止销售；不要按公园闭园时间推算最晚可入园时间。；地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日大门06:00开园、07:00开始售票、19:00停止入园、21:00闭园；11月1日至次年3月31日06:30开园、07:00开始售票、17:30停止入园、19:30闭园。西洋楼及模型展有独立开放安排。",
+      "bookingUrl": "https://www.yuanmingyuanpark.cn/pw/mmp/202004/t20200430_4402175.html",
+      "address": "北京市海淀区清华西路28号",
+      "ticketNote": "大门票10元，西洋楼遗址景区15元，盛时全景模型展10元，通票25元；优惠规则及当日可售票种以官方页面为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.yuanmingyuanpark.cn/pw/qtfw/202005/t20200509_4403117.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://www.yuanmingyuanpark.cn/pw/mmp/202004/t20200430_4402175.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q907894",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "heritage",
+      "districtId": "haidian",
+      "lng": 116.312893,
+      "lat": 40.013321,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "beihai-park",
+      "name": "北海公园",
+      "emoji": "🌊",
+      "aliases": [
+        "北海公园",
+        "北海"
+      ],
+      "visit": 120,
+      "short": "皇家园林与湖面景观结合的城市公园。",
+      "description": "皇家园林与湖面景观结合的城市公园。",
+      "highlights": [
+        "白塔",
+        "湖景",
+        "皇家园林"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "下午",
+      "tips": "地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日06:00–21:00，20:30停止入园；11月1日至次年3月31日06:30–20:00，19:30停止入园。园中景点旺季08:00–18:00、淡季08:30–17:00，提前30分钟停止进入；除团城外园中景点周一关闭，法定节假日除外。",
+      "bookingUrl": "https://english.beijing.gov.cn/specials/parktours/guidevisitors/beihaipark/index.html",
+      "address": "北京市西城区文津街1号",
+      "ticketNote": "成人门票旺季10元、淡季5元；联票旺季20元、淡季15元。其他项目及优惠以官方说明为准。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://english.beijing.gov.cn/specials/parktours/guidevisitors/beihaipark/index.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "reference": "https://english.beijing.gov.cn/specials/ticketing/parks/202407/t20240719_3753320.html",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q133650",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "park",
+      "districtId": "xicheng",
+      "lng": 116.389293,
+      "lat": 39.925841,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "jingshan-park",
+      "name": "景山公园",
+      "emoji": "🌳",
+      "aliases": [
+        "景山公园",
+        "景山",
+        "万春亭"
+      ],
+      "visit": 90,
+      "short": "在中轴线附近登高观察古城布局，兼顾园林与古建筑。",
+      "description": "在中轴线附近登高观察古城布局，兼顾园林与古建筑。",
+      "highlights": [
+        "登高",
+        "中轴线",
+        "古建筑"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "plant"
+      ],
+      "bestTime": "建议白天；具体以当天开放安排为准",
+      "tips": "政府不同票务页含平日价与活动价，未把活动票价当作全年固定票价。；停留时长为规划估算。开放、预约、票价及现场项目以官方最新公告为准。 坐标为地点参考位置，不代表已核实的开放入口；到达时请按官方入场指引导航。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": "4月1日至10月31日06:00–21:00，20:30停止入园；11月1日至次年3月31日06:30–20:00，19:30停止入园。",
+      "bookingUrl": "https://english.beijing.gov.cn/specials/parktours/guidevisitors/jingshanpark/",
+      "address": "北京市西城区景山西街44号",
+      "ticketNote": "平日成人门票2元；文化季、花展等活动期间可能执行专项票价，请按出行日官方票务确认。",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "https://www.beijing.gov.cn/renwen/rwzyd/lyjq/4A/jsgy/202210/t20221019_2839458.html",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://www.wikidata.org/wiki/Q734499#P625",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "https://english.beijing.gov.cn/specials/parktours/guidevisitors/jingshanpark/",
+          "kind": "official",
+          "verificationStatus": "verified",
+          "verifiedAt": "2026-10-22"
+        }
+      ],
+      "category": "park",
+      "districtId": "xicheng",
+      "lng": 116.396798,
+      "lat": 39.925013,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "aosen",
+      "name": "奥林匹克森林公园",
+      "emoji": "🌲",
+      "aliases": [
+        "奥林匹克森林公园",
+        "奥林匹克",
+        "奥森"
+      ],
+      "visit": 180,
+      "short": "适合慢跑、骑行与城市自然观察的大型公园。",
+      "description": "适合慢跑、骑行与城市自然观察的大型公园。",
+      "highlights": [
+        "湿地",
+        "慢跑",
+        "四季景观"
+      ],
+      "interests": [
+        "photo",
+        "plant",
+        "sport"
+      ],
+      "bestTime": "清晨",
+      "tips": "地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": false,
+      "scope": "city",
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "",
+      "ticketNote": "",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q7089073",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "park",
+      "districtId": "chaoyang",
+      "lng": 116.39231,
+      "lat": 40.019106,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "mutianyu",
+      "name": "慕田峪长城",
+      "emoji": "🧱",
+      "aliases": [
+        "慕田峪长城",
+        "慕田峪"
+      ],
+      "visit": 300,
+      "short": "植被覆盖较高、视野开阔的长城段。",
+      "description": "植被覆盖较高、视野开阔的长城段。",
+      "highlights": [
+        "长城",
+        "山景",
+        "摄影"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "sport"
+      ],
+      "bestTime": "上午",
+      "tips": "地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "",
+      "ticketNote": "",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q212610",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "heritage",
+      "districtId": "huairou",
+      "lng": 116.567779,
+      "lat": 40.439166,
+      "operation": "update",
+      "expectedVersion": 1
+    },
+    {
+      "id": "badaling",
+      "name": "八达岭长城",
+      "emoji": "🧱",
+      "aliases": [
+        "八达岭长城",
+        "八达岭"
+      ],
+      "visit": 300,
+      "short": "交通相对成熟、知名度最高的长城游览区之一。",
+      "description": "交通相对成熟、知名度最高的长城游览区之一。",
+      "highlights": [
+        "长城",
+        "世界遗产",
+        "山景"
+      ],
+      "interests": [
+        "culture",
+        "photo",
+        "sport"
+      ],
+      "bestTime": "上午",
+      "tips": "地图坐标为公开资料中的地点参考位置，经WGS84转换为GCJ-02；不代表可通行入口，请以地图实时入口导航为准。",
+      "mustSee": true,
+      "scope": "city",
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "",
+      "ticketNote": "",
+      "coordinateSystem": "gcj02",
+      "sources": [
+        {
+          "reference": "src/data/beijingPlaces.ts",
+          "kind": "project-import",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "kind": "manual",
+          "reference": "https://www.wikidata.org/wiki/Q798826",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ],
+      "category": "heritage",
+      "districtId": "yanqing",
+      "lng": 116.012699,
+      "lat": 40.355563,
+      "operation": "update",
+      "expectedVersion": 1
+    }
+  ]
+}
