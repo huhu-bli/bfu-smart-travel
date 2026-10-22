@@ -22,7 +22,8 @@
     "db:history": "node scripts/maintain-places.mjs history",
     "db:archive": "node scripts/maintain-places.mjs archive",
     "db:restore": "node scripts/maintain-places.mjs restore",
-    "db:check": "node scripts/maintain-places.mjs check"
+    "db:check": "node scripts/maintain-places.mjs check",
+    "db:apply-reviewed": "node scripts/apply-reviewed-catalogs.mjs"
   },
   "dependencies": {
     "pg": "^8.23.1",

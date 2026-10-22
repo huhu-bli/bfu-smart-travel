@@ -70,10 +70,20 @@ async function relations(db, p) {
     VALUES($1,$2,$3,$4,$5)`, [p.id, s.reference, s.kind, s.verificationStatus, s.verifiedAt]);
 }
 
-export async function importPlaces(db, document, { apply = false, actor = 'maintainer' } = {}) {
+export async function importPlaces(db, document, { apply = false, actor = 'maintainer', batch = null } = {}) {
   const records = validateImport(document).sort((a, b) => a.id.localeCompare(b.id));
   const by = actorName(actor);
+  if (batch && (!/^[a-z0-9-]{1,100}$/.test(batch.id) || !/^[a-f0-9]{64}$/.test(batch.checksum))) invalid('资料批次编号或校验值无效。');
   return transaction(db, async () => {
+    if (batch) {
+      // 与地点及版本历史在同一事务中登记；并发部署只执行一次。
+      await db.query('LOCK TABLE catalog_batches IN SHARE ROW EXCLUSIVE MODE');
+      const { rows } = await db.query('SELECT checksum FROM catalog_batches WHERE id=$1', [batch.id]);
+      if (rows.length) {
+        if (rows[0].checksum !== batch.checksum) invalid('已执行的资料批次不能修改，请新增批次。');
+        return { applied: apply, alreadyApplied: true, changes: [] };
+      }
+    }
     const changes = [];
     for (const p of records) {
       await db.query('SELECT id FROM places WHERE id=$1 FOR UPDATE', [p.id]);
@@ -106,6 +116,7 @@ export async function importPlaces(db, document, { apply = false, actor = 'maint
       await relations(db, p);
       await revision(db, await placeSnapshot(db, p.id), p.operation, by);
     }
+    if (batch) await db.query('INSERT INTO catalog_batches(id,checksum,actor) VALUES($1,$2,$3)', [batch.id, batch.checksum, by]);
     return { applied: apply, changes };
   }, apply);
 }

@@ -35,6 +35,7 @@ export default function PlaceCatalog({ onPlanCity, planBusy = false }: { onPlanC
   return <section className="place-catalog" aria-label="景点数据库查询">
     <h2>查找景点</h2>
     <p>按地区、兴趣和关键词查询景点资料，无需向 AI 提问。</p>
+    <p>开放与票务信息按来源页面标注核对日期；临时闭馆、节假日和特展安排请在出行前查看官方公告。</p>
     <div className="catalog-filters">
       <label>范围<select value={scope} onChange={(e) => { setScope(e.target.value); setOffset(0); }}>
         <option value="city">北京城市景点</option>
@@ -60,9 +61,11 @@ export default function PlaceCatalog({ onPlanCity, planBusy = false }: { onPlanC
         <p>开放信息：{place.openingHours || '尚未核实，请以官方公告为准。'}</p>
         <p>地址：{place.address || '尚未收录'}</p>
         <p>票价说明：{place.ticketNote || '尚未收录，请以官方公告为准。'}</p>
-        {place.bookingUrl?.startsWith('https://') ? <p><a href={place.bookingUrl} target="_blank" rel="noopener noreferrer">查看收录的预约页面</a></p> : null}
+        {place.bookingUrl?.startsWith('https://') ? <p><a href={place.bookingUrl} target="_blank" rel="noopener noreferrer">查看官方票务与参观说明</a></p> : null}
         <p>{place.tips}</p>
-        {place.sources?.map((source) => <p key={source.reference}>来源：{source.reference} · {source.verificationStatus === 'verified' ? '已核实' : '待核实'}</p>)}
+        {place.sources?.map((source) => <p key={source.reference}>来源：{source.reference.startsWith('https://')
+          ? <a href={source.reference} target="_blank" rel="noopener noreferrer">{source.kind === 'official' ? '官方页面' : '参考资料'}</a>
+          : source.reference} · {source.verificationStatus === 'verified' ? `网页核对 ${source.verifiedAt}` : '待核实'}</p>)}
       </details>
       {'district' in place ? <button type="button" disabled={planBusy || planningId !== null} onClick={() => {
         setPlanningId(place.id);
