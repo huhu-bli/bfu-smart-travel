@@ -18,6 +18,63 @@
     />
   </head>
   <body>
+    <section id="startup-status" role="status" style="max-width:32rem;margin:15vh auto;padding:24px;font:16px/1.7 -apple-system,BlinkMacSystemFont,sans-serif;color:#183b35;background:#f3f8f5;border-radius:16px">
+      <h1 style="font-size:24px">北京智能旅行</h1>
+      <p id="startup-message">正在打开旅行页面，请稍候……</p>
+      <button id="startup-retry" type="button" style="padding:12px 18px;font:inherit;cursor:pointer">重新加载页面</button>
+      <noscript><p>请在 Safari 设置中启用 JavaScript，然后重新加载。</p></noscript>
+    </section>
+    <script>
+      // 使用普通脚本：即使应用模块无法解析或下载，仍能显示并恢复页面。
+      (function () {
+        var status = document.getElementById('startup-status');
+        var message = document.getElementById('startup-message');
+        var retry = document.getElementById('startup-retry');
+        var ready = false;
+        function failed() {
+          status.hidden = false;
+          message.textContent = '页面未能完成加载。请重新加载；若仍无法打开，请切换 Wi-Fi / 蜂窝网络后重试。';
+        }
+        var timer = window.setTimeout(function () { if (!ready) failed(); }, 15000);
+        window.addEventListener('bfu:ready', function () {
+          ready = true;
+          window.clearTimeout(timer);
+          status.hidden = true;
+        });
+        window.addEventListener('bfu:startup-error', failed);
+        window.addEventListener('error', function (event) {
+          if (!ready && (event.target === window || event.target && event.target.tagName === 'SCRIPT')) failed();
+        }, true);
+        window.addEventListener('unhandledrejection', function () { if (!ready) failed(); });
+        window.addEventListener('vite:preloadError', failed);
+        retry.addEventListener('click', function () {
+          retry.disabled = true;
+          message.textContent = '正在更新页面缓存，已保存的路线和收藏会保留……';
+          var tasks = [];
+          // 只清理本应用的离线文件；不触碰路线、收藏等 localStorage 数据。
+          try {
+            if ('caches' in window) tasks.push(caches.keys().then(function (keys) {
+              return Promise.all(keys.filter(function (key) { return key.indexOf('beijing-travel-') === 0; })
+                .map(function (key) { return caches.delete(key); }));
+            }));
+            if ('serviceWorker' in navigator) tasks.push(navigator.serviceWorker.getRegistrations().then(function (registrations) {
+              var scope = new URL('./', window.location.href).href;
+              return Promise.all(registrations.filter(function (registration) { return registration.scope === scope; })
+                .map(function (registration) { return registration.unregister(); }));
+            }));
+          } catch (error) { /* Safari 禁止访问存储时仍允许重试。 */ }
+          function reload() {
+            var url = new URL(window.location.href);
+            url.searchParams.set('_reload', String(Date.now()));
+            window.location.replace(url.href);
+          }
+          Promise.race([
+            Promise.all(tasks.map(function (task) { return task.catch(function () {}); })),
+            new Promise(function (resolve) { window.setTimeout(resolve, 2500); })
+          ]).then(reload, reload);
+        });
+      }());
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

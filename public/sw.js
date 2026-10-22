@@ -1,62 +1,44 @@
-/* 北京智能旅行 · 离线缓存
- * 策略：导航请求「网络优先、失败回退缓存」，静态资源「缓存优先」。
- * 只处理同源静态 GET 请求，不缓存 AI 和高德代理的实时响应。
- */
-// 每次发布 Agent 关键修复时递增版本，确保手机端不会继续使用旧脚本。
-const CACHE = 'beijing-travel-v8';
+/* 导航网络优先，离线回退；只缓存本应用成功返回的同源静态资源。 */
+const CACHE_PREFIX = 'beijing-travel-';
+const CACHE = CACHE_PREFIX + 'v9';
 
-self.addEventListener('install', () => {
-  self.skipWaiting();
-});
-
+self.addEventListener('install', () => { self.skipWaiting(); });
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
-  );
+  event.waitUntil(caches.keys()
+    .then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+      .map((key) => caches.delete(key))))
+    .then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
-
-  let url;
-  try {
-    url = new URL(request.url);
-  } catch (error) {
-    return;
-  }
+  const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_AMapService/')) return;
+  const scope = new URL(self.registration.scope).pathname;
+  if (!url.pathname.startsWith(scope)) return;
+  const relativePath = url.pathname.slice(scope.length);
+  if (relativePath.startsWith('api/') || relativePath.startsWith('_AMapService/')) return;
+
+  function remember(response) {
+    const html = (response.headers.get('content-type') || '').includes('text/html');
+    // 部署期间失效的 JS URL 可能被托管平台回退成 HTML，不能把它保存成脚本。
+    if (response.ok && !(html && ['script', 'style'].includes(request.destination))) {
+      const copy = response.clone();
+      event.waitUntil(caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {}));
+    }
+    return response;
+  }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match('./index.html')),
-        ),
-    );
+    event.respondWith(fetch(request, { cache: 'no-cache' }).then(remember).catch(async () => {
+      const cached = await caches.match(request, { ignoreSearch: true }) ||
+        await caches.match(new URL('index.html', self.registration.scope).href, { ignoreSearch: true }) ||
+        await caches.match(self.registration.scope, { ignoreSearch: true });
+      return cached || new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><h1>北京智能旅行</h1><p>当前网络不可用，请连接网络后重新打开页面。</p>',
+        { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }));
     return;
   }
-
-  event.respondWith(
-    caches.match(request).then(
-      (cached) =>
-        cached ||
-        fetch(request).then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        }),
-    ),
-  );
+  event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then(remember)));
 });
