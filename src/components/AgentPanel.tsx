@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { spotAcrossCampuses } from '../data/campuses';
 import { PlaceDatabaseError } from '../lib/placeRepository';
+import { restoreChat, chatConversationKey as conversationKey, type ChatTurn } from '../lib/chatState';
 import { TRIPS } from '../data/trips';
 import { answerLocally, type LocalMemory } from '../lib/localAgent';
 import {
@@ -44,23 +45,6 @@ interface Props {
   onOpenTrips: () => void;
 }
 
-interface ChatTurn {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  plan?: RoutePlan | null;
-  planOptions?: PlanOptions | null;
-  beijingPlan?: BeijingRoutePlan | null;
-  beijingPlanOptions?: BeijingRouteOptions | null;
-  spotIds?: string[];
-  placeIds?: string[];
-  tripIds?: string[];
-  trace?: string[];
-  isError?: boolean;
-  /** 内置助手（未配置密钥）作答 */
-  offline?: boolean;
-}
-
 interface PanelSize {
   width: number;
   height: number | null;
@@ -78,9 +62,6 @@ const KEEP_TURNS = 30;
 const DEFAULT_PANEL_SIZE: PanelSize = { width: 396, height: null };
 const PANEL_SIZE_STORAGE_KEY = 'haidian-smart-travel:agent-panel-size';
 
-function conversationKey(scene: Scene, target: TravelTarget): string {
-  return `${scene}:${target.kind === 'campus' ? target.campusId : target.districtIds?.join('-') || 'beijing'}`;
-}
 const MIN_PANEL_WIDTH = 320;
 const MAX_PANEL_WIDTH = 720;
 const MIN_PANEL_HEIGHT = 420;
@@ -275,25 +256,13 @@ export default function AgentPanel({
     if (chatRestored.current) return;
     chatRestored.current = true;
     try {
-      const raw = window.localStorage.getItem(CHAT_STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as {
-        protocol?: string;
-        history?: AgentHistory;
-        histories?: Record<string, AgentHistory>;
-        activeScene?: Scene;
-        activeTarget?: TravelTarget;
-        activeConversationKey?: string;
-        turns?: ChatTurn[];
-      };
-      if (!saved || saved.protocol !== DEFAULT_AGENT_SETTINGS.protocol) return;
-      if (Array.isArray(saved.turns) && saved.turns.length) {
-        historiesRef.current = saved.histories ?? {};
-        activeSceneRef.current = saved.activeScene ?? 'unknown';
-        activeTargetRef.current = saved.activeTarget ?? BEIJING_TARGET;
-        activeConversationKeyRef.current = saved.activeConversationKey ??
-          conversationKey(activeSceneRef.current, activeTargetRef.current);
-        historyRef.current = historiesRef.current[activeConversationKeyRef.current] ?? saved.history ?? [];
+      const saved = restoreChat(window.localStorage.getItem(CHAT_STORAGE_KEY));
+      if (saved?.turns.length) {
+        historiesRef.current = saved.histories;
+        activeSceneRef.current = saved.scene;
+        activeTargetRef.current = saved.target;
+        activeConversationKeyRef.current = saved.key;
+        historyRef.current = saved.history;
         setTurns(saved.turns);
       }
     } catch {
@@ -425,38 +394,44 @@ export default function AgentPanel({
     } catch (error) {
       const reason = error instanceof Error ? error.message : '请求失败';
       if (isRecoverableAgentFailure(error) && scene !== 'weather') {
-        // 超时、短暂服务异常或工具循环耗尽时给出可编辑的本地路线；鉴权和额度错误仍明确展示。
-        const fallback = await answerLocally(question, localMemoryRef.current[key] ?? null);
-        const fallbackKey = conversationKey(fallback.memory.scene, fallback.memory.target);
-        localMemoryRef.current[fallbackKey] = fallback.memory;
-        activeSceneRef.current = fallback.memory.scene;
-        activeTargetRef.current = fallback.memory.target;
-        activeConversationKeyRef.current = fallbackKey;
-        if (fallback.plan && fallback.planOptions) onPlanGenerated(fallback.plan, fallback.planOptions);
-        if (fallback.beijingPlan && fallback.beijingPlanOptions) {
-          onBeijingPlanGenerated(fallback.beijingPlan, fallback.beijingPlanOptions);
+        try {
+          // 超时、短暂服务异常或工具循环耗尽时给出可编辑的本地路线；鉴权和额度错误仍明确展示。
+          const fallback = await answerLocally(question, localMemoryRef.current[key] ?? null);
+          const fallbackKey = conversationKey(fallback.memory.scene, fallback.memory.target);
+          localMemoryRef.current[fallbackKey] = fallback.memory;
+          activeSceneRef.current = fallback.memory.scene;
+          activeTargetRef.current = fallback.memory.target;
+          activeConversationKeyRef.current = fallbackKey;
+          if (fallback.plan && fallback.planOptions) onPlanGenerated(fallback.plan, fallback.planOptions);
+          if (fallback.beijingPlan && fallback.beijingPlanOptions) {
+            onBeijingPlanGenerated(fallback.beijingPlan, fallback.beijingPlanOptions);
+          }
+          setTurns((prev) => [
+            ...prev,
+            {
+              id: nextId(),
+              role: 'assistant',
+              text: fallback.text,
+              plan: fallback.plan,
+              planOptions: fallback.planOptions,
+              beijingPlan: fallback.beijingPlan,
+              beijingPlanOptions: fallback.beijingPlanOptions,
+              spotIds: fallback.spotIds,
+              placeIds: fallback.placeIds,
+              tripIds: fallback.tripIds,
+              trace: [
+                `场景：${sceneLabel(fallback.memory.scene)}`,
+                `千问 Agent 暂时不可用（${reason}），已用内置助手作答`,
+                ...fallback.trace,
+              ],
+              offline: true,
+            },
+          ]);
+        } catch (fallbackError) {
+          setTurns((prev) => [...prev, { id: nextId(), role: 'assistant', isError: true,
+            text: fallbackError instanceof PlaceDatabaseError ? fallbackError.message : '备用路线生成失败，请稍后重试。',
+            trace: ['主服务与备用规划均未成功，此次没有生成路线'] }]);
         }
-        setTurns((prev) => [
-          ...prev,
-          {
-            id: nextId(),
-            role: 'assistant',
-            text: fallback.text,
-            plan: fallback.plan,
-            planOptions: fallback.planOptions,
-            beijingPlan: fallback.beijingPlan,
-            beijingPlanOptions: fallback.beijingPlanOptions,
-            spotIds: fallback.spotIds,
-            placeIds: fallback.placeIds,
-            tripIds: fallback.tripIds,
-            trace: [
-              `场景：${sceneLabel(fallback.memory.scene)}`,
-              `千问 Agent 暂时不可用（${reason}），已用内置助手作答`,
-              ...fallback.trace,
-            ],
-            offline: true,
-          },
-        ]);
       } else {
         const advice = error instanceof AgentHttpError && [401, 403].includes(error.status)
           ? '请检查服务端千问密钥与访问权限后重试。'

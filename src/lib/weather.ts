@@ -83,8 +83,11 @@ function resolveDate(rawDate: string): string {
   if (!value || value === 'today' || value === '今天') return today;
   if (value === 'tomorrow' || value === '明天') return shiftDate(today, 1);
   if (value === 'day_after_tomorrow' || value === '后天') return shiftDate(today, 2);
-  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return value;
-  return today;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const parsed = new Date(value + 'T00:00:00Z');
+    if (Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value) return value;
+  }
+  throw new Error('天气日期无效，请使用今天、明天、后天或 YYYY-MM-DD 格式的真实日期。');
 }
 
 function locationLooksLikeCampus(rawLocation: string): boolean {
@@ -132,8 +135,8 @@ function formatNumber(value: number | null, suffix = ''): string {
 }
 
 export async function fetchWeather(rawLocation: string, rawDate: string): Promise<Record<string, unknown>> {
-  const location = await resolveLocation(rawLocation);
   const date = resolveDate(rawDate);
+  const location = await resolveLocation(rawLocation);
   const params = new URLSearchParams({
     latitude: String(location.latitude),
     longitude: String(location.longitude),
@@ -155,7 +158,8 @@ export async function fetchWeather(rawLocation: string, rawDate: string): Promis
   const precipitation = numberAt(daily.precipitation_sum, index);
   const windMax = numberAt(daily.wind_speed_10m_max, index);
   const rainy = (rainProbability ?? 0) >= 50 || (precipitation ?? 0) >= 0.5 || (code !== null && code >= 51);
-  const advice = rainy
+  const missingRainData = rainProbability === null && precipitation === null && code === null;
+  const advice = missingRainData ? '降水资料不足，无法判断是否适合户外活动，请查看实时天气后安排行程。' : rainy
     ? '可能有降水，建议携带雨具；校园路线可优先安排室内或有遮蔽点位。'
     : '降水风险较低，适合安排户外游览；仍请根据实时变化调整路线。';
 

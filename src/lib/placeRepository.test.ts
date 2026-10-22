@@ -64,3 +64,39 @@ test('cancelling during retry backoff never starts another request', async (t) =
   await assert.rejects(databasePlaces.city({}, controller.signal), { name: 'AbortError' });
   assert.equal(fetch.mock.callCount(), 1);
 });
+
+test('queries work without modern AbortSignal helpers or reason, including cancellation before fetch', async (t) => {
+  for (const [object, key] of [[AbortSignal, 'any'], [AbortSignal, 'timeout'],
+    [AbortSignal.prototype, 'throwIfAborted'], [AbortSignal.prototype, 'reason']] as const) {
+    const descriptor = Object.getOwnPropertyDescriptor(object, key);
+    Object.defineProperty(object, key, { configurable: true, value: undefined });
+    t.after(() => { if (descriptor) Object.defineProperty(object, key, descriptor); else Reflect.deleteProperty(object, key); });
+  }
+  const fetch = t.mock.method(globalThis, 'fetch', async () => success());
+  assert.equal((await databasePlaces.city()).total, 1);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(databasePlaces.city({}, controller.signal), { name: 'AbortError' });
+  assert.equal(fetch.mock.callCount(), 1);
+});
+
+test('query timeout covers a stalled response body and completed queries release their abort listener', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const controller = new AbortController();
+  const remove = t.mock.method(controller.signal, 'removeEventListener');
+  let started!: () => void;
+  const reading = new Promise<void>((resolve) => { started = resolve; });
+  const fetch = t.mock.method(globalThis, 'fetch', async (_url: string, options: RequestInit) => ({
+    status: 200, ok: true,
+    json: () => new Promise((_resolve, reject) => {
+      options.signal!.addEventListener('abort', () => reject(new DOMException('timeout', 'AbortError')), { once: true });
+      started();
+    }),
+  } as Response));
+  const pending = databasePlaces.city({}, controller.signal);
+  await reading;
+  t.mock.timers.tick(12001);
+  await assert.rejects(pending, /请求超时/);
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.equal(remove.mock.callCount(), 1);
+});

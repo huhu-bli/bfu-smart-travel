@@ -59,39 +59,54 @@ async function requestPlaces<T>(scope: 'city' | 'campus', filters: PlaceFilters,
   filters.interests?.forEach((id) => params.append('interest', id));
   filters.ids?.forEach((id) => params.append('id', id));
   // 两次尝试共用超时预算；取消筛选、切页或离开页面后不再重试旧请求。
-  const timeout = AbortSignal.timeout(12000);
-  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  // Safari 13–16 不一定提供 AbortSignal.any/timeout/reason/throwIfAborted。
+  // 用基础 AbortController 合并取消与超时，并在请求结束后释放监听和定时器。
+  const controller = new AbortController();
+  const combined = controller.signal;
+  const abortReason = () => signal?.reason ?? new DOMException('请求已取消。', 'AbortError');
+  const cancel = () => controller.abort();
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 12000);
+  if (signal?.aborted) cancel();
+  else signal?.addEventListener('abort', cancel, { once: true });
   const pause = () => new Promise<void>((resolve, reject) => {
-    const abort = () => { clearTimeout(timer); reject(combined.reason); };
+    const abort = () => { clearTimeout(timer); combined.removeEventListener('abort', abort); reject(abortReason()); };
     const timer = setTimeout(() => { combined.removeEventListener('abort', abort); resolve(); }, 300);
     if (combined.aborted) abort();
     else combined.addEventListener('abort', abort, { once: true });
   });
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      combined.throwIfAborted();
-      const response = await fetch(placesEndpoint() + '?' + params, { signal: combined });
-      if (attempt === 0 && [502, 503, 504].includes(response.status)) {
-        await response.body?.cancel();
-        await pause();
-        continue;
+  try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        if (combined.aborted) throw abortReason();
+        const response = await fetch(placesEndpoint() + '?' + params, { signal: combined });
+        if (attempt === 0 && [502, 503, 504].includes(response.status)) {
+          await response.body?.cancel();
+          await pause();
+          continue;
+        }
+        const payload = await response.json().catch(() => null);
+        if (combined.aborted) throw abortReason();
+        if (!response.ok || payload?.source !== 'database' || !Array.isArray(payload.places)) {
+          throw new PlaceDatabaseError(typeof payload?.error === 'string' ? payload.error : '景点数据库查询失败，请稍后重试。');
+        }
+        return payload as PlacePage<T>;
+      } catch (error) {
+        if (signal?.aborted) throw abortReason();
+        if (!combined.aborted && attempt === 0 && error instanceof TypeError) {
+          await pause();
+          continue;
+        }
+        if (error instanceof PlaceDatabaseError) throw error;
+        if (timedOut) throw new PlaceDatabaseError('景点数据库请求超时，请稍后重试。');
+        throw new PlaceDatabaseError('无法连接景点数据库服务，请稍后重试。');
       }
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || payload?.source !== 'database' || !Array.isArray(payload.places)) {
-        throw new PlaceDatabaseError(typeof payload?.error === 'string' ? payload.error : '景点数据库查询失败，请稍后重试。');
-      }
-      return payload as PlacePage<T>;
-    } catch (error) {
-      if (signal?.aborted) throw signal.reason;
-      if (!combined.aborted && attempt === 0 && error instanceof TypeError) {
-        await pause();
-        continue;
-      }
-      if (error instanceof PlaceDatabaseError) throw error;
-      throw new PlaceDatabaseError('无法连接景点数据库服务，请稍后重试。');
     }
+    throw new PlaceDatabaseError('景点数据库查询失败，请稍后重试。');
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', cancel);
   }
-  throw new PlaceDatabaseError('景点数据库查询失败，请稍后重试。');
 }
 
 export const databasePlaces: PlaceRepository = {
