@@ -63,10 +63,10 @@ export function budgetToText(plan: BeijingRoutePlan, spending?: TripSpending): s
 export function spendingFromText(text: string): TripSpending {
   const result: TripSpending = {};
   const patterns = [
-    ['limitCny', /(?:总预算|金额预算|预算|费用上限)(?:为|是|控制在|不超过|最多|约|每人|人均|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
-    ['foodCny', /(?:餐饮|吃饭|餐费)(?:预算|费用)?(?:为|是|约|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
-    ['transportCny', /(?:交通|车费)(?:预算|费用)?(?:为|是|约|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
-    ['otherCny', /其他(?:预算|费用)?(?:为|是|约|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
+    ['limitCny', /(?:总预算|金额预算|预算|费用上限)(?:为|是|改成|改为|调整为|设置为|控制在|不超过|最多|约|每人|人均|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
+    ['foodCny', /(?:餐饮|吃饭|餐费)(?:预算|费用)?(?:为|是|改成|改为|调整为|设置为|约|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
+    ['transportCny', /(?:交通|车费)(?:预算|费用)?(?:为|是|改成|改为|调整为|设置为|约|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
+    ['otherCny', /其他(?:预算|费用)?(?:为|是|改成|改为|调整为|设置为|约|\s|：|:)*(\d+(?:\.\d{1,2})?)\s*元/],
   ] as const;
   for (const [key, pattern] of patterns) {
     const match = (key === 'limitCny' ? text.replace(/(?:餐饮|吃饭|餐费|交通|车费|门票|其他)预算/g, '分项费用') : text).match(pattern);
@@ -80,4 +80,14 @@ export function spendingFromTool(args: Record<string, unknown>, previous?: TripS
     if (isMoney(args[arg])) result[key] = args[arg];
   }
   return result;
+}
+
+/** 只由金额和保留路线措辞组成时，直接修改预算，避免工具或兜底算法重新选点。 */
+export function isSpendingOnlyRequest(text: string): boolean {
+  if (!Object.keys(spendingFromText(text)).length) return false;
+  const remainder = text
+    .replace(/(?:总预算|金额预算|预算|费用上限|餐饮(?:预算|费用)?|吃饭(?:预算|费用)?|餐费|交通(?:预算|费用)?|车费|其他(?:预算|费用)?)(?:为|是|改成|改为|调整为|设置为|控制在|不超过|最多|约|每人|人均|\s|：|:)*(?:\d+(?:\.\d{1,2})?)\s*元/g, '')
+    .replace(/(?:当前路线|这条路线|刚才那条路线|保留所有站点|保留全部站点|保留站点|只调整金额|只修改预算|只改预算|只调整预算|每人|人均|把|将|的)/g, '')
+    .replace(/[\s，,。.;；!！:：]/g, '');
+  return remainder === '';
 }

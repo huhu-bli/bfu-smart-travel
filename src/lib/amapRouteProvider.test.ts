@@ -139,7 +139,7 @@ test('AMap recalculation replaces stale spare-time advice after a longer transfe
     estimate.stops.map((stop, index) => ({ minutes: index === 0 ? 500 : 20, distanceKm: 5,
       mode: stop.travelMode, path: [] })));
   assert.ok(refined.totalMinutes > options.minutes);
-  assert.match(refined.remainingAdvice, /超出预算/);
+  assert.match(refined.remainingAdvice, /超出时间预算/);
   const short = applyAmapMeasurements({ ...estimate, remainingAdvice: '原来的可选建议不应继续使用' }, options,
     estimate.stops.map((stop) => ({ minutes: 1, distanceKm: 0.1, mode: stop.travelMode, path: [] })));
   assert.doesNotMatch(short.remainingAdvice, /原来的可选建议/);

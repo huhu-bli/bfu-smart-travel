@@ -70,7 +70,7 @@ test('beijingPlanner keeps every selected stop in order when editing, even over 
     options.includePlaceIds,
   );
   assert.ok(added.totalMinutes > options.minutes);
-  assert.match(added.remainingAdvice, /超出预算/);
+  assert.match(added.remainingAdvice, /超出时间预算/);
 
   const removed = buildBeijingRoute({
     ...options,
