@@ -100,13 +100,14 @@ test('budget-only conversations preserve the exact current route without plannin
   const { BEIJING_TARGET } = await import('./travelTarget');
   for (const text of ['预算200元', '预算改成200元', '当前路线每人预算200元，餐饮50元，交通20元，其他0元。保留所有站点，只调整金额。']) assert.equal(isSpendingOnlyRequest(text), true);
   for (const text of ['去故宫预算200元', '改成4小时，预算200元', '加入天坛，预算200元', '预算200元，删掉故宫']) assert.equal(isSpendingOnlyRequest(text), false);
-  for (const protocol of ['chat'] as const) {
-    const result = await runAgentTurn({ history: [], userText: '当前路线预算0元', settings: { ...DEFAULT_AGENT_SETTINGS, protocol }, scene: 'outside-trip', previousTarget: BEIJING_TARGET,
+  for (const previousTarget of [BEIJING_TARGET, { kind: 'campus' as const, label: '北京林业大学', campusId: 'bfu' as const, explicit: true, routeSupported: true }]) {
+    const result = await runAgentTurn({ history: [{ role: 'user', content: '先前场景的文字' }], userText: '当前路线预算0元', settings: DEFAULT_AGENT_SETTINGS, scene: 'outside-trip', previousTarget,
       currentBeijingPlan: plan, currentBeijingPlanOptions: { ...options, spending: { foodCny: 15 } } });
     assert.equal(result.beijingPlan, plan);
     assert.deepEqual(result.beijingPlanOptions?.spending, { limitCny: 0, foodCny: 15 });
     assert.equal(result.rounds, 0);
-    assert.equal(result.history.length, 2);
+    assert.equal(result.history.length, previousTarget.kind === 'campus' ? 2 : 3);
+    assert.notEqual(result.target.kind, 'campus');
     assert.match(result.text, /保留当前路线/);
     assert.match(result.text, /至少超出/);
   }

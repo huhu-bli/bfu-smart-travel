@@ -77,7 +77,7 @@ export async function runAgentTurn(params: {
       spending: { ...params.currentBeijingPlanOptions.spending, ...spendingFromText(userText) } };
     const text = `已更新金额预算，保留当前路线和站点顺序。\n\n${budgetToText(params.currentBeijingPlan, options.spending)}`;
     return { scene: 'outside-trip', target: params.previousTarget && params.previousTarget.kind !== 'campus' ? params.previousTarget : { kind: 'city', label: '北京市', explicit: true, routeSupported: true },
-      text, history: [...params.history, { role: 'user', content: userText }, { role: 'assistant', content: text }] as AgentHistory,
+      text, history: [...(params.previousTarget?.kind === 'campus' ? [] : params.history), { role: 'user', content: userText }, { role: 'assistant', content: text }] as AgentHistory,
       trimmed: false, plan: null, planOptions: null, beijingPlan: params.currentBeijingPlan,
       beijingPlanOptions: options, spotIds: [], placeIds: [params.currentBeijingPlan.origin.id, ...params.currentBeijingPlan.stops.map((s) => s.place.id)],
       tripIds: [], trace: ['更新金额预算（保留当前路线）'], rounds: 0 };
