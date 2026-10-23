@@ -3,7 +3,8 @@ import { BEIJING_CATEGORY_LABELS, BEIJING_DISTRICTS } from '../data/beijingPlace
 import type { CatalogCityPlace } from '../lib/placeRepository';
 import type { BeijingDistrictId } from '../types';
 import { useCityPlaces } from '../lib/useCityPlaces';
-import { beijingRouteToText } from '../lib/beijingPlanner';
+import { beijingRouteToText, ROUTE_AVAILABILITY_NOTICE } from '../lib/beijingPlanner';
+import VisitInfo from './VisitInfo';
 import { formatClock, formatDuration } from '../lib/planner';
 import type { BeijingRouteOptions, BeijingRoutePlan } from '../types';
 
@@ -87,6 +88,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
         </div>
       </div>
 
+      <p className="route-note">{ROUTE_AVAILABILITY_NOTICE}</p>
       {editing ? (
         <div className="route-editor">
           {catalogError ? <p role="alert">{catalogError}</p> : null}
@@ -146,7 +148,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
           <ol className="stop-list">
             <li className="stop-item stop-item--origin">
               <span className="stop-index">1</span>
-              <div className="stop-main"><div className="stop-title"><strong>{plan.origin.emoji} {plan.origin.name}</strong><span className="stop-time">{formatClock(0, options.startHour ?? 9)} 示例出发</span></div><p className="stop-reason">{plan.origin.district} · {plan.origin.short}</p></div>
+              <div className="stop-main"><div className="stop-title"><strong>{plan.origin.emoji} {plan.origin.name}</strong><span className="stop-time">{formatClock(0, options.startHour ?? 9)} 示例出发</span></div><p className="stop-reason">{plan.origin.district} · {plan.origin.short}</p><VisitInfo place={plan.origin} /></div>
               <button type="button" className="route-stop-remove" onClick={() => remove(plan.origin.id)} aria-label={`删除${plan.origin.name}`} disabled={busy || primaryIds.length === 1}>×</button>
             </li>
             {plan.stops.map((stop, index) => (
@@ -156,6 +158,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
                   <div className="stop-title"><strong>{stop.place.emoji} {stop.place.name}</strong><span className="stop-time">{formatClock(stop.arrive, options.startHour ?? 9)}–{formatClock(stop.leave, options.startHour ?? 9)}</span></div>
                   <p className="stop-reason">{stop.reason}</p>
                   <div className="stop-meta"><span>{stop.travelMode} {stop.travelMinutes} 分钟 · 约 {stop.distanceKm} 公里</span><span>{stop.routeProvider === 'amap' ? '高德路线' : '本地估算'}</span><span>停留 {Math.round(stop.leave - stop.arrive)} 分钟</span><span>{stop.place.district}</span></div>
+                  <VisitInfo place={stop.place} />
                 </div>
                 <button type="button" className="route-stop-remove" onClick={() => remove(stop.place.id)} aria-label={`删除${stop.place.name}`} disabled={busy || primaryIds.length === 1}>×</button>
               </li>

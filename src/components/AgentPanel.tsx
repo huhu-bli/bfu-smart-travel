@@ -11,6 +11,7 @@ import {
   formatBeijingPlanSummary,
   formatPlanSummary,
   AgentHttpError,
+  AgentContextLimitError,
   isRecoverableAgentFailure,
   runAgentTurn,
   type AgentHistory,
@@ -443,10 +444,13 @@ export default function AgentPanel({
           {
             id: nextId(),
             role: 'assistant',
-            text: error instanceof PlaceDatabaseError ? reason : `千问 Agent 暂时不可用：${reason}\n\n${advice}此次没有切换到内置助手。`,
+            text: error instanceof PlaceDatabaseError || error instanceof AgentContextLimitError
+              ? reason : `千问 Agent 暂时不可用：${reason}\n\n${advice}此次没有切换到内置助手。`,
             trace: [
               `场景：${sceneLabel(scene)}`,
-              error instanceof PlaceDatabaseError ? '景点数据库查询失败，未生成路线' : '千问 Agent 请求失败，未切换到内置助手',
+              error instanceof PlaceDatabaseError ? '景点数据库查询失败，未生成路线'
+                : error instanceof AgentContextLimitError ? '当前轮上下文过大，未发送超限请求'
+                  : '千问 Agent 请求失败，未切换到内置助手',
             ],
             isError: true,
           },

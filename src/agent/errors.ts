@@ -23,6 +23,13 @@ export class ToolLoopLimitError extends Error {
   }
 }
 
+export class AgentContextLimitError extends Error {
+  constructor() {
+    super('当前一轮问题或工具结果过多，请缩小查询范围或减少目的地后重试。');
+    this.name = 'AgentContextLimitError';
+  }
+}
+
 /** 服务暂时不可用时让本地规划器接手；鉴权和额度错误仍原样显示。 */
 export function isRecoverableAgentFailure(error: unknown): boolean {
   return error instanceof ToolLoopLimitError ||

@@ -26,6 +26,28 @@ test('parseWalkingResult extracts duration, distance and road path', () => {
   });
 });
 
+test('malformed map values do not become zero-distance live routes', () => {
+  for (const value of [null, '', '  ', false, [], {}]) {
+    assert.equal(parseWalkingResult({ routes: [{ time: 1200, distance: value }] } as never), null);
+    assert.equal(parseWalkingResult({ routes: [{ time: value, distance: 1000 }] } as never), null);
+  }
+  const result = parseWalkingResult({ routes: [{ time: '1200', distance: '1000',
+    steps: [{ path: [{ lng: 181, lat: 40 }, { lng: 116, lat: 91 }, { lng: 116.4, lat: 39.9 }] }] }] });
+  assert.equal(result?.minutes, 20);
+  assert.deepEqual(result?.path, [[116.4, 39.9]]);
+  assert.equal(parseTransferResult({ plans: [{ time: 1800, walking_distance: 600 }] }), null);
+});
+
+test('a failed map lookup cannot label an over-budget estimate as an AMap calculation', () => {
+  const options = { scope: 'beijing' as const, interests: ['culture' as const], minutes: 60,
+    pace: PACES[1], travelMode: 'mixed' as const, districtIds: [],
+    includePlaceIds: ['forbidden-city', 'temple-of-heaven'], preserveSelectedStops: true };
+  const estimate = buildBeijingRoute(options, BEIJING_PLACES);
+  const fallback = applyAmapMeasurements(estimate, options, []);
+  assert.match(fallback.remainingAdvice, /本地估算/);
+  assert.doesNotMatch(fallback.remainingAdvice, /按高德交通/);
+});
+
 test('a one-destination plan does not falsely report an AMap outage', async () => {
   const options = { scope: 'beijing' as const, interests: ['culture' as const], minutes: 480,
     pace: PACES[1], travelMode: 'mixed' as const, districtIds: [],

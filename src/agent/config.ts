@@ -22,6 +22,8 @@ export const PROXY_TIMEOUT_MS = 50_000;
 export const MAX_HISTORY_GROUPS = 10;
 /** 历史体积硬上限。 */
 export const MAX_HISTORY_CHARS = 60_000;
+/** 与公开代理的 30 条限制一致；历史预留系统提示与新问题的位置。 */
+export const MAX_CHAT_MESSAGES = 30;
 
 export function providerOf(_id: AgentProviderId): AgentProvider {
   return QWEN_PROVIDER;
