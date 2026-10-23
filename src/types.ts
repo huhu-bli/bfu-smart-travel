@@ -121,6 +121,23 @@ export type BeijingDistrictId =
   | 'miyun'
   | 'yanqing';
 
+export interface TicketPrice {
+  currency: 'CNY';
+  min: number;
+  max: number;
+  /** 每人基础成人票的适用范围，不含额外项目。 */
+  basis: string;
+}
+
+export interface TripSpending {
+  limitCny?: number;
+  foodCny?: number;
+  transportCny?: number;
+  otherCny?: number;
+  /** 每人实际票种或待核实票价的手动估算，空缺则沿用数据库。 */
+  ticketOverrides?: Record<string, number>;
+}
+
 export interface BeijingPlace {
   id: string;
   name: string;
@@ -160,6 +177,7 @@ export interface BeijingRouteStop {
 
 export interface BeijingRouteOptions {
   scope: 'beijing';
+  spending?: TripSpending;
   /** 行程示例出发小时；下午计划默认从 14:00 起算。 */
   startHour?: number;
   interests: InterestId[];

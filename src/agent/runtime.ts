@@ -1,3 +1,4 @@
+import { budgetToText, spendingFromText } from '../lib/tripBudget';
 import { INTERESTS } from '../data/interests';
 import type {
   BeijingRouteOptions,
@@ -54,6 +55,7 @@ function formatCurrentBeijingPlanContext(
     '当前页面已有一条北京城市路线。用户说“当前路线 / 刚才那条路线”时，优先基于它调整：',
     `当前站点：${places}。`,
     `当前参数：${options.minutes} 分钟，${options.pace.label}节奏，交通偏好 ${options.travelMode}。`,
+    budgetToText(plan, options.spending),
     '调整站点时调用 build_beijing_route：保留/新增点位放入 include_place_ids，删除点位放入 exclude_place_ids。',
   ].join('\n');
 }
@@ -96,10 +98,14 @@ export async function runAgentTurn(params: {
     tripIds: [],
     trace: [],
   };
+  const requestedSpending = spendingFromText(userText);
+  context.requestedSpending = requestedSpending;
+  if (context.beijingPlanOptions) context.beijingPlanOptions = { ...context.beijingPlanOptions,
+    spending: { ...context.beijingPlanOptions.spending, ...requestedSpending } };
   const contextHint = [
     targetContext(target),
     formatCurrentPlanContext(currentPlan, currentPlanOptions),
-    formatCurrentBeijingPlanContext(currentBeijingPlan, currentBeijingPlanOptions),
+    formatCurrentBeijingPlanContext(context.beijingPlan, context.beijingPlanOptions),
   ].filter(Boolean).join('\n\n');
 
   const outcome =
@@ -123,9 +129,11 @@ export async function runAgentTurn(params: {
           requestModel,
         );
 
-  const text = scene === 'outside-trip'
+  const routeText = scene === 'outside-trip'
     ? await ensureCityRoute(userText, outcome.text, context)
     : outcome.text;
+  const text = scene === 'outside-trip' && context.beijingPlan && Object.keys(requestedSpending).length && !routeText.includes('门票与金额预算（')
+    ? `${routeText}\n\n${budgetToText(context.beijingPlan, context.beijingPlanOptions?.spending)}` : routeText;
   if (text !== outcome.text) {
     // 后续追问只能看到真实工具结果；旧的错误结论不可留在上下文里。
     const last = outcome.history[outcome.history.length - 1] as ChatMessage | AgentInputItem;

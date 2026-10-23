@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/global.css';
 import './styles/haidian.css';
+import './styles/budget.css';
 
 class AppBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
   state = { failed: false };

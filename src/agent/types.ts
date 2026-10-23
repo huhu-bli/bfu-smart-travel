@@ -63,6 +63,7 @@ export interface AgentToolContext {
   plan: RoutePlan | null;
   planOptions: PlanOptions | null;
   beijingPlan: BeijingRoutePlan | null;
+  requestedSpending?: import('../types').TripSpending;
   beijingPlanOptions: BeijingRouteOptions | null;
   spotIds: string[];
   placeIds: string[];

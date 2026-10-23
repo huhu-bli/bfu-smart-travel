@@ -1,5 +1,5 @@
 import { DEFAULT_AGENT_SETTINGS } from '../agent/config';
-import type { BeijingPlace, Spot } from '../types';
+import type { BeijingPlace, Spot, TicketPrice } from '../types';
 
 export interface PlaceSource {
   reference: string;
@@ -11,6 +11,7 @@ export interface PlaceMetadata {
   version?: number;
   address?: string;
   ticketNote?: string;
+  ticketPrice?: TicketPrice | null;
   coordinateSystem?: 'unknown' | 'gcj02';
   aliases?: string[];
   updatedAt?: string;

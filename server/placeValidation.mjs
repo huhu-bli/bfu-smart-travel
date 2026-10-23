@@ -3,7 +3,7 @@ const CAMPUS_CATEGORIES = ['入口', '景观', '建筑', '场馆', '科研', '�
 const TAGS = ['plant', 'culture', 'research', 'sport', 'food', 'photo'];
 const FIELDS = new Set(['operation', 'expectedVersion', 'id', 'scope', 'campusId', 'districtId', 'name',
   'aliases', 'category', 'emoji', 'lng', 'lat', 'x', 'y', 'visit', 'short', 'description', 'highlights',
-  'bestTime', 'tips', 'interests', 'mustSee', 'openingHours', 'bookingUrl', 'address', 'ticketNote', 'coordinateSystem', 'sources']);
+  'bestTime', 'tips', 'interests', 'mustSee', 'openingHours', 'bookingUrl', 'address', 'ticketNote', 'ticketPrice', 'coordinateSystem', 'sources']);
 
 export class PlaceValidationError extends Error {
   constructor(message) { super(message); this.name = 'PlaceValidationError'; }
@@ -60,6 +60,16 @@ function source(value) {
   return { reference, kind, verificationStatus, verifiedAt };
 }
 
+function ticketPrice(value) {
+  if (value == null) return null;
+  if (typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).some((key) => !['currency', 'min', 'max', 'basis'].includes(key)) || value.currency !== 'CNY') fail('门票价格格式无效。');
+  const min = number(value.min, '门票最低价', 0, 100000);
+  const max = number(value.max, '门票最高价', 0, 100000);
+  if (min > max || [min, max].some((n) => Math.abs(n * 100 - Math.round(n * 100)) > 0.000001)) fail('门票价格上下限或小数位无效。');
+  return { currency: 'CNY', min, max, basis: text(value.basis, '门票适用范围', 500, true) };
+}
+
 export function validatePlace(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('地点必须是对象。');
   if (Object.keys(value).some((key) => !FIELDS.has(key))) fail('地点包含未知字段，请使用导出文件中的字段。');
@@ -82,6 +92,7 @@ export function validatePlace(value) {
     short: text(value.short, '简介', 1000), description: text(value.description, '介绍', 20000),
     highlights: texts(value.highlights, '看点', 30, 300), interests: interests.sort(),
     bestTime: text(value.bestTime, '最佳时间', 300), tips: text(value.tips, '提示', 3000),
+    ticketPrice: ticketPrice(value.ticketPrice),
     address: text(value.address, '地址', 1000), ticketNote: text(value.ticketNote, '票价说明', 1000),
     openingHours: value.openingHours == null ? null : text(value.openingHours, '开放说明', 2000),
     bookingUrl: httpsUrl(value.bookingUrl, '预约地址'),

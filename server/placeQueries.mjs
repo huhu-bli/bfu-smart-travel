@@ -71,7 +71,7 @@ function publicPlace(row) {
     tips: row.tips, mustSee: row.must_see, scope: row.scope,
     openingHours: row.opening_hours, bookingUrl: row.booking_url,
     updatedAt: row.updated_at, version: row.version,
-    address: row.address, ticketNote: row.ticket_note, coordinateSystem: row.coordinate_system,
+    address: row.address, ticketNote: row.ticket_note, ticketPrice: row.ticket_price, coordinateSystem: row.coordinate_system,
     sources: row.sources.map((s) => ({ reference: s.reference, kind: s.source_kind,
       verificationStatus: s.verification_status,
       verifiedAt: s.verified_at ? new Date(s.verified_at).toISOString().slice(0, 10) : null })),

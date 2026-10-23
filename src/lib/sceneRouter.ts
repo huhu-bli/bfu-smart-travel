@@ -69,6 +69,7 @@ export function routeScene(text: string, currentScene: Scene = 'unknown'): Scene
     if (currentScene === 'campus-route' || currentScene === 'outside-trip') return currentScene;
     return 'weather';
   }
+  if (currentScene === 'outside-trip' && /(预算|餐饮|交通费|车费|门票|费用上限)/.test(value)) return currentScene;
   if (ROUTE.test(value)) return 'campus-route';
   if (DETAIL.test(value)) return 'spot-detail';
   if (currentScene !== 'unknown' && FOLLOW_UP.test(value)) return currentScene;

@@ -1,3 +1,4 @@
+import { ticketLabel } from '../lib/tripBudget';
 import { useEffect, useState } from 'react';
 import { BEIJING_CATEGORY_LABELS, BEIJING_DISTRICTS } from '../data/beijingPlaces';
 import { CAMPUSES } from '../data/campuses';
@@ -60,6 +61,7 @@ export default function PlaceCatalog({ onPlanCity, planBusy = false }: { onPlanC
       <details><summary>资料与开放信息</summary>
         <p>开放信息：{place.openingHours || '尚未核实，请以官方公告为准。'}</p>
         <p>地址：{place.address || '尚未收录'}</p>
+        {'category' in place ? <p>基础门票：{ticketLabel(place)}</p> : null}
         <p>票价说明：{place.ticketNote || '尚未收录，请以官方公告为准。'}</p>
         {place.bookingUrl?.startsWith('https://') ? <p><a href={place.bookingUrl} target="_blank" rel="noopener noreferrer">查看官方票务与参观说明</a></p> : null}
         <p>{place.tips}</p>

@@ -1,3 +1,4 @@
+import { budgetToText, spendingFromText } from './tripBudget';
 import { databasePlaces, cityPlanningPlaces, matchingCityPlaces, PlaceDatabaseError, type PlaceRepository } from './placeRepository';
 import { campusById, campusSpotMap } from '../data/campuses';
 import {
@@ -41,6 +42,7 @@ export interface LocalAnswer {
 }
 
 export interface LocalMemory {
+  spending?: import('../types').TripSpending;
   scene: Scene;
   target: TravelTarget;
   minutes: number;
@@ -244,6 +246,7 @@ async function answerLocallyCore(rawText: string, previous: LocalMemory | null |
     ? Array.from(new Set([...previousBeijingExcludes, ...namedBeijingPlaceIds]))
     : previousBeijingExcludes.filter((id) => !namedBeijingPlaceIds.includes(id));
   const memory: LocalMemory = {
+    spending: { ...base?.spending, ...spendingFromText(text) },
     scene,
     target,
     minutes: explicitMinutes ?? base?.minutes ?? (/下午|半天/.test(text) ? 240 : 60),
@@ -284,6 +287,7 @@ async function answerCore(rawText: string, memory: LocalMemory, repository: Plac
   const text = rawText.trim();
   const context = emptyContext(memory.target);
   context.placeRepository = repository;
+  context.requestedSpending = memory.spending;
   const campus = memory.target.kind === 'campus' ? campusById(memory.target.campusId) : null;
   const spots = campus?.spots ?? [];
   const spotMap = campus ? campusSpotMap(campus) : {};
@@ -377,6 +381,7 @@ async function answerCore(rawText: string, memory: LocalMemory, repository: Plac
     return {
       text: routeLine
         ? `给你生成了「${result.title}」：\n\n${routeLine}${optionalLine}${diningLine}\n\n预计 ${Math.round(result.totalMinutes)} 分钟，点位间约 ${result.totalDistanceKm} 公里。剩余约 ${result.remainingMinutes} 分钟：${result.remainingAdvice}${seasonalPlaces.length ? '\n\n银杏叶色和当日开放情况请出发前向园方确认。' : ''}`
+          + (context.beijingPlan ? `\n\n${budgetToText(context.beijingPlan, context.beijingPlanOptions?.spending)}` : '')
         : '暂时没有生成合适的北京路线，请补充时长、行政区或想去的景点。',
       plan: null,
       planOptions: null,
