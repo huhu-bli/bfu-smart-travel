@@ -1,3 +1,4 @@
+import { budgetToText } from './tripBudget';
 import { BEIJING_CATEGORY_LABELS } from '../data/beijingPlaces';
 import { INTEREST_MAP } from '../data/interests';
 import type {
@@ -231,7 +232,7 @@ export function buildBeijingRoute(options: BeijingRouteOptions, places: BeijingP
   };
 }
 
-export function beijingRouteToText(plan: BeijingRoutePlan): string {
+export function beijingRouteToText(plan: BeijingRoutePlan, spending?: import('../types').TripSpending): string {
   const opening = (place: BeijingPlace) => {
     const hours = (place as BeijingPlace & { openingHours?: unknown }).openingHours;
     return typeof hours === 'string' && hours.trim() ? hours : '尚未核实，请查看官方公告。';
@@ -252,6 +253,6 @@ export function beijingRouteToText(plan: BeijingRoutePlan): string {
     `总计：${formatDuration(plan.totalMinutes)}，点位间约 ${plan.totalDistanceKm} 公里（${plan.routeProvider === 'amap' ? '高德实时路线' : plan.routeProvider === 'hybrid' ? '高德与本地混合路线' : '本地估算'}）`,
     `剩余时间：${plan.remainingMinutes} 分钟。${plan.remainingAdvice}`,
   ];
-  return lines.join('\n');
+  return [...lines, budgetToText(plan, spending)].join('\n');
 }
 

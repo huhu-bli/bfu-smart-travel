@@ -5,24 +5,37 @@ import type { BeijingDistrictId } from '../types';
 import { useCityPlaces } from '../lib/useCityPlaces';
 import { beijingRouteToText, ROUTE_AVAILABILITY_NOTICE } from '../lib/beijingPlanner';
 import VisitInfo from './VisitInfo';
+import TripBudgetPanel from './TripBudgetPanel';
+import type { TripSpending } from '../types';
 import { formatClock, formatDuration } from '../lib/planner';
 import type { BeijingRouteOptions, BeijingRoutePlan } from '../types';
 
 interface Props {
   busy?: boolean;
+  onChangeSpending?: (spending: TripSpending) => void;
   plan: BeijingRoutePlan;
   options: BeijingRouteOptions;
   onOpenMap: () => void;
   onEditRoute: (includePlaceIds: string[], excludePlaceIds: string[]) => void;
 }
 
-export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRoute, busy = false }: Props) {
+export default function BeijingRouteResult({ plan: savedPlan, options, onOpenMap, onEditRoute, onChangeSpending, busy = false }: Props) {
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const primaryIds = useMemo(
-    () => [plan.origin.id, ...plan.stops.map((stop) => stop.place.id)],
-    [plan],
+    () => [savedPlan.origin.id, ...savedPlan.stops.map((stop) => stop.place.id)],
+    [savedPlan],
   );
+  // 老路线快照也从数据库读取最新门票资料；只更新票务字段，不改变交通和站点。
+  const tickets = useCityPlaces({ ids: primaryIds, limit: 100 });
+  const plan = useMemo(() => {
+    const byId = new Map(tickets.places.map((place) => [place.id, place]));
+    const update = (place: BeijingRoutePlan['origin']) => {
+      const fresh = byId.get(place.id);
+      return fresh ? { ...place, ticketPrice: fresh.ticketPrice, ticketNote: fresh.ticketNote } : place;
+    };
+    return { ...savedPlan, origin: update(savedPlan.origin), stops: savedPlan.stops.map((stop) => ({ ...stop, place: update(stop.place) })) };
+  }, [savedPlan, tickets.places]);
   const [selectedIds, setSelectedIds] = useState(primaryIds);
   const [selectedPlaces, setSelectedPlaces] = useState<CatalogCityPlace[]>([]);
   const [keyword, setKeyword] = useState('');
@@ -61,7 +74,7 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
   };
 
   const copy = async () => {
-    const text = beijingRouteToText(plan);
+    const text = beijingRouteToText(plan, options.spending);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -141,6 +154,10 @@ export default function BeijingRouteResult({ plan, options, onOpenMap, onEditRou
         <div className="stat"><span className="stat-label">点位间距离</span><strong>约 {plan.totalDistanceKm} 公里</strong></div>
         <div className="stat"><span className="stat-label">必游目的地</span><strong>{primaryIds.length} 个</strong></div>
       </div>
+
+      {tickets.loading ? <p className="route-note" role="status">正在更新数据库门票资料…</p> : null}
+      {tickets.error ? <p className="route-note">门票资料更新失败，当前沿用路线快照；请查看官方票务说明。</p> : null}
+      <TripBudgetPanel plan={plan} spending={options.spending} busy={busy} onChange={onChangeSpending} />
 
       <div className="route-body">
         <div className="route-timeline">

@@ -23,6 +23,9 @@ const SCENE_PROMPTS: Record<Exclude<Scene, 'unknown'>, string> = {
   'outside-trip': [
     '当前场景：北京城市路线。',
     '处理北京市 16 个行政区内的单区或跨区旅行路线、时间与交通建议。',
+    '金额均为人民币/人。将用户明确给出的总额和餐饮、交通、其他估算分别传 budget_cny、food_cny、transport_cny、other_cny；未指定传 null，不能擅自填写 0。',
+    '只调整金额预算时保留当前站点和顺序。票价只依据工具 ticketPrice/costEstimate；未知票价、未填费用不能当作免费，不能在费用未完整时声称预算足够。',
+    '基础成人票和额外项目需区分，按季节票价区间解释，不保证购票成功；预算只核对已排路线，不声称已自动优化到预算内。',
     '用户要求规划路线时必须调用 build_beijing_route，不能只给静态推荐文字；不确定点位 id 时先调用 list_beijing_places。',
     '用户要求加入、删除或保留当前路线站点时，根据当前北京路线上下文传 include_place_ids 和 exclude_place_ids。',
     '用户想吃北京特色美食时，优先把已收录且适合用餐的街区放进城市路线；可以建议预留用餐时间，但不要编造未收录的具体餐馆或营业信息。',

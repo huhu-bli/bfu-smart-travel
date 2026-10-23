@@ -1,3 +1,4 @@
+import { cleanSpending } from './tripBudget';
 import type { GlobalRoutePlan } from '../types';
 
 type RecordValue = Record<string, unknown>;
@@ -53,7 +54,7 @@ export function decodeStoredGlobalRoute(value: unknown): GlobalRoutePlan | undef
   } else if (typeof o.startId !== 'string' || !optionalStrings(o.includeSpotIds) || !optionalStrings(o.excludeSpotIds) ||
     (o.campusId !== undefined && typeof o.campusId !== 'string') ||
     (o.campusLabel !== undefined && typeof o.campusLabel !== 'string')) return undefined;
-  return { ...value, kind } as unknown as GlobalRoutePlan;
+  return { ...value, kind, options: city && o.spending !== undefined ? { ...o, spending: cleanSpending(o.spending) } : o } as unknown as GlobalRoutePlan;
 }
 
 /** 解析失败或合法 JSON 的类型错误均只恢复当前键；其他收藏、清单和计划互不影响。 */

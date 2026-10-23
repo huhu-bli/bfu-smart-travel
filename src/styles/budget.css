@@ -1,0 +1,22 @@
+
+.trip-budget { margin: 20px 0; padding: 22px; border: 1px solid var(--line, #dce5df); border-radius: 18px; background: #f5f9f5; color: #263c31; }
+.trip-budget-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.trip-budget-head h3 { margin: 0 0 6px; font-size: 19px; }
+.trip-budget p { font-size: 13px; line-height: 1.7; margin: 6px 0; overflow-wrap: anywhere; }
+.trip-budget-head > strong { font-size: 24px; text-align: right; }
+.trip-budget-head small { display: block; font-size: 12px; font-weight: 400; }
+.trip-budget-inputs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+.trip-budget label { display: flex; flex-direction: column; gap: 7px; font-size: 12px; min-width: 0; }
+.trip-budget input { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px; border-radius: 9px; border: 1px solid #cad7ce; background: white; font: inherit; font-size: 16px; color: #263c31; }
+.trip-budget-tickets summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.trip-budget-ticket { display: grid; grid-template-columns: minmax(0, 1fr) 175px; gap: 16px; padding: 14px 0; border-bottom: 1px solid #dce5df; }
+.trip-budget-ticket strong { font-size: 14px; }
+.trip-budget-ticket small { line-height: 1.6; }
+.trip-budget-status { font-weight: 700; }
+@media (max-width: 600px) {
+  .trip-budget { padding: 16px; }
+  .trip-budget-head { flex-direction: column; gap: 8px; }
+  .trip-budget-head > strong { text-align: left; font-size: 22px; }
+  .trip-budget-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trip-budget-ticket { grid-template-columns: 1fr; gap: 8px; }
+}

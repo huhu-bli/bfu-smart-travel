@@ -2,11 +2,12 @@ import { PlaceValidationError, validateImport } from './placeValidation.mjs';
 
 const columns = ['id', 'scope', 'campus_id', 'district_id', 'name', 'aliases', 'category', 'emoji',
   'lng', 'lat', 'map_x', 'map_y', 'visit_minutes', 'short', 'description', 'highlights', 'best_time',
-  'tips', 'must_see', 'opening_hours', 'booking_url', 'address', 'ticket_note', 'coordinate_system'];
+  'tips', 'must_see', 'opening_hours', 'booking_url', 'address', 'ticket_note', 'coordinate_system', 'ticket_price'];
 const valuesOf = (p) => [p.id, p.scope, p.campusId ?? null, p.districtId ?? null, p.name, p.aliases,
   p.category, p.emoji, p.lng ?? null, p.lat ?? null, p.x ?? null, p.y ?? null, p.visit, p.short,
   p.description, p.highlights, p.bestTime, p.tips, p.mustSee, p.openingHours, p.bookingUrl,
-  p.address, p.ticketNote, p.coordinateSystem ?? 'unknown'];
+  p.address, p.ticketNote, p.coordinateSystem ?? 'unknown', p.ticketPrice ? JSON.stringify({
+    currency: p.ticketPrice.currency, min: p.ticketPrice.min, max: p.ticketPrice.max, basis: p.ticketPrice.basis }) : null];
 const invalid = (message) => { throw new PlaceValidationError(message); };
 
 // db 必须是独占连接（pg.Client 或 PGlite），不能将事务分散给连接池。
@@ -36,7 +37,7 @@ function editable(row) {
     visit: row.visit_minutes, short: row.short, description: row.description,
     highlights: row.highlights, interests: row.interests, bestTime: row.best_time, tips: row.tips,
     mustSee: row.must_see, openingHours: row.opening_hours, bookingUrl: row.booking_url,
-    address: row.address, ticketNote: row.ticket_note,
+    address: row.address, ticketNote: row.ticket_note, ticketPrice: row.ticket_price,
     sources: row.sources.map((s) => ({ reference: s.reference, kind: s.source_kind,
       verificationStatus: s.verification_status,
       verifiedAt: s.verified_at ? new Date(s.verified_at).toISOString().slice(0, 10) : null })) };

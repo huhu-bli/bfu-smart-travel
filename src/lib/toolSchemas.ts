@@ -163,6 +163,10 @@ export const TOOL_SCHEMAS = [
     parameters: {
       type: 'object',
       properties: {
+        budget_cny: { type: ['number', 'null'], minimum: 0, maximum: 100000, description: '总金额上限，人民币/人，最多两位小数；未知或未指定传 null，沿用当前值；0 表示明确零元。' },
+        food_cny: { type: ['number', 'null'], minimum: 0, maximum: 100000, description: '餐饮估算，人民币/人，最多两位小数；未知或未指定传 null，沿用当前值；0 表示明确零元。' },
+        transport_cny: { type: ['number', 'null'], minimum: 0, maximum: 100000, description: '交通估算，人民币/人，最多两位小数；未知或未指定传 null，沿用当前值；0 表示明确零元。' },
+        other_cny: { type: ['number', 'null'], minimum: 0, maximum: 100000, description: '其他费用估算，人民币/人，最多两位小数；未知或未指定传 null，沿用当前值；0 表示明确零元。' },
         minutes: {
           type: 'integer',
           description: '可用总时长（分钟），范围 60–720。',
@@ -206,7 +210,7 @@ export const TOOL_SCHEMAS = [
           description: '用户明确要求删除的北京点位 id。',
         },
       },
-      required: ['minutes', 'interests', 'district_ids', 'pace', 'travel_mode', 'start_place_id', 'start_hour', 'include_place_ids', 'exclude_place_ids'],
+      required: ['minutes', 'interests', 'district_ids', 'pace', 'travel_mode', 'start_place_id', 'start_hour', 'include_place_ids', 'exclude_place_ids', 'budget_cny', 'food_cny', 'transport_cny', 'other_cny'],
       additionalProperties: false,
     },
   },

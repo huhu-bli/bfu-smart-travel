@@ -438,6 +438,8 @@ export default function App() {
                 options={globalRoute.options}
                 onOpenMap={openPlanMap}
                 onEditRoute={applyBeijingRouteEdits}
+                onChangeSpending={(spending) => setGlobalRoute((current) => current.kind === 'beijing'
+                  ? { ...current, options: { ...current.options, spending }, updatedAt: new Date().toISOString() } : current)}
               />
             ) : (
               <div className="planner-layout">

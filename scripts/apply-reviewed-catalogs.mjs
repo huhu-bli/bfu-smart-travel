@@ -5,7 +5,7 @@ import { migrate } from '../database/migrate.mjs';
 import { importPlaces } from '../server/placeMaintenance.mjs';
 import { openScriptDatabase } from './scriptDatabase.mjs';
 
-const batches = ['beijing-reviewed-2026-10-22'];
+const batches = ['beijing-reviewed-2026-10-22', 'beijing-ticket-prices-2026-10-23'];
 
 export async function applyReviewedCatalogs({ env = process.env, connect = openScriptDatabase } = {}) {
   // 预览分支、GitHub Pages 和本地构建绝不写生产库。

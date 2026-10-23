@@ -1,3 +1,4 @@
+import { budgetToText, routeBudget, spendingFromTool } from './tripBudget';
 import { PACES } from '../data/interests';
 import { campusById, type CampusDefinition } from '../data/campuses';
 import type { Spot } from '../types';
@@ -273,6 +274,7 @@ async function runToolCore(
         visitMinutes: place.visit,
         interests: place.interests,
         short: place.short,
+        ticketPrice: place.ticketPrice ?? null,
         sources: place.sources,
       })),
     });
@@ -309,6 +311,7 @@ async function runToolCore(
     const startPlaceId = validPlaceIds.includes(requestedStart) ? requestedStart : undefined;
     const options: BeijingRouteOptions = {
       scope: 'beijing',
+      spending: { ...spendingFromTool(args, context.beijingPlanOptions?.spending), ...context.requestedSpending },
       startHour: Number.isInteger(args.start_hour) && Number(args.start_hour) >= 0 && Number(args.start_hour) <= 23
         ? Number(args.start_hour) : 9,
       interests,
@@ -336,6 +339,8 @@ async function runToolCore(
         scope: districtIds.length ? context.target.label : '北京市',
         totalMinutes: Math.round(plan.totalMinutes),
         totalDistanceKm: plan.totalDistanceKm,
+        costEstimate: routeBudget(plan, options.spending),
+        costNote: budgetToText(plan, options.spending),
         mustSeeStops: [
           {
             order: 1,
@@ -409,6 +414,7 @@ async function runToolCore(
       bookingUrl: place.bookingUrl ?? null,
       address: place.address ?? '',
       ticketNote: place.ticketNote ?? '',
+      ticketPrice: place.ticketPrice ?? null,
       highlights: place.highlights,
       bestTime: place.bestTime,
       visitMinutes: place.visit,

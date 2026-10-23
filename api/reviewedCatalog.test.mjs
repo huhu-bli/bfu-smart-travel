@@ -35,6 +35,14 @@ test('reviewed facts and reference coordinates reach real queries and retain bas
   assert.equal(quality.unknownCoordinates, 35);
   const all = await queryPlaces(db, parsePlaceQuery(new URLSearchParams({ scope: 'city', limit: '100' })));
   assert.equal(all.total, 67);
+  assert.equal(applied.results.length, 2);
+  assert.equal(applied.results[1].changes.length, 15);
+  assert.ok(applied.results[1].changes.every((p) => p.version === 3));
+  assert.equal(all.places.filter((p) => p.ticketPrice).length, 15);
+  assert.deepEqual(all.places.find((p) => p.id === 'forbidden-city').ticketPrice,
+    { currency: 'CNY', min: 40, max: 60, basis: '成人大门票，淡旺季区间；珍宝馆、钟表馆另购' });
+  assert.equal(all.places.find((p) => p.id === 'national-museum').ticketPrice.max, 0);
+  assert.equal(all.places.find((p) => p.id === 'capital-museum').ticketPrice, null);
   assert.equal(all.places.filter((p) => p.openingHours).length, 19);
   const capital = all.places.find((p) => p.id === 'capital-museum');
   assert.match(capital.openingHours, /10月19日至23日/);
@@ -49,11 +57,16 @@ test('reviewed facts and reference coordinates reach real queries and retain bas
     assert.equal(p.lat, Number(lat.toFixed(6)));
   }
   assert.ok(all.places.find((p) => p.id === 'grand-canal-museum').lat < 39.9);
-  assert.deepEqual((await placeHistory(db, 'forbidden-city')).revisions.map((r) => r.action), ['update', 'baseline']);
+  assert.deepEqual((await placeHistory(db, 'forbidden-city')).revisions.map((r) => r.action), ['update', 'update', 'baseline']);
 });
 
 test('batch replay preserves later manual edits; edited batches and conflicts cannot partially apply', async () => {
   const edited = await exportPlaces(db, 'forbidden-city');
+  const ticketBatchText = await readFile(new URL('../database/catalogs/beijing-ticket-prices-2026-10-23.json', import.meta.url), 'utf8');
+  const ticketBatch = { id: 'beijing-ticket-prices-2026-10-23', checksum: createHash('sha256').update(ticketBatchText).digest('hex') };
+  assert.equal((await importPlaces(db, JSON.parse(ticketBatchText), { apply: true, batch: ticketBatch })).alreadyApplied, true);
+  assert.equal(edited.places[0].expectedVersion, 3);
+  assert.equal(edited.places[0].ticketPrice.max, 60);
   edited.places[0].tips = '后续人工维护的出行提示';
   await importPlaces(db, edited, { apply: true });
   assert.equal((await importPlaces(db, document, { apply: true, batch })).alreadyApplied, true);

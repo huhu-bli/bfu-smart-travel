@@ -132,3 +132,23 @@ test('campus edits cannot repurpose a point as another campus or city destinatio
   await assert.rejects(importPlaces(db, doc(city), { apply: true }), /地点范围/);
   assert.equal((await placeSnapshot(db, campus.id)).campus_id, 'bjtu');
 });
+
+test('structured ticket prices round-trip through SQL and exports; invalid prices fail application and database constraints', async () => {
+  await ready;
+  const price = { currency: 'CNY', min: 10.25, max: 30, basis: '普通成人票，其他项目另计' };
+  await importPlaces(db, doc({ ...place('ticket-roundtrip'), ticketPrice: price }), { apply: true });
+  assert.deepEqual((await search('ticket-roundtrip')).places[0].ticketPrice, price);
+  const exported = await exportPlaces(db, 'ticket-roundtrip');
+  assert.deepEqual(exported.places[0].ticketPrice, price);
+  assert.equal((await importPlaces(db, exported, { apply: true })).changes[0].action, 'unchanged');
+  const bad = [{ ...price, min: -1 }, { ...price, max: 0 }, { ...price, max: '30' }, { ...price, min: 1.001 }, { ...price, currency: 'USD' }, { ...price, basis: '' }, { ...price, min: null }, { ...price, foo: 1 }];
+  for (const ticketPrice of bad) assert.throws(() => validateImport(doc({ ...place('bad-ticket'), ticketPrice })), { name: 'PlaceValidationError' });
+  for (const ticketPrice of bad.slice(0, -1)) {
+    await assert.rejects(db.query('UPDATE places SET ticket_price=$1 WHERE id=$2', [JSON.stringify(ticketPrice), 'ticket-roundtrip']));
+  }
+  assert.equal((await search('ticket-roundtrip')).places[0].version, 1);
+  exported.places[0].ticketPrice = null;
+  await importPlaces(db, exported, { apply: true });
+  assert.equal((await search('ticket-roundtrip')).places[0].ticketPrice, null);
+  assert.deepEqual((await placeHistory(db, 'ticket-roundtrip')).revisions[1].snapshot.ticket_price, price);
+});
