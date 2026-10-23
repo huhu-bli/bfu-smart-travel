@@ -1,4 +1,4 @@
-import { budgetToText, spendingFromText } from '../lib/tripBudget';
+import { budgetToText, isSpendingOnlyRequest, spendingFromText } from '../lib/tripBudget';
 import { INTERESTS } from '../data/interests';
 import type {
   BeijingRouteOptions,
@@ -72,6 +72,16 @@ export async function runAgentTurn(params: {
   currentBeijingPlanOptions?: BeijingRouteOptions | null;
 }): Promise<AgentTurnResult> {
   const { userText, settings } = params;
+  if (params.currentBeijingPlan && params.currentBeijingPlanOptions && isSpendingOnlyRequest(userText)) {
+    const options = { ...params.currentBeijingPlanOptions,
+      spending: { ...params.currentBeijingPlanOptions.spending, ...spendingFromText(userText) } };
+    const text = `已更新金额预算，保留当前路线和站点顺序。\n\n${budgetToText(params.currentBeijingPlan, options.spending)}`;
+    return { scene: 'outside-trip', target: params.previousTarget && params.previousTarget.kind !== 'campus' ? params.previousTarget : { kind: 'city', label: '北京市', explicit: true, routeSupported: true },
+      text, history: [...params.history, { role: 'user', content: userText }, { role: 'assistant', content: text }] as AgentHistory,
+      trimmed: false, plan: null, planOptions: null, beijingPlan: params.currentBeijingPlan,
+      beijingPlanOptions: options, spotIds: [], placeIds: [params.currentBeijingPlan.origin.id, ...params.currentBeijingPlan.stops.map((s) => s.place.id)],
+      tripIds: [], trace: ['更新金额预算（保留当前路线）'], rounds: 0 };
+  }
   const target = await resolveDatabaseTravelTarget(userText, params.previousTarget);
   // 前端尚未识别的新点位可能改变场景；不要把旧校园历史传入城市工具循环。
   const history = sameTravelTarget(target, params.previousTarget) ? params.history : [];

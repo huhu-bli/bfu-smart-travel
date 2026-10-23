@@ -23,7 +23,7 @@ export default function TripBudgetPanel({ plan, spending, busy, onChange }: {
       {b.tickets.map((ticket) => {
         const place = [plan.origin, ...plan.stops.map((s) => s.place)].find((p) => p.id === ticket.id)!;
         const quote = readTicketPrice(place);
-        return <div className="trip-budget-ticket" key={ticket.id}><div><strong>{ticket.name}</strong><p>{ticket.min === undefined ? '票价待核实' : `${moneyRange(ticket.min, ticket.max!)}/人`} · {ticket.basis}</p>{ticket.manual && quote ? <small>数据库基础票：{moneyRange(quote.min, quote.max)} · {quote.basis}</small> : null}</div><label>{ticket.name}手动票价（元/人）<input type="number" inputMode="decimal" min="0" max="100000" step="0.01" disabled={busy || !onChange} value={value.ticketOverrides?.[ticket.id] ?? ''} placeholder="留空沿用资料" onChange={(e) => update(e.target.value, undefined, ticket.id)} /></label></div>;
+        return <div className="trip-budget-ticket" key={ticket.id}><div><strong>{ticket.name}</strong><p>{ticket.min === undefined ? '票价待核实' : `${moneyRange(ticket.min, ticket.max!)}/人`}{ticket.min !== undefined ? ` · ${ticket.basis}` : ''}</p>{ticket.manual && quote ? <small>数据库基础票：{moneyRange(quote.min, quote.max)} · {quote.basis}</small> : null}</div><label>{ticket.name}手动票价（元/人）<input type="number" inputMode="decimal" min="0" max="100000" step="0.01" disabled={busy || !onChange} value={value.ticketOverrides?.[ticket.id] ?? ''} placeholder="留空沿用资料" onChange={(e) => update(e.target.value, undefined, ticket.id)} /></label></div>;
       })}
     </details>
     <p className="trip-budget-status" role="status">{b.status}{b.limit !== undefined ? `（上限 ${money(b.limit)}/人）` : ''}</p>

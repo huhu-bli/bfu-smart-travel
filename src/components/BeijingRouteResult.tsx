@@ -106,7 +106,7 @@ export default function BeijingRouteResult({ plan: savedPlan, options, onOpenMap
         <div className="route-editor">
           {catalogError ? <p role="alert">{catalogError}</p> : null}
           <div className="route-editor-head">
-            <div><strong>自由增删北京目的地</strong><p>将按所选顺序重新计算交通时间；超出预算时保留站点并提示时长。</p></div>
+            <div><strong>自由增删北京目的地</strong><p>将按所选顺序重新计算交通时间；超出时间预算时保留站点并提示时长。</p></div>
             <span>{selectedIds.length} 个目的地</span>
           </div>
           <div className="catalog-filters">

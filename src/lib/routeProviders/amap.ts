@@ -205,7 +205,7 @@ export function applyAmapMeasurements(
     totalDistanceKm,
     remainingMinutes,
     remainingAdvice: overrun
-      ? `按${calculationSource}交通时间计算，当前路线超出预算约 ${overrun} 分钟，建议删除一个站点或缩短停留时间。`
+      ? `按${calculationSource}交通时间计算，当前路线超出时间预算约 ${overrun} 分钟，建议删除一个站点或缩短停留时间。`
       : remainingAdvice(remainingMinutes, optionalStops, elapsed),
     subtitle: `${plan.pace.label}节奏 · ${1 + stops.length} 个目的地 · 点位间约 ${totalDistanceKm} 公里`,
     routeProvider,

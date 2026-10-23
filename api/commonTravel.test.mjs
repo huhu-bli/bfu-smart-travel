@@ -157,7 +157,7 @@ test('manual city edits query cross-district selections by ID and keep their exa
   assert.equal(result.options.startHour, 14);
   assert.equal(result.options.minutes, 120);
   assert.ok(result.plan.totalMinutes > 120);
-  assert.match(result.plan.remainingAdvice, /超出预算/);
+  assert.match(result.plan.remainingAdvice, /超出时间预算/);
   const removed = await prepareBeijingRouteEdit(repository, result.options, ['forbidden-city'], ['niujie', 'taoranting-park']);
   assert.deepEqual(removed.options.districtIds, ['dongcheng']);
   assert.equal(removed.plan.origin.id, 'forbidden-city');
