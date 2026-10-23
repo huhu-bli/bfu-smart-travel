@@ -12,6 +12,7 @@ import { formatDuration } from './planner';
 const MAX_STOPS = 8;
 const MAX_OPTIONAL_STOPS = 4;
 const EARTH_RADIUS_KM = 6371;
+export const ROUTE_AVAILABILITY_NOTICE = '本路线尚未校验出游日期、临时闭馆或预约余票；请逐站确认开放与预约后再出发。';
 
 export function distanceKm(a: BeijingPlace, b: BeijingPlace): number {
   const toRadians = (value: number) => (value * Math.PI) / 180;
@@ -231,16 +232,22 @@ export function buildBeijingRoute(options: BeijingRouteOptions, places: BeijingP
 }
 
 export function beijingRouteToText(plan: BeijingRoutePlan): string {
+  const opening = (place: BeijingPlace) => {
+    const hours = (place as BeijingPlace & { openingHours?: unknown }).openingHours;
+    return typeof hours === 'string' && hours.trim() ? hours : '尚未核实，请查看官方公告。';
+  };
   const originDwell = plan.stops[0]
     ? plan.stops[0].arrive - plan.stops[0].travelMinutes
     : plan.totalMinutes;
   const lines = [
     `北京智能旅行 · ${plan.title}`,
     plan.subtitle,
+    ROUTE_AVAILABILITY_NOTICE,
     `1. ${plan.origin.name}（建议停留 ${Math.round(originDwell)} 分钟）`,
+    `开放说明：${opening(plan.origin)}`,
     ...plan.stops.map(
       (stop, index) =>
-        `${index + 2}. ${stop.place.name}（${stop.travelMode}约 ${stop.travelMinutes} 分钟，停留 ${Math.round(stop.leave - stop.arrive)} 分钟）`,
+        `${index + 2}. ${stop.place.name}（${stop.travelMode}约 ${stop.travelMinutes} 分钟，停留 ${Math.round(stop.leave - stop.arrive)} 分钟）\n开放说明：${opening(stop.place)}`,
     ),
     `总计：${formatDuration(plan.totalMinutes)}，点位间约 ${plan.totalDistanceKm} 公里（${plan.routeProvider === 'amap' ? '高德实时路线' : plan.routeProvider === 'hybrid' ? '高德与本地混合路线' : '本地估算'}）`,
     `剩余时间：${plan.remainingMinutes} 分钟。${plan.remainingAdvice}`,

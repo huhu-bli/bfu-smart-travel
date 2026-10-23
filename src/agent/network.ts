@@ -13,34 +13,43 @@ export async function requestModel(
 
   const controller = new AbortController();
   const timer = globalThis.setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
-  let response: Response;
   try {
-    response = await fetch(endpoint, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+    const payload: unknown = await response.json().catch((error: unknown) => {
+      if (controller.signal.aborted) throw error;
+      return null;
+    });
+    if (controller.signal.aborted) throw new DOMException('请求超时。', 'AbortError');
+    if (!response.ok) throw new AgentHttpError(response.status, describeError(response.status, payload, settings));
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new AgentHttpError(502, '共享 Agent 返回了无效数据，请稍后重试。');
+    }
+    return payload as Record<string, unknown>;
   } catch (error) {
+    if (controller.signal.aborted) throw new AgentHttpError(504, '共享 Agent 请求超时，请稍后重试。');
+    if (error instanceof AgentHttpError) throw error;
     throw new Error(
       `共享 Agent 请求失败：浏览器无法连接代理服务。${errorDetail(error)}`,
     );
   } finally {
     globalThis.clearTimeout(timer);
   }
-
-  const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!response.ok) throw new AgentHttpError(response.status, describeError(response.status, payload, settings));
-  return payload ?? {};
 }
 
 /** 检查共享代理服务是否可达，不向上游模型发送测试请求。 */
 export async function probeConnection(settings: AgentSettings): Promise<ProbeResult> {
   const started = Date.now();
-  const url = settings.proxyUrl.trim().replace(/\/+$/, '');
-  if (!url) {
+  if (!settings.proxyUrl.trim()) {
     return { ok: false, latencyMs: 0, message: '共享 Agent 服务暂时未配置。' };
   }
+  let url: string;
+  try { url = resolveEndpoint(settings); }
+  catch { return { ok: false, latencyMs: 0, message: '共享 Agent 地址配置无效。' }; }
 
   const controller = new AbortController();
   const timer = globalThis.setTimeout(() => controller.abort(), 15_000);
@@ -61,12 +70,13 @@ export async function probeConnection(settings: AgentSettings): Promise<ProbeRes
       };
     }
 
+    const payload = await response.json().catch(() => null) as { ok?: unknown; error?: { message?: unknown } } | null;
     const latencyMs = Date.now() - started;
+    if (controller.signal.aborted) return { ok: false, latencyMs, message: '共享 Agent 连接检查超时。' };
     if (response.status === 401) {
       return { ok: false, status: 401, latencyMs, message: '共享 Agent 访问口令无效。' };
     }
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
       const message =
         payload && typeof payload.error === 'object' && payload.error && 'message' in payload.error
           ? String((payload.error as { message?: unknown }).message ?? '')
@@ -80,10 +90,10 @@ export async function probeConnection(settings: AgentSettings): Promise<ProbeRes
       };
     }
     return {
-      ok: true,
+      ok: payload?.ok === true,
       status: response.status,
       latencyMs,
-      message: `共享 Agent 可达（HTTP ${response.status}，${latencyMs} ms）。`,
+      message: payload?.ok === true ? `共享 Agent 可达（HTTP ${response.status}，${latencyMs} ms）。` : '共享 Agent 健康检查未返回有效状态。',
     };
   } finally {
     globalThis.clearTimeout(timer);

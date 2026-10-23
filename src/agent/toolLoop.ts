@@ -1,4 +1,4 @@
-import { MAX_ROUNDS } from './config';
+import { MAX_CHAT_MESSAGES, MAX_ROUNDS } from './config';
 import { buildChatPayload, parseChatResponse } from './transports/chat';
 import { buildRequestPayload, extractOutputText, extractToolCalls } from './transports/responses';
 import { trimHistory } from './history';
@@ -41,8 +41,12 @@ export async function runResponsesLoop(
     ...(trimmedHistory.history as AgentInputItem[]),
     { role: 'user', content: userText },
   ];
+  let trimmed = trimmedHistory.trimmed;
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
+    const bounded = trimHistory(input);
+    input = bounded.history as AgentInputItem[];
+    trimmed ||= bounded.trimmed;
     const response = await requestModel(settings, buildRequestPayload(settings, input, scene, contextHint));
     const output = (response.output as AgentInputItem[] | undefined) ?? [];
     input = [...input, ...output];
@@ -53,7 +57,7 @@ export async function runResponsesLoop(
         text: extractOutputText(response) || EMPTY_REPLY,
         history: input,
         rounds: round,
-        trimmed: trimmedHistory.trimmed,
+        trimmed,
       };
     }
 
@@ -80,10 +84,15 @@ export async function runChatLoop(
 ): Promise<LoopOutcome> {
   const trimmedHistory = trimHistory(history);
   let messages: ChatMessage[] = [...(trimmedHistory.history as ChatMessage[]), { role: 'user', content: userText }];
+  let trimmed = trimmedHistory.trimmed;
   const toolResults = new Map<string, string>();
   let finishWithoutTools = false;
 
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
+    // 每次工具返回后重新检查；只丢弃完整的旧用户轮次，保留当前调用与结果配对。
+    const bounded = trimHistory(messages, MAX_CHAT_MESSAGES - 1);
+    messages = bounded.history as ChatMessage[];
+    trimmed ||= bounded.trimmed;
     const payload = buildChatPayload(settings, messages, scene, contextHint);
     if (finishWithoutTools || round === MAX_ROUNDS) {
       payload.tool_choice = 'none';
@@ -104,7 +113,7 @@ export async function runChatLoop(
         text: turn.text || EMPTY_REPLY,
         history: messages,
         rounds: round,
-        trimmed: trimmedHistory.trimmed,
+        trimmed,
       };
     }
 

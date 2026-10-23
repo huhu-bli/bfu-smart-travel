@@ -25,14 +25,15 @@ type RouteMeasurement = AmapRouteMeasurement | null;
 const SINGLE_PLACE_NOTICE = '当前只有一个目的地，无需查询点位间交通；停留时长仍为估算。';
 
 function finiteNumber(value: unknown): number | null {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = typeof value === 'number' ? value
+    : typeof value === 'string' && value.trim() ? Number(value) : NaN;
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function pointTuple(point: AMapLngLatInstance): [number, number] | null {
   const lng = finiteNumber(point.getLng?.() ?? point.lng);
   const lat = finiteNumber(point.getLat?.() ?? point.lat);
-  return lng === null || lat === null ? null : [lng, lat];
+  return lng === null || lat === null || lng > 180 || lat > 90 ? null : [lng, lat];
 }
 
 function pathFromPoints(points: AMapLngLatInstance[]): Array<[number, number]> {
@@ -84,7 +85,8 @@ export function parseTransferResult(result: AMapRouteResult): AmapRouteMeasureme
   const minutes = secondsToMinutes(plan.time ?? plan.duration);
   const path = pathFromPoints((plan.segments ?? []).flatMap((segment) => segment.transit?.path ?? []));
   const explicitDistance = metersToKm(plan.distance);
-  const distanceKm = explicitDistance ?? pathDistanceKm(path) ?? metersToKm(plan.walking_distance);
+  // walking_distance 只是公共交通中的步行段，不能当作整段交通距离。
+  const distanceKm = explicitDistance ?? pathDistanceKm(path);
   if (minutes === null || distanceKm === null) return null;
   return { minutes, distanceKm, path, mode: '公共交通' };
 }
@@ -188,6 +190,7 @@ export function applyAmapMeasurements(
       : 'hybrid';
   const remainingMinutes = Math.max(0, Math.round(options.minutes - elapsed));
   const overrun = Math.max(0, Math.round(elapsed - options.minutes));
+  const calculationSource = routeProvider === 'amap' ? '高德' : routeProvider === 'hybrid' ? '高德与本地混合' : '本地估算';
   const routeNotice = !stops.length ? SINGLE_PLACE_NOTICE : routeProvider === 'amap'
     ? '交通时间与道路轨迹来自高德路线服务，出发前仍需确认实时运营和临时管制。'
     : routeProvider === 'hybrid'
@@ -202,7 +205,7 @@ export function applyAmapMeasurements(
     totalDistanceKm,
     remainingMinutes,
     remainingAdvice: overrun
-      ? `按高德交通时间计算，当前路线超出预算约 ${overrun} 分钟，建议删除一个站点或缩短停留时间。`
+      ? `按${calculationSource}交通时间计算，当前路线超出预算约 ${overrun} 分钟，建议删除一个站点或缩短停留时间。`
       : remainingAdvice(remainingMinutes, optionalStops, elapsed),
     subtitle: `${plan.pace.label}节奏 · ${1 + stops.length} 个目的地 · 点位间约 ${totalDistanceKm} 公里`,
     routeProvider,
