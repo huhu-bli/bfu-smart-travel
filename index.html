@@ -22,6 +22,8 @@
       <h1 style="font-size:24px">北京智能旅行</h1>
       <p id="startup-message">正在打开旅行页面，请稍候……</p>
       <button id="startup-retry" type="button" style="padding:12px 18px;font:inherit;cursor:pointer">重新加载页面</button>
+      <p style="font-size:14px">微信里打不开时，请点右上角“…”选择“在浏览器中打开”。</p>
+      <p style="font-size:14px"><a id="startup-alternate" href="https://huhu-bli.github.io/bfu-smart-travel/mobile.html">尝试备用站点</a> · <a href="./mobile.html">打开手机新版入口</a></p>
       <noscript><p>请在 Safari 设置中启用 JavaScript，然后重新加载。</p></noscript>
     </section>
     <script>
@@ -31,6 +33,10 @@
         var message = document.getElementById('startup-message');
         var retry = document.getElementById('startup-retry');
         var ready = false;
+        var alternate = document.getElementById('startup-alternate');
+        if (alternate && window.location && window.location.hostname === 'huhu-bli.github.io') {
+          alternate.href = 'https://bfu-smart-travel.vercel.app/mobile.html';
+        }
         function failed() {
           status.hidden = false;
           message.textContent = '页面未能完成加载。请重新加载；若仍无法打开，请切换 Wi-Fi / 蜂窝网络后重试。';

@@ -1,6 +1,6 @@
 /* 导航网络优先，离线回退；只缓存本应用成功返回的同源静态资源。 */
 const CACHE_PREFIX = 'beijing-travel-';
-const CACHE = CACHE_PREFIX + 'v9';
+const CACHE = CACHE_PREFIX + 'v10';
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 self.addEventListener('activate', (event) => {

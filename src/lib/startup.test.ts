@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { inlineStartupStyles } from '../../scripts/inline-startup-styles';
 
 const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 const bootScript = html.match(/<script>([\s\S]*?)<\/script>/)![1];
@@ -63,7 +64,7 @@ function worker(fetch: (...args: any[]) => Promise<Response>, match: (...args: a
   runInNewContext(swScript, { URL, Response, fetch,
     self: { location: { origin: 'https://example.com' }, registration: { scope },
       clients: { claim: async () => {} }, addEventListener: (name: string, cb: (event: any) => void) => { events[name] = cb; } },
-    caches: { match, keys: async () => ['beijing-travel-v8', 'beijing-travel-v9', 'other-app'],
+    caches: { match, keys: async () => ['beijing-travel-v8', 'beijing-travel-v9', 'beijing-travel-v10', 'other-app'],
       delete: async (key: string) => { deleted.push(key); },
       open: async () => ({ put: async (request: any) => { stored.push(request.url); } }) } });
   async function request(path: string, mode = 'navigate', destination = '') {
@@ -93,8 +94,30 @@ test('workers preserve unrelated caches, bypass APIs under a Pages subpath, and 
   const sw = worker(async () => new Response('<html>fallback</html>', { headers: { 'content-type': 'text/html' } }));
   sw.events.activate({ waitUntil: (promise: Promise<unknown>) => sw.waits.push(promise) });
   await Promise.all(sw.waits);
-  assert.deepEqual(sw.deleted, ['beijing-travel-v8']);
+  assert.deepEqual(sw.deleted, ['beijing-travel-v8', 'beijing-travel-v9']);
   assert.equal(await sw.request('api/places', 'cors'), undefined);
   await sw.request('assets/missing.js', 'cors', 'script');
   assert.deepEqual(sw.stored, []);
+});
+
+
+test('startup HTML keeps visible recovery without requesting a render-blocking stylesheet', () => {
+  const result = inlineStartupStyles('<head><link crossorigin rel="stylesheet" href="./assets/app.css"><link rel="icon" href="./icon.svg"></head><body><p>正在打开旅行页面</p><script type="module" src="./assets/app.js"></script></body>',
+    { 'assets/app.css': 'body{color:#183b35;background:white}' });
+  assert.doesNotMatch(result, /<link[^>]+rel="stylesheet"/);
+  assert.match(result, /<style data-bfu-startup-style>body\{color:#183b35/);
+  assert.match(result, /正在打开旅行页面/);
+  assert.match(result, /src="\.\/assets\/app.js"/);
+  assert.match(result, /rel="icon"/);
+  assert.throws(() => inlineStartupStyles('<link rel="stylesheet" href="./assets/missing.css">', {}), /找不到首屏样式/);
+});
+
+test('inlined CSS preserves relative images, external URLs and style element boundaries', () => {
+  const html = inlineStartupStyles('<link href="./assets/app.css" rel="stylesheet">', { 'assets/app.css':
+    'a{background:url(./photo.png)}b{background:url("../icon.svg")}c{background:url(data:image/png;base64,AAAA)}d{background:url(https://example.com/x.png)}e{content:"</style>"}' });
+  assert.match(html, /url\(\.\/assets\/\.\/photo.png\)/);
+  assert.match(html, /url\("\.\/assets\/\.\.\/icon.svg"\)/);
+  assert.match(html, /url\(data:image\/png;base64,AAAA\)/);
+  assert.match(html, /url\(https:\/\/example.com\/x.png\)/);
+  assert.equal((html.match(/<\/style>/g) ?? []).length, 1);
 });
