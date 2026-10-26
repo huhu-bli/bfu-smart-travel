@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { startupHtmlPlugin } from './scripts/inline-startup-styles';
 
 // base: './' 让构建产物可以放在 GitHub Pages 的任意子路径下。
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), startupHtmlPlugin()],
   build: {
     // 显式转换可选链等语法，兼容仍在使用旧版 iOS 的 Safari。
     target: ['safari13', 'chrome87', 'edge88', 'firefox78'],
