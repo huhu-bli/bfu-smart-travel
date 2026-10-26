@@ -61,3 +61,22 @@ test('a health response body timeout returns a controlled result instead of reje
   assert.equal(result.ok, false);
   assert.match(result.message, /超时/);
 });
+
+
+test('model response can arrive after the server execution window without replaying the POST', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let started!: () => void;
+  const reading = new Promise<void>((resolve) => { started = resolve; });
+  const fetch = t.mock.method(globalThis, 'fetch', async (_url: string, options: RequestInit) => {
+    started();
+    return new Promise<Response>((resolve, reject) => {
+      setTimeout(() => resolve(new Response(JSON.stringify({ choices: [] }))), 50_500);
+      options.signal!.addEventListener('abort', () => reject(new DOMException('timeout', 'AbortError')), { once: true });
+    });
+  });
+  const pending = requestModel(DEFAULT_AGENT_SETTINGS, {});
+  await reading;
+  t.mock.timers.tick(50_501);
+  assert.deepEqual(await pending, { choices: [] });
+  assert.equal(fetch.mock.callCount(), 1);
+});
