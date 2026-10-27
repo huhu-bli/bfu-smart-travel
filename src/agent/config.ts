@@ -15,8 +15,9 @@ export const PROVIDERS: AgentProvider[] = [QWEN_PROVIDER];
 // 最多三轮工具往返，第四轮只允许组织答案，防止模型反复调用相同工具。
 export const MAX_ROUNDS = 4;
 export const REQUEST_TIMEOUT_MS = 60_000;
-// 服务端代理冷启动时可能需要更长时间，避免前端过早触发 AbortError。
-export const PROXY_TIMEOUT_MS = 50_000;
+// 服务端函数最多运行 50 秒；浏览器额外预留 15 秒用于移动网络传输。
+// 不自动重发 POST，避免上游已处理但响应延迟时重复消耗额度。
+export const PROXY_TIMEOUT_MS = 65_000;
 
 /** 发给模型的历史最多保留最近 10 轮。 */
 export const MAX_HISTORY_GROUPS = 10;

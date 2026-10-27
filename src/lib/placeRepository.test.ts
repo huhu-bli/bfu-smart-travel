@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { databasePlaces, PlaceDatabaseError } from './placeRepository';
+import { databasePlaces, PlaceDatabaseError, PLACE_REQUEST_TIMEOUT_MS } from './placeRepository';
 
 const success = () => new Response(JSON.stringify({ source: 'database', total: 1, limit: 20, offset: 0,
   places: [{ id: 'niujie', name: '牛街' }] }), { status: 200 });
@@ -95,8 +95,26 @@ test('query timeout covers a stalled response body and completed queries release
   } as Response));
   const pending = databasePlaces.city({}, controller.signal);
   await reading;
-  t.mock.timers.tick(12001);
+  t.mock.timers.tick(PLACE_REQUEST_TIMEOUT_MS + 1);
   await assert.rejects(pending, /请求超时/);
   assert.equal(fetch.mock.callCount(), 1);
   assert.equal(remove.mock.callCount(), 1);
+});
+
+
+test('a slow database response is not aborted before the server execution window ends', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let started!: () => void;
+  const reading = new Promise<void>((resolve) => { started = resolve; });
+  t.mock.method(globalThis, 'fetch', async (_url: string, options: RequestInit) => {
+    started();
+    return new Promise<Response>((resolve, reject) => {
+      setTimeout(() => resolve(success()), 20_500);
+      options.signal!.addEventListener('abort', () => reject(new DOMException('timeout', 'AbortError')), { once: true });
+    });
+  });
+  const pending = databasePlaces.city({ keyword: '慢查询' });
+  await reading;
+  t.mock.timers.tick(20_501);
+  assert.equal((await pending).total, 1);
 });

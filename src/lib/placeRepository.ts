@@ -41,6 +41,9 @@ export interface PlaceRepository {
   city(filters?: PlaceFilters, signal?: AbortSignal): Promise<PlacePage<CatalogCityPlace>>;
   campus(campusId: string, filters?: PlaceFilters, signal?: AbortSignal): Promise<PlacePage<CatalogSpot>>;
 }
+// 服务端函数最多运行 20 秒；为移动网络、冷启动和响应传输预留余量。
+export const PLACE_REQUEST_TIMEOUT_MS = 25_000;
+
 export class PlaceDatabaseError extends Error {
   constructor(message: string) { super(message); this.name = 'PlaceDatabaseError'; }
 }
@@ -67,7 +70,7 @@ async function requestPlaces<T>(scope: 'city' | 'campus', filters: PlaceFilters,
   const abortReason = () => signal?.reason ?? new DOMException('请求已取消。', 'AbortError');
   const cancel = () => controller.abort();
   let timedOut = false;
-  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 12000);
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, PLACE_REQUEST_TIMEOUT_MS);
   if (signal?.aborted) cancel();
   else signal?.addEventListener('abort', cancel, { once: true });
   const pause = () => new Promise<void>((resolve, reject) => {
