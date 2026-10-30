@@ -213,6 +213,8 @@ export interface BeijingRoutePlan {
 
 export interface CampusGlobalRoutePlan {
   kind: 'campus';
+  /** 离线导览可用静态副本；数据库计划编辑后必须继续查询数据库。 */
+  spotSource?: 'static' | 'database';
   plan: RoutePlan;
   options: PlanOptions;
   source: 'agent' | 'manual';

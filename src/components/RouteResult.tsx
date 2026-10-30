@@ -6,6 +6,7 @@ import CampusMap from './CampusMap';
 const MAX_EDITABLE_STOPS = 12;
 
 interface Props {
+  busy?: boolean;
   plan: RoutePlan;
   availableSpots: Spot[];
   showCampusMap?: boolean;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function RouteResult({
+  busy = false,
   plan,
   availableSpots,
   showCampusMap = true,
@@ -35,7 +37,11 @@ export default function RouteResult({
   }, [plan, editing]);
 
   const currentSpotIds = new Set(plan.stops.map((stop) => stop.spot.id));
-  const routeCandidates = availableSpots.filter((spot) => spot.id !== plan.origin.id && spot.kind !== '入口');
+  const availableIds = new Set(availableSpots.map((spot) => spot.id));
+  // 已归档的主线点位仍显示为可取消项，不能隐藏选择导致用户无法移除。
+  const routeCandidates = [...availableSpots, ...plan.stops.map((stop) => stop.spot)
+    .filter((spot) => !availableIds.has(spot.id))]
+    .filter((spot) => spot.id !== plan.origin.id && spot.kind !== '入口');
 
   const toggleSpot = (spotId: string) => {
     setSelectedSpotIds((previous) => {
@@ -86,6 +92,7 @@ export default function RouteResult({
           <button
             type="button"
             className={editing ? 'ghost-btn is-active' : 'ghost-btn'}
+            disabled={busy}
             onClick={() => {
               if (!editing) setSelectedSpotIds(plan.stops.map((stop) => stop.spot.id));
               setEditing((previous) => !previous);
@@ -114,20 +121,20 @@ export default function RouteResult({
           <div className="route-editor-grid">
             {routeCandidates.map((spot) => {
               const checked = selectedSpotIds.includes(spot.id);
-              const disabled = !checked && selectedSpotIds.length >= MAX_EDITABLE_STOPS;
+              const disabled = !checked && (selectedSpotIds.length >= MAX_EDITABLE_STOPS || !availableIds.has(spot.id));
               return (
                 <label key={spot.id} className={checked ? 'route-editor-option is-selected' : 'route-editor-option'}>
                   <input
                     type="checkbox"
                     checked={checked}
-                    disabled={disabled}
+                    disabled={busy || disabled}
                     onChange={() => toggleSpot(spot.id)}
                   />
                   <span>
                     <strong>
                       {spot.emoji} {spot.name}
                     </strong>
-                    <small>{currentSpotIds.has(spot.id) ? '当前路线' : spot.kind}</small>
+                    <small>{!availableIds.has(spot.id) ? '已不在当前资料中，请取消选择' : currentSpotIds.has(spot.id) ? '当前路线' : spot.kind}</small>
                   </span>
                 </label>
               );
@@ -139,7 +146,7 @@ export default function RouteResult({
               <button type="button" className="ghost-btn" onClick={cancelEditing}>
                 取消
               </button>
-              <button type="button" className="primary-btn primary-btn--sm" onClick={applyEditing}>
+              <button type="button" disabled={busy} className="primary-btn primary-btn--sm" onClick={applyEditing}>
                 应用修改
               </button>
             </div>
@@ -226,7 +233,7 @@ export default function RouteResult({
                         <span>{stop.spot.emoji} {stop.spot.name}</span>
                         <small>{Math.round(stop.leave - stop.arrive)} 分钟 · 步行 {stop.walkMeters} 米</small>
                       </button>
-                      <button type="button" className="optional-add-btn" onClick={() => addOptionalStop(stop.spot.id)}>
+                      <button type="button" disabled={busy} className="optional-add-btn" onClick={() => addOptionalStop(stop.spot.id)}>
                         加入主线
                       </button>
                     </div>

@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { DURATIONS, INTERESTS, PACES, gatesOf } from '../data/interests';
-import { SPOTS } from '../data/spots';
-import type { InterestId, PaceId } from '../types';
+import { DURATIONS, INTERESTS, PACES } from '../data/interests';
+import type { InterestId, PaceId, Spot } from '../types';
 
 interface Props {
+  campusLabel: string;
+  gates: Spot[];
+  busy?: boolean;
   interestIds: InterestId[];
   onToggleInterest: (id: InterestId) => void;
   durationId: string;
@@ -17,6 +19,9 @@ interface Props {
 }
 
 export default function Planner({
+  campusLabel,
+  gates,
+  busy = false,
   interestIds,
   onToggleInterest,
   durationId,
@@ -28,7 +33,6 @@ export default function Planner({
   onGenerate,
   dirty,
 }: Props) {
-  const gates = gatesOf(SPOTS);
   const [manualOpen, setManualOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const selectedPace = PACES.find((pace) => pace.id === paceId) ?? PACES[1];
@@ -37,7 +41,7 @@ export default function Planner({
     <section className="planner-card">
       <div className="planner-head">
         <span className="planner-kicker">备用入口</span>
-        <h2>自己设置路线</h2>
+        <h2>{campusLabel} · 自己设置路线</h2>
         <p>不想和 Agent 对话时，也可以手动选择兴趣和时间。</p>
       </div>
 
@@ -47,7 +51,7 @@ export default function Planner({
           <span>兴趣 · 时长 · 门岗</span>
         </summary>
 
-        <div className="manual-planner-body">
+        <fieldset className="manual-planner-body" disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <div className="field">
         <label className="field-label">1 · 你更想看什么</label>
         <div className="chip-grid">
@@ -75,6 +79,7 @@ export default function Planner({
         <div className="field">
         <label className="field-label">2 · 你有多少时间</label>
         <div className="seg-grid">
+          {!DURATIONS.some((duration) => duration.id === durationId) ? <button type="button" className="segment is-active" onClick={() => onDuration(durationId)}><strong>{durationId} 分钟</strong><small>当前路线时长</small></button> : null}
           {DURATIONS.map((duration) => (
             <button
               key={duration.id}
@@ -117,6 +122,7 @@ export default function Planner({
           3 · 从哪个门出发
         </label>
         <select id="start-gate" className="select" value={startId} onChange={(event) => onStart(event.target.value)}>
+          {!gates.some((gate) => gate.id === startId) ? <option value={startId} disabled>当前起点待确认，请选择可用门岗</option> : null}
           {gates.map((gate) => (
             <option key={gate.id} value={gate.id}>
               {gate.name} · {gate.short}
@@ -134,7 +140,7 @@ export default function Planner({
           />
         </svg>
       </button>
-        </div>
+        </fieldset>
       </details>
     </section>
   );
