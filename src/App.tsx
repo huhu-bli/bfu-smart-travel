@@ -13,9 +13,9 @@ import SpotDetail from './components/SpotDetail';
 import SpotsGallery from './components/SpotsGallery';
 import PlaceCatalog from './components/PlaceCatalog';
 import Trips from './components/Trips';
-import { DURATIONS, GATE_IDS, PACES } from './data/interests';
-import { SPOTS, SPOT_MAP } from './data/spots';
-import { campusById, spotAcrossCampuses } from './data/campuses';
+import { DURATIONS, PACES } from './data/interests';
+import { SPOTS } from './data/spots';
+import { campusById } from './data/campuses';
 import { buildBeijingRoute } from './lib/beijingPlanner';
 import { databasePlaces, cityPlanningPlaces, type CatalogCityPlace } from './lib/placeRepository';
 import { refineBeijingRouteWithAmap } from './lib/routeProviders/amap';
@@ -24,6 +24,8 @@ import { toggleInList, useLocalStorage } from './lib/storage';
 import { decodeStoredGlobalRoute } from './lib/storedState';
 import { createRouteUpdateGate } from './lib/routeUpdateGate';
 import { prepareBeijingRouteEdit } from './lib/beijingRouteEditor';
+import { prepareCampusRoute } from './lib/campusRouteEditor';
+import { useCampusRouteSpots } from './lib/useCampusRouteSpots';
 import type {
   BeijingRouteOptions,
   BeijingRoutePlan,
@@ -40,27 +42,25 @@ const REPO_URL = 'https://github.com/huhu-bli/bfu-smart-travel';
 
 export default function App() {
   const [tab, setTab] = useState<TabId>('planner');
-  const [interestIds, setInterestIds] = useLocalStorage<InterestId[]>('interests', [
+  const [interestIds] = useLocalStorage<InterestId[]>('interests', [
     'plant',
     'culture',
     'photo',
   ]);
-  const [durationId, setDurationId] = useLocalStorage<string>('duration', '60');
-  const [paceId, setPaceId] = useLocalStorage<PaceId>('pace', 'normal');
-  const [startId, setStartId] = useLocalStorage<string>('start', 'gate-main');
+  const [durationId] = useLocalStorage<string>('duration', '60');
+  const [paceId] = useLocalStorage<PaceId>('pace', 'normal');
+  const [startId] = useLocalStorage<string>('start', 'gate-main');
   const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
   const [activeSpotId, setActiveSpotId] = useState<string | null>(null);
   const [agentOpen, setAgentOpen] = useState(false);
   const [galleryScope, setGalleryScope] = useState<'database' | 'campus'>('database');
   const [catalogPlanError, setCatalogPlanError] = useState('');
   const [mapScope, setMapScope] = useState<'campus' | 'beijing'>('campus');
-  const [includedSpotIds, setIncludedSpotIds] = useState<string[]>([]);
-  const [excludedSpotIds, setExcludedSpotIds] = useState<string[]>([]);
-  const beijingUpdates = useRef(createRouteUpdateGate());
-  const [beijingUpdating, setBeijingUpdating] = useState(false);
-  const invalidateBeijingUpdate = () => {
-    beijingUpdates.current.invalidate();
-    setBeijingUpdating(false);
+  const routeUpdates = useRef(createRouteUpdateGate());
+  const [routeUpdating, setRouteUpdating] = useState(false);
+  const invalidateRouteUpdate = () => {
+    routeUpdates.current.invalidate();
+    setRouteUpdating(false);
     setCatalogPlanError('');
   };
 
@@ -74,13 +74,12 @@ export default function App() {
       minutes: duration.minutes,
       pace,
       startId,
-      includeSpotIds: includedSpotIds,
-      excludeSpotIds: excludedSpotIds,
     };
-  }, [interestIds, durationId, paceId, startId, includedSpotIds, excludedSpotIds]);
+  }, [interestIds, durationId, paceId, startId]);
 
   const [globalRoute, setGlobalRoute] = useLocalStorage<GlobalRoutePlan>('global-route-plan:v1', {
     kind: 'campus',
+    spotSource: 'static',
     plan: buildRoute(SPOTS, options),
     options,
     source: 'manual',
@@ -88,6 +87,7 @@ export default function App() {
   }, decodeStoredGlobalRoute);
   const fallbackCampusRoute = useMemo<CampusGlobalRoutePlan>(() => ({
     kind: 'campus',
+    spotSource: 'static',
     plan: buildRoute(SPOTS, options),
     options,
     source: 'manual',
@@ -100,77 +100,56 @@ export default function App() {
   const plan = campusRoute.plan;
   const activeOptions = campusRoute.options;
   const activeCampus = campusById(activeOptions.campusId ?? 'bfu');
-  const activeSpots = useMemo<Spot[]>(() => {
-    if (activeCampus?.spots?.length) return activeCampus.spots;
-    const seen = new Set<string>();
-    return [plan.origin, ...plan.stops.map((stop) => stop.spot), ...plan.optionalStops.map((stop) => stop.spot)]
-      .filter((spot) => {
-        if (seen.has(spot.id)) return false;
-        seen.add(spot.id);
-        return true;
-      });
-  }, [activeCampus, plan]);
+  const catalog = useCampusRouteSpots(campusRoute);
+  const activeSpots = useMemo<Spot[]>(() => catalog?.spots ?? Array.from(new Map(
+    [plan.origin, ...plan.stops.map((stop) => stop.spot), ...plan.optionalStops.map((stop) => stop.spot)]
+      .map((spot) => [spot.id, spot]),
+  ).values()), [catalog, plan]);
+  const [draft, setDraft] = useState<PlanOptions>(activeOptions);
   const [dirty, setDirty] = useState(false);
-  const firstRender = useRef(true);
-  const skipDirty = useRef(false);
-
-  useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
-    if (skipDirty.current) {
-      skipDirty.current = false;
-      return;
-    }
+  useEffect(() => { setDraft(activeOptions); setDirty(false); }, [activeOptions]);
+  const changeDraft = (patch: Partial<PlanOptions>) => {
+    setDraft((current) => ({ ...current, ...patch }));
     setDirty(true);
-  }, [options]);
+  };
+  useEffect(() => () => routeUpdates.current.invalidate(), []);
 
-  const generate = () => {
-    invalidateBeijingUpdate();
-    setGlobalRoute({
-      kind: 'campus',
-      plan: buildRoute(SPOTS, options),
-      options,
-      source: 'manual',
-      updatedAt: new Date().toISOString(),
+  const updateCampusRoute = (nextOptions: PlanOptions, selectedIds?: string[]) => {
+    const revision = routeUpdates.current.begin();
+    if (revision === undefined) return;
+    setRouteUpdating(true);
+    setCatalogPlanError('');
+    void prepareCampusRoute(databasePlaces, campusRoute, nextOptions, selectedIds).then((result) => {
+      if (!routeUpdates.current.isCurrent(revision)) return;
+      setGlobalRoute({ kind: 'campus', ...result, source: 'manual', updatedAt: new Date().toISOString() });
+      setDirty(false);
+      if (selectedIds === undefined) window.setTimeout(() => {
+        document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 40);
+    }).catch((error: unknown) => {
+      if (routeUpdates.current.isCurrent(revision)) setCatalogPlanError(error instanceof Error ? error.message : '路线更新失败，原计划已保留。');
+    }).finally(() => {
+      if (routeUpdates.current.finish(revision)) setRouteUpdating(false);
     });
-    setDirty(false);
-    window.setTimeout(() => {
-      document.getElementById('route-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 40);
   };
 
+  const generate = () => updateCampusRoute(draft);
   const selectStart = (id: string) => {
-    setStartId(id);
+    changeDraft({ startId: id });
     setTab('planner');
   };
 
   /** Agent 一旦生成有效路线就写入全局计划；查看按钮只负责把用户带到编辑器。 */
   const savePlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
-    invalidateBeijingUpdate();
+    invalidateRouteUpdate();
     setGlobalRoute({
       kind: 'campus',
       plan: nextPlan,
       options: nextOptions,
       source: 'agent',
+      spotSource: 'database',
       updatedAt: new Date().toISOString(),
     });
-    skipDirty.current = true;
-    setDirty(false);
-    if (!nextOptions.campusId || nextOptions.campusId === 'bfu') {
-      setIncludedSpotIds(nextOptions.includeSpotIds ?? nextPlan.stops.map((stop) => stop.spot.id));
-      setExcludedSpotIds(nextOptions.excludeSpotIds ?? []);
-    }
-    setInterestIds(nextOptions.interests);
-    setPaceId(nextOptions.pace.id);
-    if (!nextOptions.campusId || nextOptions.campusId === 'bfu') setStartId(nextOptions.startId);
-    const closest = DURATIONS.reduce((best, item) =>
-      Math.abs(item.minutes - nextOptions.minutes) < Math.abs(best.minutes - nextOptions.minutes)
-        ? item
-        : best,
-    );
-    setDurationId(closest.id);
   };
 
   const applyPlanFromAgent = (nextPlan: RoutePlan, nextOptions: PlanOptions) => {
@@ -186,7 +165,7 @@ export default function App() {
     nextPlan: BeijingRoutePlan,
     nextOptions: BeijingRouteOptions,
   ) => {
-    invalidateBeijingUpdate();
+    invalidateRouteUpdate();
     setGlobalRoute({
       kind: 'beijing',
       plan: nextPlan,
@@ -210,36 +189,18 @@ export default function App() {
     }, 80);
   };
 
-  const applyRouteEdits = (nextIncludedIds: string[], nextExcludedIds: string[]) => {
-    invalidateBeijingUpdate();
-    const nextOptions = {
-      ...activeOptions,
-      includeSpotIds: nextIncludedIds,
-      excludeSpotIds: nextExcludedIds,
-    };
-    skipDirty.current = true;
-    if (!nextOptions.campusId || nextOptions.campusId === 'bfu') {
-      setIncludedSpotIds(nextIncludedIds);
-      setExcludedSpotIds(nextExcludedIds);
-    }
-    setGlobalRoute({
-      kind: 'campus',
-      plan: buildRoute(activeSpots, nextOptions),
-      options: nextOptions,
-      source: globalRoute.source,
-      updatedAt: new Date().toISOString(),
-    });
-    setDirty(false);
+  const applyRouteEdits = (nextIncludedIds: string[], _nextExcludedIds: string[]) => {
+    updateCampusRoute(activeOptions, nextIncludedIds);
   };
 
   const applyBeijingRouteEdits = (includePlaceIds: string[], excludePlaceIds: string[]) => {
     if (globalRoute.kind !== 'beijing' || !includePlaceIds.length) return;
-    const revision = beijingUpdates.current.begin();
+    const revision = routeUpdates.current.begin();
     if (revision === undefined) return;
-    setBeijingUpdating(true);
+    setRouteUpdating(true);
     setCatalogPlanError('');
     void prepareBeijingRouteEdit(databasePlaces, globalRoute.options, includePlaceIds, excludePlaceIds).then(async ({ plan: estimatedPlan, options: nextOptions }) => {
-      if (!beijingUpdates.current.isCurrent(revision)) return;
+      if (!routeUpdates.current.isCurrent(revision)) return;
       const source = 'manual';
       setGlobalRoute({
         kind: 'beijing',
@@ -249,7 +210,7 @@ export default function App() {
         updatedAt: new Date().toISOString(),
       });
       const refinedPlan = await refineBeijingRouteWithAmap(estimatedPlan, nextOptions);
-      if (!beijingUpdates.current.isCurrent(revision)) return;
+      if (!routeUpdates.current.isCurrent(revision)) return;
       setGlobalRoute({
         kind: 'beijing',
         plan: refinedPlan,
@@ -258,28 +219,28 @@ export default function App() {
         updatedAt: new Date().toISOString(),
       });
     }).catch((error: unknown) => {
-      if (beijingUpdates.current.isCurrent(revision)) setCatalogPlanError(error instanceof Error ? error.message : '路线更新失败。');
+      if (routeUpdates.current.isCurrent(revision)) setCatalogPlanError(error instanceof Error ? error.message : '路线更新失败。');
     }).finally(() => {
-      if (beijingUpdates.current.finish(revision)) setBeijingUpdating(false);
+      if (routeUpdates.current.finish(revision)) setRouteUpdating(false);
     });
   };
   const planFromCatalog = (place: CatalogCityPlace) => {
-    const revision = beijingUpdates.current.begin();
+    const revision = routeUpdates.current.begin();
     if (revision === undefined) return Promise.resolve();
-    setBeijingUpdating(true);
+    setRouteUpdating(true);
     setCatalogPlanError('');
     const nextOptions: BeijingRouteOptions = { scope: 'beijing', startHour: 9, minutes: 240,
       interests: place.interests, pace: PACES[1], travelMode: 'mixed', districtIds: [place.districtId],
       startPlaceId: place.id, includePlaceIds: [place.id], excludePlaceIds: [] };
     return cityPlanningPlaces(databasePlaces, nextOptions.districtIds, [place.id]).then(async (places) => {
       const result = await refineBeijingRouteWithAmap(buildBeijingRoute(nextOptions, places), nextOptions);
-      if (!beijingUpdates.current.isCurrent(revision)) return;
+      if (!routeUpdates.current.isCurrent(revision)) return;
       setGlobalRoute({ kind: 'beijing', plan: result, options: nextOptions, source: 'manual', updatedAt: new Date().toISOString() });
       setMapScope('beijing'); setTab('planner');
     }).catch((error: unknown) => {
-      if (beijingUpdates.current.isCurrent(revision)) setCatalogPlanError(error instanceof Error ? error.message : '路线生成失败。');
+      if (routeUpdates.current.isCurrent(revision)) setCatalogPlanError(error instanceof Error ? error.message : '路线生成失败。');
     }).finally(() => {
-      if (beijingUpdates.current.finish(revision)) setBeijingUpdating(false);
+      if (routeUpdates.current.finish(revision)) setRouteUpdating(false);
     });
   };
 
@@ -326,7 +287,9 @@ export default function App() {
   };
 
   const activeSpot = activeSpotId
-    ? spotAcrossCampuses(activeSpotId) ?? SPOT_MAP[activeSpotId] ?? activeSpots.find((spot) => spot.id === activeSpotId) ?? null
+    ? activeSpots.find((spot) => spot.id === activeSpotId)
+      ?? [plan.origin, ...plan.stops.map((stop) => stop.spot), ...plan.optionalStops.map((stop) => stop.spot)]
+        .find((spot) => spot.id === activeSpotId) ?? null
     : null;
 
   return (
@@ -379,13 +342,14 @@ export default function App() {
         </section>
 
         <GlobalRoutePlanBar
-          busy={beijingUpdating}
+          busy={routeUpdating}
           route={globalRoute}
           onOpen={() => setTab('planner')}
           onRemoveStop={removePlanStop}
           onAddOptionalStop={addOptionalStop}
         />
-        {beijingUpdating ? <p role="status" aria-live="polite">正在更新路线，请稍候再增删目的地…</p> : null}
+        {routeUpdating ? <p role="status" aria-live="polite">正在更新路线，请稍候再增删目的地…</p> : null}
+        {globalRoute.kind === 'campus' && catalog?.error ? <p role="alert">校园资料未能更新：{catalog.error} 重新生成或应用修改时会再次查询。</p> : null}
         {catalogPlanError ? <p role="alert">{catalogPlanError}</p> : null}
 
         <section className="explore-strip" aria-label="北京探索入口">
@@ -433,7 +397,7 @@ export default function App() {
           {tab === 'planner' ? (
             globalRoute.kind === 'beijing' ? (
               <BeijingRouteResult
-                busy={beijingUpdating}
+                busy={routeUpdating}
                 plan={globalRoute.plan}
                 options={globalRoute.options}
                 onOpenMap={openPlanMap}
@@ -444,18 +408,23 @@ export default function App() {
             ) : (
               <div className="planner-layout">
                 <Planner
-                  interestIds={interestIds}
-                  onToggleInterest={(id) => setInterestIds((prev) => toggleInList(prev, id))}
-                  durationId={durationId}
-                  onDuration={setDurationId}
-                  paceId={paceId}
-                  onPace={setPaceId}
-                  startId={startId}
-                  onStart={setStartId}
+                  campusLabel={activeCampus?.name ?? activeOptions.campusLabel ?? '当前校园'}
+                  gates={activeSpots.filter((spot) => spot.kind === '入口')}
+                  busy={routeUpdating}
+                  interestIds={draft.interests}
+                  onToggleInterest={(id) => changeDraft({ interests: toggleInList(draft.interests, id) })}
+                  durationId={String(draft.minutes)}
+                  onDuration={(id) => changeDraft({ minutes: Number(id) })}
+                  paceId={draft.pace.id}
+                  onPace={(id) => changeDraft({ pace: PACES.find((pace) => pace.id === id)! })}
+                  startId={draft.startId}
+                  onStart={selectStart}
                   onGenerate={generate}
                   dirty={dirty}
                 />
                 <RouteResult
+                  key={`${activeOptions.campusId}:${campusRoute.updatedAt}`}
+                  busy={routeUpdating}
                   plan={plan}
                   availableSpots={activeSpots}
                   showCampusMap={activeCampus?.mapMode === 'bfu-svg'}
@@ -536,14 +505,14 @@ export default function App() {
               <button type="button" className={galleryScope === 'database' ? 'is-active' : ''} onClick={() => setGalleryScope('database')}>景点数据库</button>
               <button type="button" className={galleryScope === 'campus' ? 'is-active' : ''} onClick={() => setGalleryScope('campus')}>校园导览</button>
             </div>
-            {galleryScope === 'database' ? <PlaceCatalog planBusy={beijingUpdating} onPlanCity={planFromCatalog} /> :
+            {galleryScope === 'database' ? <PlaceCatalog planBusy={routeUpdating} onPlanCity={planFromCatalog} /> :
             <SpotsGallery
               spots={activeSpots}
               scopeLabel={activeCampus?.shortName ?? activeOptions.campusLabel ?? '当前路线'}
               favorites={favorites}
               plannedSpotIds={plan.stops.map((stop) => stop.spot.id)}
               onToggleFavorite={(id) => setFavorites((prev) => toggleInList(prev, id))}
-              onTogglePlanSpot={togglePlanSpot}
+              onTogglePlanSpot={routeUpdating ? undefined : togglePlanSpot}
               onSelect={setActiveSpotId}
             />
             }
@@ -584,7 +553,7 @@ export default function App() {
           onToggleFavorite={(id) => setFavorites((prev) => toggleInList(prev, id))}
           onClose={() => setActiveSpotId(null)}
           onUseAsStart={selectStart}
-          canUseAsStart={GATE_IDS.includes(activeSpot.id)}
+          canUseAsStart={activeSpot.kind === '入口' && !routeUpdating}
         />
       ) : null}
     </div>

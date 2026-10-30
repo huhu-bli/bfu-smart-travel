@@ -51,7 +51,8 @@ export function decodeStoredGlobalRoute(value: unknown): GlobalRoutePlan | undef
       (o.startPlaceId !== undefined && typeof o.startPlaceId !== 'string') ||
       (o.preserveSelectedStops !== undefined && typeof o.preserveSelectedStops !== 'boolean') ||
       (o.startHour !== undefined && (!number(o.startHour) || o.startHour >= 24))) return undefined;
-  } else if (typeof o.startId !== 'string' || !optionalStrings(o.includeSpotIds) || !optionalStrings(o.excludeSpotIds) ||
+  } else if ((value.spotSource !== undefined && !['static', 'database'].includes(String(value.spotSource))) ||
+    typeof o.startId !== 'string' || !optionalStrings(o.includeSpotIds) || !optionalStrings(o.excludeSpotIds) ||
     (o.campusId !== undefined && typeof o.campusId !== 'string') ||
     (o.campusLabel !== undefined && typeof o.campusLabel !== 'string')) return undefined;
   return { ...value, kind, options: city && o.spending !== undefined ? { ...o, spending: cleanSpending(o.spending) } : o } as unknown as GlobalRoutePlan;

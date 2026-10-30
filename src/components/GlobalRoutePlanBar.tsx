@@ -81,6 +81,7 @@ export default function GlobalRoutePlanBar({
               aria-label={`从路线中删除${stop.spot.name}`}
               title={`删除${stop.spot.name}`}
               onClick={() => onRemoveStop(stop.spot.id)}
+              disabled={busy}
             >
               ×
             </button>
@@ -97,6 +98,7 @@ export default function GlobalRoutePlanBar({
                 type="button"
                 key={stop.spot.id}
                 onClick={() => onAddOptionalStop(stop.spot.id)}
+                disabled={busy}
               >
                 ＋ {stop.spot.name}
               </button>

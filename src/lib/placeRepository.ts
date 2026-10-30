@@ -20,7 +20,7 @@ export interface PlaceMetadata {
   sources?: PlaceSource[];
 }
 export type CatalogCityPlace = BeijingPlace & PlaceMetadata;
-export type CatalogSpot = Spot & PlaceMetadata;
+export type CatalogSpot = Spot & PlaceMetadata & { campusId?: string };
 export interface PlaceFilters {
   keyword?: string;
   districtIds?: string[];

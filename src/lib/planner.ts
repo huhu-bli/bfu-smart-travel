@@ -50,7 +50,7 @@ const THEMES: { ids: InterestId[]; title: string }[] = [
 
 function buildTitle(matched: InterestId[], minutes: number, campusLabel: string): string {
   for (const theme of THEMES) {
-    if (theme.ids.every((id) => matched.includes(id))) return theme.title;
+    if (theme.ids.every((id) => matched.includes(id))) return theme.title.replace(/北林/g, campusLabel);
   }
   if (matched.length === 0) return `${campusLabel}漫步 · 综合精华线`;
   const labels = matched.slice(0, 2).map((id) => INTEREST_MAP[id]?.label ?? '校园');
