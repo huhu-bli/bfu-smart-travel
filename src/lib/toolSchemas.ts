@@ -1,5 +1,5 @@
-import { GATE_IDS, INTERESTS } from '../data/interests';
-import { CAMPUS_IDS } from '../data/campuses';
+import { INTERESTS } from '../data/interests';
+import { CAMPUSES, CAMPUS_IDS } from '../data/campuses';
 import { BEIJING_DISTRICT_IDS } from '../data/beijingPlaces';
 
 /** 工具参数中的枚举来自 data 层，不复制到提示词中，避免提示词和数据重复维护。 */
@@ -86,7 +86,7 @@ export const TOOL_SCHEMAS = [
         },
         start_gate: {
           type: 'string',
-          description: `出发门岗 id。北林可用：${GATE_IDS.join(' / ')}；其他校园不知道时传空字符串，由数据层选择默认入口。`,
+          description: `出发门岗 id，必须属于目标校园。${CAMPUSES.filter((campus) => campus.spots?.length).map((campus) => `${campus.shortName}：${campus.spots!.filter((spot) => spot.kind === '入口').map((spot) => spot.id).join(' / ')}`).join('；')}。不确定时传空字符串。`,
         },
         include_spot_ids: {
           type: 'array',

@@ -66,6 +66,9 @@ function campusForTool(
     return { campus: null, error: '当前目标是北京市城市旅行，请先明确要进入哪所学校，再调用校园工具。' };
   }
   const targetCampus = campusById(context.target.campusId);
+  if (!context.target.routeSupported) {
+    return { campus: targetCampus, error: '当前目标校区尚未收录详细点位，不能用其他校区的路线替代。' };
+  }
   if (!targetCampus) {
     return { campus: null, error: `没有找到目标校园「${context.target.label}」的配置。` };
   }

@@ -1,0 +1,444 @@
+{
+  "schemaVersion": 1,
+  "places": [
+    {
+      "operation": "create",
+      "id": "ustb-west-gate",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学西门",
+      "aliases": [
+        "西门"
+      ],
+      "category": "入口",
+      "emoji": "🚪",
+      "x": 70,
+      "y": 300,
+      "visit": 0,
+      "interests": [],
+      "short": "学院路一侧的校园入口示意点",
+      "description": "用作学院路主校区的路线起点之一；是否允许访客通行以学校现场管理为准。",
+      "highlights": [],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": false,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://gym.ustb.edu.cn/dtdh/xndt/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-south-gate",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学南门",
+      "aliases": [
+        "南门"
+      ],
+      "category": "入口",
+      "emoji": "🚪",
+      "x": 650,
+      "y": 590,
+      "visit": 0,
+      "interests": [],
+      "short": "主校区南侧入口示意点",
+      "description": "可作为南侧出发的校园路线起点；请先确认当日通行安排。",
+      "highlights": [],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": false,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://gym.ustb.edu.cn/dtdh/xndt/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-east-gate",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学东门",
+      "aliases": [
+        "东门"
+      ],
+      "category": "入口",
+      "emoji": "🚪",
+      "x": 920,
+      "y": 420,
+      "visit": 0,
+      "interests": [],
+      "short": "主校区东侧入口示意点",
+      "description": "可作为东侧出发的校园路线起点，不代表该门对所有访客开放。",
+      "highlights": [],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": false,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://gym.ustb.edu.cn/dtdh/xndt/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-north-gate",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学北门",
+      "aliases": [
+        "北门"
+      ],
+      "category": "入口",
+      "emoji": "🚪",
+      "x": 480,
+      "y": 50,
+      "visit": 0,
+      "interests": [],
+      "short": "主校区北侧入口示意点",
+      "description": "可作为北侧出发的校园路线起点；入校资格与门岗开放须另行确认。",
+      "highlights": [],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": false,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://gym.ustb.edu.cn/dtdh/xndt/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-main-building",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学主楼",
+      "aliases": [
+        "主楼"
+      ],
+      "category": "建筑",
+      "emoji": "🏫",
+      "x": 350,
+      "y": 350,
+      "visit": 20,
+      "interests": [
+        "culture",
+        "photo"
+      ],
+      "short": "观察校园建筑与学习环境的外观停留点",
+      "description": "学校公开资料介绍的校园建筑。路线以楼外观察为主，不包含进入教学、办公空间的许可。",
+      "highlights": [
+        "建筑外观",
+        "校园文化"
+      ],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": true,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://news.ustb.edu.cn/info/2514/68755.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-library",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学图书馆",
+      "aliases": [
+        "图书馆"
+      ],
+      "category": "场馆",
+      "emoji": "📚",
+      "x": 470,
+      "y": 300,
+      "visit": 20,
+      "interests": [
+        "culture",
+        "research",
+        "photo"
+      ],
+      "short": "了解校园学习氛围的外观停留点",
+      "description": "校园图书馆是学习与文献服务空间。此处安排外围观察，进入馆内须按图书馆当日权限和规定执行。",
+      "highlights": [
+        "学习氛围",
+        "建筑外观"
+      ],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": true,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://gym.ustb.edu.cn/dtdh/xndt/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-history-museum",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学校史馆",
+      "aliases": [
+        "校史馆"
+      ],
+      "category": "场馆",
+      "emoji": "🏛️",
+      "x": 410,
+      "y": 400,
+      "visit": 30,
+      "interests": [
+        "culture",
+        "research"
+      ],
+      "short": "了解学校发展历程的校史展示场馆",
+      "description": "官方校史馆介绍提供学校历史展陈信息。是否可以入馆、是否需要预约应提前联系确认；不能入馆时可改为周边外观停留。",
+      "highlights": [
+        "学校历史",
+        "展陈文化"
+      ],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": false,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://oia.ustb.edu.cn/LifeUSTB/CampuCulture/USTBHistoryMuseum/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-gymnasium",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学体育馆",
+      "aliases": [
+        "体育馆"
+      ],
+      "category": "运动",
+      "emoji": "🏟️",
+      "x": 760,
+      "y": 340,
+      "visit": 15,
+      "interests": [
+        "sport",
+        "culture",
+        "photo"
+      ],
+      "short": "校园体育建筑的外观观察点",
+      "description": "以体育馆周边公共空间和建筑外观为游览内容。赛事、训练和场馆使用安排不纳入本项目承诺。",
+      "highlights": [
+        "体育建筑",
+        "运动文化"
+      ],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": false,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://gym.ustb.edu.cn/dtdh/xndt/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-ginkgo-walk",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学银杏大道",
+      "aliases": [
+        "银杏大道",
+        "银杏景观步道"
+      ],
+      "category": "绿地",
+      "emoji": "🍂",
+      "x": 510,
+      "y": 390,
+      "visit": 20,
+      "interests": [
+        "plant",
+        "photo"
+      ],
+      "short": "适合慢走与季节摄影的银杏景观示意点",
+      "description": "学校关于电子地图的报道提及校园银杏大道。这里把银杏景观作为一个示意游览节点，观赏情况受季节、天气和现场管理影响。",
+      "highlights": [
+        "季节植物",
+        "慢走摄影"
+      ],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": true,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://news.ustb.edu.cn/info/2514/68755.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    },
+    {
+      "operation": "create",
+      "id": "ustb-sports-ground",
+      "scope": "campus",
+      "campusId": "ustb",
+      "name": "北京科技大学运动场",
+      "aliases": [
+        "运动场"
+      ],
+      "category": "运动",
+      "emoji": "🏃",
+      "x": 660,
+      "y": 240,
+      "visit": 15,
+      "interests": [
+        "sport",
+        "photo"
+      ],
+      "short": "感受校园体育氛围的外围停留点",
+      "description": "校园平面图标注的运动场区域。路线仅建议在允许通行的外围观察，运动场内使用资格和开放时段须现场确认。",
+      "highlights": [
+        "校园生活",
+        "运动氛围"
+      ],
+      "bestTime": "白天；场馆内部以确认后的开放时段为准",
+      "tips": "仅支持学院路主校区。示意坐标、步行距离与停留时长为产品估算，不代表实测导航；访客请先确认入校与场馆权限。",
+      "mustSee": false,
+      "openingHours": null,
+      "bookingUrl": null,
+      "address": "北京市海淀区学院路30号（学院路主校区）",
+      "ticketNote": "未核实票务或场馆使用费用，不代表免费或无需预约。",
+      "sources": [
+        {
+          "reference": "https://gym.ustb.edu.cn/dtdh/xndt/index.htm",
+          "kind": "official",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        },
+        {
+          "reference": "docs/ustb-campus-routes.md",
+          "kind": "manual",
+          "verificationStatus": "unverified",
+          "verifiedAt": null
+        }
+      ]
+    }
+  ]
+}

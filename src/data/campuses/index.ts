@@ -1,10 +1,12 @@
 import { SPOTS } from '../spots';
 import type { Spot } from '../../types';
 import { BJTU_SPOTS } from './bjtu';
+import { USTB_SPOTS } from './ustb';
 
 export type CampusId =
   | 'bfu'
   | 'bjtu'
+  | 'ustb'
   | 'pku'
   | 'tsinghua'
   | 'ruc'
@@ -27,6 +29,11 @@ export interface CampusDefinition {
   defaultGateId: string;
   /** 有点位数据才允许调用校园路线工具。 */
   spots?: Spot[];
+  /** 由可追溯数据库批次导入，seed 不重复插入静态副本。 */
+  catalogManaged?: boolean;
+  seedReference?: string;
+  officialMapUrl?: string;
+  unsupportedCampusTerms?: string[];
   /** 当前是否有专用地图适配器；没有时只展示 Agent 文本路线。 */
   mapMode?: 'bfu-svg' | 'haidian-poi';
 }
@@ -50,7 +57,16 @@ export const CAMPUSES: CampusDefinition[] = [
     weatherLocation: '北京交通大学',
     defaultGateId: 'bjtu-south-gate',
     spots: BJTU_SPOTS,
+    seedReference: 'src/data/campuses/bjtu.ts',
     mapMode: 'haidian-poi',
+  },
+  {
+    id: 'ustb', name: '北京科技大学', shortName: '北科大',
+    aliases: ['北京科技大学', '北科大', '北科', '贝壳', 'USTB', 'ustb'],
+    weatherLocation: '北京科技大学学院路校区', defaultGateId: 'ustb-west-gate',
+    spots: USTB_SPOTS, mapMode: 'haidian-poi', catalogManaged: true,
+    officialMapUrl: 'https://map.ustb.edu.cn',
+    unsupportedCampusTerms: ['昌平', '雄安', '管庄', '天津', '顺德', '西三旗'],
   },
   { id: 'pku', name: '北京大学', shortName: '北大', aliases: ['北京大学', '北大'], weatherLocation: '北京大学', defaultGateId: '' },
   { id: 'tsinghua', name: '清华大学', shortName: '清华', aliases: ['清华大学', '清华'], weatherLocation: '清华大学', defaultGateId: '' },
@@ -73,10 +89,11 @@ export function campusById(id: string | null | undefined): CampusDefinition | nu
 }
 
 export function campusByText(text: string): CampusDefinition | null {
+  const lowered = text.toLowerCase();
   // 先按用户原文位置识别学校，不能按注册表顺序让北林覆盖其他目标。
   const mentions = CAMPUSES.flatMap((campus) => campus.aliases.flatMap((alias) => {
     const matches: Array<{ campus: CampusDefinition; index: number; length: number }> = [];
-    for (let index = text.indexOf(alias); index !== -1; index = text.indexOf(alias, index + alias.length)) {
+    for (let index = lowered.indexOf(alias.toLowerCase()); index !== -1; index = lowered.indexOf(alias.toLowerCase(), index + alias.length)) {
       matches.push({ campus, index, length: alias.length });
     }
     return matches;

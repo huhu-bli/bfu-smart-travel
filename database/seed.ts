@@ -2,6 +2,7 @@ import { BEIJING_DISTRICTS, BEIJING_PLACES, aliasesForPlace } from '../src/data/
 import { CAMPUSES } from '../src/data/campuses';
 import { INTERESTS } from '../src/data/interests';
 import type { BeijingPlace, Spot } from '../src/types';
+import { applyCampusCatalogs } from '../scripts/apply-campus-catalogs.mjs';
 
 interface SeedDatabase {
   query(text: string, values?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
@@ -43,11 +44,13 @@ export async function seedPlaces(db: SeedDatabase) {
     };
     for (const place of BEIJING_PLACES) await insert(place, null, 'src/data/beijingPlaces.ts');
     for (const campus of CAMPUSES) {
+      if (campus.catalogManaged) continue;
       for (const place of campus.spots ?? []) {
-        await insert(place, campus.id, campus.id === 'bfu' ? 'src/data/spots.ts' : 'src/data/campuses/bjtu.ts');
+        await insert(place, campus.id, campus.seedReference ?? 'src/data/spots.ts');
       }
     }
     await db.query('COMMIT');
-    return { inserted };
   } catch (error) { await db.query('ROLLBACK'); throw error; }
+  const campusBatches = await applyCampusCatalogs(db);
+  return { inserted: inserted + campusBatches.reduce((sum, batch) => sum + batch.changes.length, 0) };
 }

@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { migrate } from '../database/migrate.mjs';
 import { importPlaces } from '../server/placeMaintenance.mjs';
 import { openScriptDatabase } from './scriptDatabase.mjs';
+import { applyCampusCatalogs } from './apply-campus-catalogs.mjs';
 
 const batches = ['beijing-reviewed-2026-10-22', 'beijing-ticket-prices-2026-10-23'];
 
@@ -14,13 +15,14 @@ export async function applyReviewedCatalogs({ env = process.env, connect = openS
   const db = await connect();
   try {
     await migrate(db);
+    const campusResults = await applyCampusCatalogs(db);
     const results = [];
     for (const id of batches) {
       const text = await readFile(new URL(`../database/catalogs/${id}.json`, import.meta.url), 'utf8');
       results.push(await importPlaces(db, JSON.parse(text), { apply: true, actor: `reviewed:${id}`,
         batch: { id, checksum: createHash('sha256').update(text).digest('hex') } }));
     }
-    return { skipped: false, results };
+    return { skipped: false, results, campusResults };
   } finally { await db.close(); }
 }
 

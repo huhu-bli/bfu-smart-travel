@@ -30,8 +30,8 @@ test('reviewed facts and reference coordinates reach real queries and retain bas
   assert.equal(result.changes.length, 22);
   assert.ok(result.changes.every((p) => p.version === 2));
   const quality = await checkDataQuality(db);
-  assert.equal(quality.active, 105);
-  assert.equal(quality.withoutVerifiedSource, 86);
+  assert.equal(quality.active, 115);
+  assert.equal(quality.withoutVerifiedSource, 96);
   assert.equal(quality.unknownCoordinates, 35);
   const all = await queryPlaces(db, parsePlaceQuery(new URLSearchParams({ scope: 'city', limit: '100' })));
   assert.equal(all.total, 67);

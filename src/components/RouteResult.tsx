@@ -10,6 +10,7 @@ interface Props {
   plan: RoutePlan;
   availableSpots: Spot[];
   showCampusMap?: boolean;
+  officialMapUrl?: string;
   onSelectSpot: (id: string) => void;
   onOpenMap: () => void;
   onEditRoute: (includedSpotIds: string[], excludedSpotIds: string[]) => void;
@@ -21,6 +22,7 @@ export default function RouteResult({
   plan,
   availableSpots,
   showCampusMap = true,
+  officialMapUrl,
   onSelectSpot,
   onOpenMap,
   onEditRoute,
@@ -273,6 +275,7 @@ export default function RouteResult({
                 ))}
               </div>
               <button type="button" className="ghost-btn" onClick={onOpenMap}>打开北京综合地图</button>
+              {officialMapUrl ? <a className="ghost-btn" href={officialMapUrl} target="_blank" rel="noopener noreferrer">查看官方校园地图</a> : null}
             </div>
           )}
           <div className="route-map-tips">
