@@ -40,15 +40,15 @@ test('maintenance validation rejects malformed coordinates, untrusted links, inv
 test('dry-run validates real database references and rolls back records, sources and revisions', async () => {
   await ready;
   const initial = await checkDataQuality(db);
-  assert.equal(initial.total, 86);
-  assert.equal(initial.withoutVerifiedSource, 86);
+  assert.equal(initial.total, 96);
+  assert.equal(initial.withoutVerifiedSource, 96);
   const preview = await importPlaces(db, doc(place()));
   assert.equal(preview.applied, false);
   assert.equal(preview.changes[0].action, 'create');
   assert.equal(await placeSnapshot(db, 'maintenance-test'), null);
   assert.deepEqual((await placeHistory(db, 'maintenance-test')).revisions, []);
   await assert.rejects(importPlaces(db, doc({ ...place(), districtId: 'missing-district' })), /编号不存在/);
-  assert.equal((await checkDataQuality(db)).total, 86);
+  assert.equal((await checkDataQuality(db)).total, 96);
 });
 
 test('applied import is immediately queryable, exported edits preserve sources and optimistic versions stop lost updates', async () => {
@@ -81,7 +81,7 @@ test('applied import is immediately queryable, exported edits preserve sources a
   assert.deepEqual(history.revisions[0].snapshot.interests, ['food', 'photo']);
   assert.equal(history.revisions[0].snapshot.sources[0].verification_status, 'verified');
   assert.equal(history.revisions[1].snapshot.sources[0].verification_status, 'unverified');
-  assert.equal((await checkDataQuality(db)).withoutVerifiedSource, 86);
+  assert.equal((await checkDataQuality(db)).withoutVerifiedSource, 96);
 });
 
 test('a later batch failure rolls back every earlier row and history entry', async () => {
@@ -111,7 +111,7 @@ test('archive and restore are versioned and reversible, and archived places disa
 test('all seed records export into validated inputs; first edit retains the baseline and seed replay preserves edits', async () => {
   await ready;
   const exported = await exportPlaces(db);
-  assert.equal(validateImport(exported).length, 87);
+  assert.equal(validateImport(exported).length, 97);
   const record = exported.places.find((p) => p.id === 'forbidden-city');
   const before = record.description;
   record.description = '人工维护介绍';

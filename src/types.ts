@@ -11,6 +11,7 @@ export interface Interest {
 
 export interface Spot {
   id: string;
+  aliases?: string[];
   name: string;
   kind: SpotKind;
   emoji: string;

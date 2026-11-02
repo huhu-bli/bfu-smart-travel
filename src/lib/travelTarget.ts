@@ -1,4 +1,4 @@
-import { campusByText, type CampusId } from '../data/campuses';
+import { campusByText, type CampusId, type CampusDefinition } from '../data/campuses';
 import {
   BEIJING_DISTRICTS,
   beijingPlacesFromText,
@@ -34,6 +34,17 @@ export const HAIDIAN_TARGET: TravelTarget = {
 const BEIJING_TERMS = /(北京|京城|故宫|天坛|北海|什刹海|雍和宫|南锣鼓巷|鸟巢|水立方|奥林匹克|798|三里屯|颐和园|圆明园|香山|中关村|首钢园|八大处|潭柘寺|卢沟桥|环球度假区|大运河|十三陵|长城|慕田峪|八达岭|古北水镇|十渡|龙庆峡)/;
 const ROUTE_EDIT_TERMS = /(加入|增加|添加|删除|去掉|移除|保留|换掉|当前路线|刚才.*路线)/;
 
+function requestsUnsupportedCampus(text: string, campus: CampusDefinition): boolean {
+  return text.split(/[，,。.!！?？；;\n]/).some((clause) => {
+    // 出发城市及被排除的校区不是当前校园目的地。
+    if (/(不去|不要|不选|不是|排除)/.test(clause) || /^(从|由).*(出发|前往)/.test(clause.trim())) return false;
+    return campus.unsupportedCampusTerms?.some((term) =>
+      clause.includes(`${term}校区`) || clause.includes(`${term}园区`) || clause.includes(`${term}创新`)
+      || campus.aliases.some((alias) => clause.toLowerCase().includes(`${alias}${term}`.toLowerCase())),
+    ) ?? false;
+  });
+}
+
 /**
  * 目的地解析独立于大模型。显式学校名称具有最高优先级，防止模型把其他学校
  * 错误回退为北林；追问没有再次提地点时沿用上一轮目标。
@@ -46,7 +57,7 @@ export function resolveTravelTarget(text: string, previous?: TravelTarget | null
       kind: 'campus',
       label: campus.name,
       campusId: campus.id,
-      routeSupported: Boolean(campus.spots?.length),
+      routeSupported: Boolean(campus.spots?.length) && !requestsUnsupportedCampus(text, campus),
       explicit: true,
     };
   }

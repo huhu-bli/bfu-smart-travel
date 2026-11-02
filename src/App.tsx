@@ -428,6 +428,7 @@ export default function App() {
                   plan={plan}
                   availableSpots={activeSpots}
                   showCampusMap={activeCampus?.mapMode === 'bfu-svg'}
+                  officialMapUrl={activeCampus?.officialMapUrl}
                   onSelectSpot={setActiveSpotId}
                   onOpenMap={openPlanMap}
                   onEditRoute={applyRouteEdits}

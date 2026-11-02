@@ -1,6 +1,6 @@
 import { budgetToText, spendingFromText } from './tripBudget';
 import { databasePlaces, cityPlanningPlaces, matchingCityPlaces, PlaceDatabaseError, type PlaceRepository } from './placeRepository';
-import { campusById, campusSpotMap } from '../data/campuses';
+import { campusById, campusSpotMap, type CampusDefinition } from '../data/campuses';
 import {
   districtIdsFromText,
 } from '../data/beijingPlaces';
@@ -154,11 +154,18 @@ export function matchGate(text: string): string | null {
   return null;
 }
 
+function matchCampusGate(text: string, campus: CampusDefinition | null): string | null {
+  if (campus?.id === 'bfu') return matchGate(text);
+  const gates = text.match(/东北门|东南门|西北门|西南门|东门|西门|南门|北门/g) ?? [];
+  const last = gates[gates.length - 1];
+  return last ? campus?.spots?.find((spot) => spot.kind === '入口' && spot.name.endsWith(last))?.id ?? null : null;
+}
+
 function parseSpot(text: string, spots: Spot[]): string | null {
   for (const [pattern, id] of SPOT_KEYWORDS) {
     if (pattern.test(text) && spots.some((spot) => spot.id === id)) return id;
   }
-  const byName = spots.find((spot) => spot.kind !== '入口' && text.includes(spot.name));
+  const byName = spots.find((spot) => spot.kind !== '入口' && [spot.name, ...(spot.aliases ?? [])].some((name) => name.length >= 2 && text.includes(name)));
   return byName ? byName.id : null;
 }
 
@@ -254,7 +261,7 @@ async function answerLocallyCore(rawText: string, previous: LocalMemory | null |
       ? mergeInterests(text, parsedInterests, base.interests)
       : parsedInterests,
     gateId:
-      (campus?.id === 'bfu' ? matchGate(text) : null) ??
+      matchCampusGate(text, campus) ??
       (base?.target.campusId === target.campusId ? base?.gateId : undefined) ??
       campus?.defaultGateId ??
       '',
@@ -294,7 +301,7 @@ async function answerCore(rawText: string, memory: LocalMemory, repository: Plac
   const explicitMinutes = parseMinutes(text);
   const minutes = explicitMinutes ?? memory.minutes;
   const interests = memory.interests;
-  const gateId = (campus?.id === 'bfu' ? matchGate(text) : null) ?? memory.gateId;
+  const gateId = matchCampusGate(text, campus) ?? memory.gateId;
   const gateName = spotMap[gateId]?.name ?? campus?.shortName ?? '北京市';
   const spotId = parseSpot(text, spots) ?? memory.selectedSpotId ?? null;
 
@@ -328,7 +335,7 @@ async function answerCore(rawText: string, memory: LocalMemory, repository: Plac
   }
 
   // 1) 北京城市路线
-  if (memory.scene === 'outside-trip' || OUTSIDE_KEYWORDS.test(text)) {
+  if (memory.scene === 'outside-trip' || (memory.target.kind !== 'campus' && OUTSIDE_KEYWORDS.test(text))) {
     const namedPlaces = (memory.beijingIncludePlaceIds ?? [])
       .map((id) => cityPlaces.find((place) => place.id === id))
       .filter((place): place is (typeof cityPlaces)[number] => Boolean(place));
@@ -422,7 +429,7 @@ async function answerCore(rawText: string, memory: LocalMemory, repository: Plac
     };
   }
 
-  if (!campus.spots?.length) {
+  if (!campus.spots?.length || !memory.target.routeSupported) {
     return {
       text: `目前已在海淀地图中收录${campus.name}的位置，但还没有该校的校内点位数据，因此暂时不能生成内部路线，也不会用其他学校的路线替代。`,
       plan: null,
